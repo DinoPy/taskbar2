@@ -1,0 +1,184 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400&display=swap');
+* {
+	box-sizing: border-box;
+	user-select: none;
+}
+
+p {
+	margin: 0;
+}
+
+html {
+	height: 100%;
+	color: #949aa7;
+	background-color: #1b1d23;
+	border: 1px solid #343b38;
+}
+
+body {
+	margin: 0;
+	height: 100%;
+	font-family: 'Nunito', sans-serif;
+
+	overflow: hidden;
+
+	display: flex;
+	justify-content: space-between;
+}
+
+.task {
+	border-right: 1px solid #343b38;
+	height: 70%;
+	padding: 0 5px;
+	border-radius: 2px;
+
+	display: flex;
+	width: 200px;
+	flex: 0 1 200px;
+	align-items: center;
+	cursor: pointer;
+
+	position: relative;
+}
+
+.task > p:not(.firstTaskTimer) {
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.mainContent {
+	height: 100%;
+	display: flex;
+	width: calc(100% - 205px);
+}
+
+.taskContainer,
+.timerAndActions {
+	height: 100%;
+	display: flex;
+	gap: 10px;
+	align-items: center;
+}
+
+.taskContainer {
+	overflow: hidden;
+	padding-left: 15px;
+}
+
+.timerAndActions {
+	width: 205px;
+	justify-content: flex-end;
+}
+
+@keyframes visual_pointer {
+	from {
+		color: #252525;
+	}
+	40% {
+		color: rgb(189, 177, 5);
+	}
+
+	60% {
+		color: rgb(189, 177, 5);
+	}
+	100% {
+		color: #252525;
+	}
+}
+
+@keyframes Jump {
+	0% {
+		transform: scale(1);
+	}
+	40% {
+		transform: scale(1.08);
+	}
+	50% {
+		transform: scale(0.98);
+	}
+	55% {
+		transform: scale(1.02);
+	}
+	60% {
+		transform: scale(0.98);
+	}
+	100% {
+		transform: scale(1);
+	}
+}
+
+.countdown {
+	height: 80%;
+}
+
+.task:nth-child(1) {
+	animation: 2s Jump ease-out infinite;
+	background-color: #3cf39ed2;
+	font-size: 1.1rem;
+	font-weight: bold;
+	color: #252525;
+}
+
+.firstTaskTimer {
+	position: absolute;
+	top: 0px;
+	right: 8px;
+	font-size: 10px;
+	font-weight: normal;
+	color: #1b1d23;
+}
+
+.addTaskContainer {
+	display: flex;
+	height: 100%;
+	align-items: center;
+}
+
+.addTaskInput {
+	background-color: #292c35;
+	color: #949aa7;
+	border: none;
+	outline: #949aa7;
+	height: 60%;
+	border-radius: 1px;
+	padding: 2px 5px;
+	margin-left: 5px;
+	font-family: 'Nunito', sans-serif;
+}
+
+.timer {
+	display: flex;
+	align-items: center;
+
+	height: 60%;
+	border-left: 1px solid #343b38;
+	border-right: 1px solid #343b38;
+	padding: 0 10px 0 5px;
+}
+
+.button {
+	background-color: inherit;
+	fill: #949aa7;
+	color: #949aa7;
+	border-radius: 100%;
+	height: 34px;
+	width: 34px;
+	border: none;
+
+	transition: all 0.3s;
+	cursor: pointer;
+	margin: 0 3px;
+}
+
+.button:hover {
+	background-color: #343b38;
+}
+
+.button:active {
+	background-color: #4f9eee6c;
+}
+
+.skipPauseIcon {
+	display: none;
+}

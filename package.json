@@ -1,0 +1,27 @@
+{
+  "name": "taskbar2",
+  "main": "main.js",
+  "type": "module",
+  "version": "1.0.0",
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "electron-localshortcut": "^3.2.1",
+    "google-auth-library": "^9.15.0",
+    "googleapis": "^144.0.0",
+    "socket.io-client": "^4.8.1",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "electron": "^33.2.1",
+    "electron-builder": "^25.1.8"
+  },
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder",
+    "dev": "electron . --trace-warnings"
+  }
+}

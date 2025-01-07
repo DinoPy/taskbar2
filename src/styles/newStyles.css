@@ -1,0 +1,242 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400&display=swap');
+* {
+	box-sizing: border-box;
+	user-select: none;
+}
+
+p {
+	margin: 0;
+}
+
+html {
+	height: 100%;
+	color: #949aa7;
+	background-color: #1b1d23;
+	border: 1px solid #343b38;
+}
+
+body {
+	margin: 0;
+	height: 100%;
+	font-family: 'Nunito', sans-serif;
+
+	overflow: hidden;
+
+	display: flex;
+	justify-content: space-between;
+	transition: background-color 250ms ease-in-out;
+}
+
+.task {
+	border-right: 1px solid #343b38;
+	height: 70%;
+	padding: 0 5px;
+	border-radius: 2px;
+
+	display: flex;
+	min-width: 60px;
+	width: 200px;
+
+	align-items: center;
+	cursor: pointer;
+
+	position: relative;
+}
+
+.task > .taskTitle {
+	padding-top: 10px;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+
+.task > .taskCategory {
+	font-size: 9px;
+	position: absolute;
+	top: -2px;
+	left: 5px;
+	text-transform: capitalize;
+}
+
+.mainContent {
+	height: 100%;
+	display: flex;
+	width: calc(100% - 205px);
+}
+
+.taskContainer,
+.timerAndActions {
+	height: 100%;
+	display: flex;
+	gap: 10px;
+	align-items: center;
+}
+
+.taskContainer {
+	overflow: hidden;
+	padding-left: 15px;
+}
+
+.timerAndActions {
+	width: 255px;
+	justify-content: flex-end;
+}
+
+@keyframes Jump {
+	0% {
+		transform: scale(1);
+	}
+	40% {
+		transform: scale(1.08);
+	}
+	50% {
+		transform: scale(0.98);
+	}
+	55% {
+		transform: scale(1.02);
+	}
+	60% {
+		transform: scale(0.98);
+	}
+	100% {
+		transform: scale(1);
+	}
+}
+
+.countdown {
+	height: 80%;
+}
+
+.activeTask {
+	animation: 2s Jump ease-out infinite;
+	animation-play-state: paused;
+	background-color: #3cf39ed2;
+	font-size: 1.1rem;
+	font-weight: bold;
+	color: #252525;
+}
+
+.activeTaskTimer {
+	/* display: none; */
+	color: gray;
+	position: absolute;
+	top: -2px;
+	right: 8px;
+	font-size: 9px;
+	font-weight: normal;
+}
+
+.addTaskContainer {
+	display: flex;
+	height: 100%;
+	align-items: center;
+}
+
+.addTaskInput {
+	background-color: #292c35;
+	color: #949aa7;
+	border: none;
+	outline: #949aa7;
+	height: 60%;
+	border-radius: 1px;
+	padding: 2px 5px;
+	margin-left: 5px;
+	font-family: 'Nunito', sans-serif;
+}
+
+.user, .connection-status {
+    padding: 5px 0 5px 10px;
+	border-left: 1px solid #343b38;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.user-icon, .connection-status-icon {
+    fill: red;
+}
+
+.logged-in-color {
+    fill: green;
+}
+
+.timer {
+	display: flex;
+	align-items: center;
+
+	height: 70%;
+	border-left: 1px solid #343b38;
+	border-right: 1px solid #343b38;
+	padding: 0 10px 0 5px;
+}
+
+.button {
+	background-color: inherit;
+	fill: #949aa7;
+	color: #949aa7;
+	border-radius: 100%;
+	height: 34px;
+	width: 34px;
+	border: none;
+
+	transition: all 0.3s;
+	cursor: pointer;
+	margin: 0 3px;
+}
+
+.button:hover {
+	background-color: #343b38;
+}
+
+.button:active {
+	background-color: #4f9eee6c;
+}
+
+.skipPauseIcon {
+	display: none;
+}
+
+.noActiveTaskWarning {
+	color: yellowgreen;
+	font-weight: 900;
+	font-size: 24px;
+	position: absolute;
+	left: 50%;
+	top: 50%;
+	transform: translateX(-50%) translateY(-50%);
+	text-shadow: 0px 0px 1px white, 0px 0px 10px #252525;
+}
+
+.invisible {
+	display: none;
+}
+
+.noActiveTaskBodyWarning {
+	background-color: rgb(228, 99, 44);
+}
+
+body:hover .noActiveTaskWarning {
+	display: none;
+}
+
+.search-container {
+    z-index: 10;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 90%;
+    margin: auto;
+}
+
+.search-input {
+	background-color: #292c35;
+	color: #949aa7;
+	border: none;
+	outline: #949aa7;
+	height: 60%;
+	border-radius: 1px;
+	padding: 2px 5px;
+	margin-left: 5px;
+	font-family: 'Nunito', sans-serif;
+}

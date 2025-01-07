@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Document</title>
+    <link href="styles/newStyles.css" rel="stylesheet" />
+    <script src="js/newIndex.js" defer type="module"></script>
+</head>
+
+<body>
+    <div class="mainContent">
+        <div class="taskContainer"></div>
+        <div class="addTaskContainer" id="addTaskContainer">
+            <img class="addButton button" id="addTaskBtn" src="images/add.svg" />
+        </div>
+        <p class="noActiveTaskWarning invisible">NO ACTIVE TASK</p>
+        <div class="search-container">
+            <input class="search-input"/>
+        </div>
+    </div>
+
+
+    <div class="timerAndActions">
+        <div class="connection-status">
+            <svg xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960" width="24px"
+                class="connection-status-icon">
+                <path
+                    d="M480-120q-42 0-71-29t-29-71q0-42 29-71t71-29q42 0 71 29t29 71q0 42-29 71t-71 29ZM254-346l-84-86q59-59 138.5-93.5T480-560q92 0 171.5 35T790-430l-84 84q-44-44-102-69t-124-25q-66 0-124 25t-102 69ZM84-516 0-600q92-94 215-147t265-53q142 0 265 53t215 147l-84 84q-77-77-178.5-120.5T480-680q-116 0-217.5 43.5T84-516Z" />
+            </svg>
+        </div>
+        <div class="user">
+            <svg class="user-icon" xmlns="http://www.w3.org/2000/svg" height="24px" viewBox="0 -960 960 960"
+                width="24px" title="Logged in">
+                <path class="user-icon-path"
+                    d="M480-480q-66 0-113-47t-47-113q0-66 47-113t113-47q66 0 113 47t47 113q0 66-47 113t-113 47ZM160-160v-112q0-34 17.5-62.5T224-378q62-31 126-46.5T480-440q66 0 130 15.5T736-378q29 15 46.5 43.5T800-272v112H160Z" />
+            </svg>
+        </div>
+        <div class="timer" id="timerBtn">
+            <img class="skipPauseIcon button" id="skipPauseIcon" src="images/skip.svg" />
+            <img class="playPauseIcon button" id="playPauseIcon" src="images/play.svg" />
+            <p class="countdown" id="countdown">00:00</p>
+        </div>
+        <img class="closeIcon button" id="closeBtn" src="images/close.svg" />
+    </div>
+</body>
+
+</html>

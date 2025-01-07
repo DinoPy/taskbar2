@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Edit task</title>
+		<link href="../styles/childrenStyles.css" rel="stylesheet" />
+		<script src="../js/childrenIndex.js" defer type="module"></script>
+	</head>
+	<body class="body-container">
+		<main>
+			<dialog class="newCategoryDialog">
+				<input placeholder="New Category" id="addCategoryInput" />
+				<div class="modalOptionsContainer">
+					<button id="addCategoryBtn" class="submitBtn btn">Add</button>
+					<button id="cancelAddCategoryBtn" class="cancelBtn btn">
+						Cancel
+					</button>
+				</div>
+			</dialog>
+			<label for="title" class="titleLabel">Title</label>
+			<input id="title" placeholder="Title" minlength="3" />
+			<label for="category">Category</label>
+			<select type="text" id="category" name="category" value="none"></select>
+			<label for="description">Description</label>
+			<textarea id="description" type="text" rows="3" minlength="3"></textarea>
+			<button
+				id="submitBtn"
+				class="submitBtn btn"
+				title="close and save changes"
+			>
+				Submit
+			</button>
+		</main>
+		<img
+			class="closeIcon button"
+			id="closeBtn"
+			src="../images/close.svg"
+			title="close window, won't save"
+		/>
+	</body>
+</html>

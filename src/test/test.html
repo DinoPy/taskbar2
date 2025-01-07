@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title></title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="css/style.css" rel="stylesheet">
+</head>
+
+<body>
+    <script src="https://cdn.socket.io/4.8.1/socket.io.min.js"
+        integrity="sha384-mkQ3/7FUtcGyoppY6bz/PORYoGqOl7/aSUMn2ymDOJcapfS6PHqxhRTMh1RR0Q6+"
+        crossorigin="anonymous"></script>
+    <script>
+        const userInfo = {
+            id: '113264336578483032004',
+            email: '001test.alex@gmail.com',
+            verified_email: true,
+            name: 'Alex Test',
+            given_name: 'Alex',
+            family_name: 'Test',
+            picture: 'https://lh3.googleusercontent.com/a/ACg8ocLnKj2orJJArEdIz6r1TnXHlAmiJauNGM_Ahm7SRy4VNPojDts=s96-c'
+        }
+        const socket = io("http://127.0.0.1:8000", {
+                path: "/ws/taskbar",
+                transports: ['websocket'],  // Make sure it's using WebSocket
+                query: {
+                    id: userInfo.id,
+                    email: userInfo.email,
+                    first_name: userInfo.given_name,
+                    last_name: userInfo.family_name
+                }
+            });
+
+        socket.on("new_task_created", data => {
+            console.log(data);
+        })
+
+    </script>
+
+
+</body>
+
+</html>
