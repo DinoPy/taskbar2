@@ -41,11 +41,12 @@ let CATEGORIES = [];
 loadSettings();
 
 const createWindow = () => {
+    const displays = screen.getAllDisplays()[0];
     win = new BrowserWindow({
-        x: screen.getAllDisplays()[0].workArea.x,
-        y: screen.getAllDisplays()[0].workArea.y,
-        width: screen.getAllDisplays()[0].workAreaSize.width,
-        width: screen.getAllDisplays()[0].workAreaSize.width,
+        x: displays.workArea.x,
+        y: displays.workArea.y,
+        width: displays.workAreaSize.width,
+        width: displays.workAreaSize.width,
         height: 40,
         minHeight: 40,
         maxHeight: 40,
@@ -70,14 +71,14 @@ const createWindow = () => {
     win.loadFile('src/index.html');
     win.title = 'Task bar';
 
-    ipc.on('closeApp', (_, args) => {
+    ipc.on('close_app', (_, args) => {
         // exportCsv(args);
         taskWindow?.close();
         completedTasksWindow?.close();
         win.close();
     });
 
-    ipc.on('Interval-Ended', (_, args) => {
+    ipc.on("interval_end", (_, args) => {
         new Notification({
             title: 'Interval Ended',
             body: args,
@@ -124,7 +125,7 @@ const createWindow = () => {
             event.preventDefault(); // Prevent the default reload action
         }
         if ((input.key === 'w') && (input.ctrlOrCommand || input.meta)) {
-            event.preventDefault(); // Prevent the default reload action
+            event.preventDefault(); // Prevent the default quit action
         }
     });
 };
@@ -393,9 +394,13 @@ function createTaskContextMenu(args) {
 
 function createKenbanWindow(props) {
     // properties of the browser window.
+    const cursorPosition = screen.getCursorScreenPoint();
+    const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
     kenbanWindow = new BrowserWindow({
-        width: 1200,
-        height: 800,
+        x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width * 0.1),
+        y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.1),
+        height: Math.floor(activeDisplay.bounds.height * 0.8),
+        width: Math.floor(activeDisplay.bounds.width * 0.8),
         minimizable: true,
         resizable: true,
         show: true,
@@ -412,7 +417,7 @@ function createKenbanWindow(props) {
     kenbanWindow.loadURL("https://dinodev-kenban.vercel.app")
 
     kenbanWindow.on('close', () => {
-        taskWindow = null;
+        kenbanWindow = null;
     });
 
 }
@@ -626,7 +631,8 @@ ipc.on("task_complete", async (_, data) => {
         socket.instance.emit("task_completed",JSON.stringify({
             id: data.id,
             duration: data.duration,
-            completed_at: data.completed_at
+            completed_at: data.completed_at,
+            last_modified_at: +new Date()
         }), (response) => {
         console.log(response)
     })
@@ -719,11 +725,10 @@ function handleSocketDisconnect() {
         setTimeout(handleSocketDisconnect, 1000);
 }
 
-let wereTasksResumed = false;
 function setUpTasks(tasks) {
-    if (win && win.webContents && !wereTasksResumed) {
+    // TODO: allow tasks to refetch, and replace on frontend.
+    if (win && win.webContents) {
         win.webContents.send("resume-tasks", tasks)
-        wereTasksResumed = true;
     }
 }
 

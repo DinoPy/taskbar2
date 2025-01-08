@@ -1,5 +1,6 @@
 const { ipcRenderer } = require('electron');
 const ipc = ipcRenderer;
+import { isSocketConnected, tasks_compl_or_del_while_nocon } from "./newIndex.js";
 
 export function formatCountdownText(time) {
     let minutes = Math.floor((time / 60) % 60);
@@ -35,6 +36,7 @@ export class Task {
         tags = "",
         duration = 0,
         toggledFocusAt = 0,
+        last_modified_at = +new Date()
     }) {
         this.id = id;
         this.title = title;
@@ -57,6 +59,7 @@ export class Task {
         this.barDetails = barDetails;
         this.noActiveTaskWarning = noActiveTaskWarning;
         this.completedTasks = completedTasks;
+        this.last_modified_at = last_modified_at
 
         if (isActive)
             this.addFocus(true);
@@ -72,15 +75,20 @@ export class Task {
         };
 
         updateCategory (newCategory, from_relative= false) {
+            const currentEpochTime = +new Date();
+
             this.category = newCategory;
             this.children.categoryEl.textContent = newCategory;
+            this.last_modified_at = currentEpochTime;
+
             if (!from_relative)
                 ipc.send("task_edit", {
                     category: newCategory,
                     title: this.title,
                     description: this.description,
                     tags: this.tags,
-                    id: this.id
+                    id: this.id,
+                    last_modified_at: currentEpochTime,
                 })
         };
 
@@ -93,6 +101,9 @@ export class Task {
         };
 
         addFocus (from_relative= false) {
+            const currentEpochTime = +new Date();
+
+            this.last_modified_at = currentEpochTime
             this.isFocused = true;
             if (from_relative)
                 this.startTimer(this.toggledFocusAt);
@@ -107,11 +118,15 @@ export class Task {
                     { uuid: this.id,
                         toggled_at: this.toggledFocusAt,
                         is_active: this.isFocused,
-                        duration: this.formatTaskDuration(Math.ceil(this.duration / 1000))
+                        duration: this.formatTaskDuration(Math.ceil(this.duration / 1000)),
+                        last_modified_at: currentEpochTime
                     });
         };
 
         removeFocus (from_delete = false) {
+            const currentEpochTime = +new Date();
+
+            this.last_modified_at = currentEpochTime;
             this.isFocused = false;
             this.stopTimer();
             this.taskEl.classList.remove('activeTask');
@@ -121,7 +136,8 @@ export class Task {
                     { uuid: this.id,
                         toggled_at: this.toggledFocusAt,
                         is_active: this.isFocused,
-                        duration: this.formatTaskDuration(Math.ceil(this.duration / 1000))
+                        duration: this.formatTaskDuration(Math.ceil(this.duration / 1000)),
+                        last_modified_at: currentEpochTime
                     });
         };
 
@@ -165,6 +181,8 @@ export class Task {
 
         addToCompletedTaskList () {
             this.completedTasks.push(this.formatTask('Object', true));
+            if (!isSocketConnected)
+                tasks_compl_or_del_while_nocon.push(this.id);
             ipc.send("task_complete", this.formatTask('Object', true));
         };
 
@@ -173,6 +191,7 @@ export class Task {
                 e.preventDefault();
                 // which gets the button that's pressed on the mouse 1 being right click
                 if (e.which === 1) {
+                    console.log(isSocketConnected);
                     if (this.isFocused) this.removeFocus();
                     else this.addFocus();
                 } else if (e.which === 2) {
@@ -225,19 +244,6 @@ export class Task {
             const formatedCompletedAt = this.formatCurrentDate();
             const formatedDuration =
                 this.formatTaskDuration(Math.ceil(this.duration / 1000));
-            /*
-                const id = idNew;
-                let title = titleNew;
-                const createdAt = createdAtNew;
-                let taskEl = taskElNew;
-                let children = childrenEl;
-                let isFocused = false;
-                let taskTimerInterval = null;
-                let description = 'no description';
-                let duration = 0;
-                let category = categoryNew;
-                let toggledFocusAt = 0;
-            */
 
             switch (type) {
                 case 'Object':
@@ -253,6 +259,7 @@ export class Task {
                         toggled_at: this.toggledFocusAt,
                         is_completed: isCompleted,
                         is_active: false,
+                        last_modified_at: this.last_modified_at
                     }
                 case 'Array':
                     return [

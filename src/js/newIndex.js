@@ -15,6 +15,9 @@ const searchContainer = document.querySelector(".search-container");
 
 const tasks = {};
 const completedTasks = [];
+export let tasks_compl_or_del_while_nocon = []
+
+export let isSocketConnected = false;
 let isTimerRunning = true;
 let lastCategorySelected = 'none';
 
@@ -31,11 +34,13 @@ ipc.on("user-login-status", (e, data) => {
 
 ipc.on("socket-connected", (e, data) => {
     console.log("socket connected");
+    isSocketConnected = true;
     connectionStatusIcon.classList.add("logged-in-color");
 });
 
 ipc.on("socket-disconnected", (e, data) => {
     console.log("socket diconnected");
+    isSocketConnected = false;
     connectionStatusIcon.classList.remove("logged-in-color");
 });
 
@@ -61,35 +66,62 @@ ipc.on('task-post-error', (e, data) => {
 
 // -------------- FROM SERVER ---- ----------------- //
 
+    // add last change property and only make change if the update is the most recent on the server.
+function createTaskFromDataList (t) {
+    const durationStringSplit = t[5].split(":");
+    const durationInt = (parseInt(durationStringSplit[0]) * 60 * 60 +
+        parseInt(durationStringSplit[1]) * 60 +
+        parseInt(durationStringSplit[2])) * 1000;
+    tasks[t[0]] =  new Task({
+        id: t[0],
+        title: t[1],
+        description: t[2],
+        createdAt: t[3],
+        duration: durationInt,
+        category: t[6],
+        tags: t[7],
+        isActive: Boolean(t[9]),
+        toggledFocusAt: t[8],
+        last_modified_at: t[12],
+        completedTasks,
+        tasks,
+        taskContainer,
+        barDetails,
+        noActiveTaskWarning: noActiveTaskParagraph,
+    });
+    tasks[t[0]].setTaskUp(true);
+    tasks[t[0]].addTaskListeners();
+}
+
 ipc.on("resume-tasks", (e, data) => {
-    console.log(data);
+    // first delete all active tasks
+    // then add the new ones
+    // this won't do well for situations without connection.
 
     for (let t of data) {
-        const durationStringSplit = t[5].split(":");
-        const durationInt = (parseInt(durationStringSplit[0]) * 60 * 60 +
-            parseInt(durationStringSplit[1]) * 60 +
-            parseInt(durationStringSplit[2])) * 1000;
-        console.log(durationInt);
-        tasks[t[0]] = new Task({
-            id: t[0],
-            title: t[1],
-            description: t[2],
-            createdAt: t[3],
-            duration: durationInt,
-            category: t[6],
-            tags: t[7],
-            isActive: Boolean(t[9]),
-            toggledFocusAt: t[8],
-            completedTasks,
-            tasks,
-            taskContainer,
-            barDetails,
-            noActiveTaskWarning: noActiveTaskParagraph,
-        });
-
-        tasks[t[0]].setTaskUp(true);
-        tasks[t[0]].addTaskListeners();
+        if (tasks.hasOwnProperty(t[0])) {
+            console.log(`task: ${t[0]} exists`)
+            //11th
+            if (tasks[t[0]].last_modified_at > t[12]) {
+                console.log(`task: ${t[0]} with time: ${t[12]} has more updated information locally`)
+                continue;
+            } else if (tasks[t[0]].last_modified_at < t[12]){
+                console.log(`task: ${t[0]} with time: ${t[12]} is outdated`)
+                tasks[t[0]].removeFocus(true);
+                tasks[t[0]].destroySelfFromDOM();
+                createTaskFromDataList(t);
+            } else {
+                console.log(`task: ${t[0]} with time: ${t[12]} is the same`)
+                continue;
+            }
+        } else {
+            console.log(`task: ${t[0]} does not exist`)
+            if (!tasks_compl_or_del_while_nocon.includes(t[0]))
+                createTaskFromDataList(t);
+        }
     }
+
+    tasks_compl_or_del_while_nocon = [];
 })
 
 
@@ -154,12 +186,18 @@ ipc.on('deleteTask', (e, data) => {
     tasks[data.id].destroySelfFromDOM();
     ipc.send("task_delete", { id: tasks[data.id].id });
     delete tasks[data.id];
+
+    if (!isSocketConnected)
+        tasks_compl_or_del_while_nocon.push(data.id);
 });
 
 ipc.on('completeTask', (e, data) => {
     tasks[data.id].removeFocus();
     tasks[data.id].addToCompletedTaskList();
     tasks[data.id].destroySelfFromDOM();
+
+    if (!isSocketConnected)
+        tasks_compl_or_del_while_nocon.push(data.id);
 });
 
 ipc.on('update-task-category', (e, data) => {
@@ -186,7 +224,7 @@ ipc.on("request-current-task-data-for-edit", () => {
 
 
 closeBtn.addEventListener('click', () => {
-    ipc.send('closeApp', completedTasks);
+    ipc.send('close_app', completedTasks);
 });
 
 
@@ -236,14 +274,14 @@ function startCountdown() {
                 countdownInitialValue = countdown;
                 skipPauseBtn.style.display = 'inline';
 
-                ipc.send('Interval-Ended', 'Start pause.');
+                ipc.send("interval_end", 'Start pause.');
             } else {
                 countdown = activeTime;
                 barDetails.barStatus = 'active';
                 countdownInitialValue = countdown;
                 skipPauseBtn.style.display = 'none';
 
-                ipc.send('Interval-Ended', 'Start work.');
+                ipc.send('interval_end', 'Start work.');
             }
 
             countdownText.textContent = formatCountdownText(countdown);
@@ -267,16 +305,9 @@ function toggleCountdown() {
 
         if (barDetails.barStatus === 'pause') return;
         // start the time of each focused task
-        for (let task in tasks) {
-            if (tasks[task].getIsFocusedStatus()) tasks[task].startTimer();
-        }
     } else {
         // stop the main timer
         clearInterval(intervalId);
-
-        for (let task in tasks) {
-            tasks[task].stopTimer();
-        }
 
         barDetails.isCountingDown = false;
         playPauseBtn.src = 'images/play.svg';
@@ -312,10 +343,6 @@ function handleSkipBreak() {
 
     // start both task and main timers
     startCountdown();
-
-    for (let task in tasks) {
-        if (tasks[task].getIsFocusedStatus()) tasks[task].startTimer();
-    }
 }
 
 // ----------------- ADD TASKS ----------------------- //
