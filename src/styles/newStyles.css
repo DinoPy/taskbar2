@@ -78,7 +78,8 @@ body {
 }
 
 .timerAndActions {
-	width: 255px;
+	width: fit-content;
+    min-width: 255px;
 	justify-content: flex-end;
 }
 
@@ -104,6 +105,7 @@ body {
 }
 
 .countdown {
+    text-wrap: nowrap;
 	height: 80%;
 }
 

@@ -12,27 +12,31 @@ function socketConnect(userInfo) {
         return socket;
     }
 
-    socket = io("http://127.0.0.1:8000", {
-        path: "/ws/taskbar",
-        transports: ['websocket'],  // Make sure it's using WebSocket
-        reconnectionAttempts: Infinity,   // Retry forever
-        query: {
-            id: userInfo.id,
-            email: userInfo.email,
-            first_name: userInfo.given_name,
-            last_name: userInfo.family_name
-        }
-    });
+    try {
+        socket = io("https://pythonws.dinodev.dev", {
+            path: "/ws/taskbar",
+            transports: ["websocket", "polling"],  // Make sure it's using WebSocket
+            reconnectionAttempts: Infinity,   // Retry forever
+            query: {
+                id: userInfo.id,
+                email: userInfo.email,
+                first_name: userInfo.given_name,
+                last_name: userInfo.family_name
+            }
+        });
+    } catch (e) {
+        console.log(e)
+    }
 
 
     // Event: Connection opened
-    socket.on('connect', () => {
-        console.log('Connected to WebSocket server');
+    socket.on("connect", () => {
+        console.log("Connected to WebSocket server");
         handleSocketConnect();
         clearTimeout(timeout);
     });
 
-    socket.on("socket-connected", (data) => {
+    socket.on("socket_connected", (data) => {
         setUpTasks(data.tasks);
         console.log(data);
     });
@@ -46,8 +50,8 @@ function socketConnect(userInfo) {
         handleSocketDisconnect();
     });
 
-    socket.on('disconnect', () => {
-        console.log('WebSocket connection closed');
+    socket.on("disconnect", () => {
+        console.log("WebSocket connection closed");
         handleSocketDisconnect();
     });
 
@@ -56,8 +60,8 @@ function socketConnect(userInfo) {
     })
 
     // Initial connection error
-    socket.on('connect_error', (error) => {
-        console.error('Initial connection failed:', error.message);
+    socket.on("connect_error", (error) => {
+        console.error("Initial connection failed:", error.message);
         reconnectInterval *= 2
         let delay = Math.min(reconnectInterval, 8000); // Cap delay at 8s
         console.log(`Retrying in ${delay / 1000} seconds...`);

@@ -707,6 +707,11 @@ function socketHandlers(socket) {
         win.webContents.send("related_task_edited", JSON.parse(data));
     })
 
+    socket.on("tasks_refresher", data => {
+        if (win && win.webContents)
+            win.webContents.send("refresh_tasks", data.tasks)
+    })
+
 }
 
 function handleSocketConnect() {
@@ -726,7 +731,6 @@ function handleSocketDisconnect() {
 }
 
 function setUpTasks(tasks) {
-    // TODO: allow tasks to refetch, and replace on frontend.
     if (win && win.webContents) {
         win.webContents.send("resume-tasks", tasks)
     }

@@ -124,6 +124,16 @@ ipc.on("resume-tasks", (e, data) => {
     tasks_compl_or_del_while_nocon = [];
 })
 
+ipc.on("refresh_tasks", (e, data) => {
+    for (let t in tasks) {
+        tasks[t].removeFocus(true);
+        tasks[t].destroySelfFromDOM();
+    }
+
+    for (let t of data) {
+        createTaskFromDataList(t);
+    }
+})
 
 // -------------- FROM RELATED APP ----------------- //
 
@@ -265,9 +275,6 @@ function startCountdown() {
             clearInterval(intervalId);
             bodyEl.style.backgroundColor = '#c74242';
 
-            for (let task in tasks) {
-                tasks[task].stopTimer();
-            }
             if (countdownInitialValue === activeTime) {
                 barDetails.barStatus = 'pause';
                 countdown = pauseTime;
