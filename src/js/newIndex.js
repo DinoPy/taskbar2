@@ -11,9 +11,10 @@ const bodyEl = document.querySelector('body');
 const noActiveTaskParagraph = document.querySelector('.noActiveTaskWarning');
 const connectionStatusIcon = document.querySelector(".connection-status-icon");
 const userLoginIcon = document.querySelector(".user-icon");
-const searchContainer = document.querySelector(".search-container");
+const searchContainer = document.querySelector(".searchContainer");
+const searchInput = document.querySelector(".searchInput");
 
-const tasks = {};
+export const tasks = {};
 const completedTasks = [];
 export let tasks_compl_or_del_while_nocon = []
 
@@ -54,9 +55,6 @@ ipc.on('toggle-countdown-timer', (e, data) => {
     isTimerRunning = data.isTimerRunning;
 });
 
-ipc.on('request-list-of-completed-tasks', () => {
-    ipc.send('sending-completed-tasks', completedTasks);
-})
 
 ipc.on('task-post-error', (e, data) => {
     console.log(data);
@@ -439,3 +437,41 @@ setInterval(() => {
         }, 1000);
     }
 }, 2500);
+
+
+const handleTaskChangeSearch = () => {
+    searchContainer.style.display = "flex";
+    searchInput.focus()
+
+    const searchInputListener = (e) => {
+        if (e.key !== "Enter") return;
+
+        searchInput.removeEventListener("keydown", searchInputListener);
+
+        const index = parseInt(searchInput.value);
+        if (isNaN(index)) {
+            searchInput.blur();
+            searchInput.value = "";
+            searchContainer.style.display = "none"
+        }
+
+        const taskKeys = Object.keys(tasks);
+        if (index > 0 && index <= taskKeys.length) {
+            for (let k of taskKeys) {
+                tasks[k].removeFocus();
+            }
+            tasks[taskKeys[index-1]].addFocus();
+        }
+
+        searchInput.blur();
+        searchInput.value = "";
+        searchContainer.style.display = "none"
+    }
+
+    searchInput.addEventListener("keydown", searchInputListener);
+
+}
+
+ipc.on("task_switch_trigger", (e, data) => {
+    handleTaskChangeSearch()
+})

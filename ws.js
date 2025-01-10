@@ -13,7 +13,7 @@ function socketConnect(userInfo) {
     }
 
     try {
-        socket = io("https://pythonws.dinodev.dev", {
+        socket = io("http://localhost:8000", {
             path: "/ws/taskbar",
             transports: ["websocket", "polling"],  // Make sure it's using WebSocket
             reconnectionAttempts: Infinity,   // Retry forever

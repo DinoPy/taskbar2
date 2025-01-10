@@ -2,6 +2,9 @@ const { webContents } = require('electron');
 const {ipcRenderer} = require('electron/renderer');
 const ipc = ipcRenderer;
 
+const startDateInputEl = document.getElementById("startDate")
+const endDateInputEl = document.getElementById("endDate")
+
 let TABLEEL;
 
 const createTableElement = () => {
@@ -22,7 +25,10 @@ const createTableElement = () => {
     const durationHead = document.createElement('th');
     durationHead.textContent = 'duration';
 
-    tableHeadRow.append(idHead, titleHead, categoryHead, durationHead);
+    const completedAtHead = document.createElement('th');
+    completedAtHead.textContent = 'Completed At';
+
+    tableHeadRow.append(idHead, titleHead, categoryHead, durationHead, completedAtHead);
     tableHeader.append(tableHeadRow);
     TABLEEL.append(tableHeader);
 
@@ -34,35 +40,35 @@ const createTableElement = () => {
 
 const createTaskListElements = (data, tableBody) => {
     console.log(data);
-    const currentDate = new Date().toLocaleDateString("en-US");
     data
-        .filter(i => i.createdAt.split(" ")[0] === currentDate)
         .map((t,i) => {
         const tableRow = document.createElement('tr');
 
         const indexField = document.createElement('td');
-        indexField.textContent = i;
+        indexField.textContent = i + 1;
 
         const titleField = document.createElement('td');
-        titleField.textContent = t.title;
+        titleField.textContent = t[1];
 
         const categoryField = document.createElement('td');
-        categoryField.textContent = t.category;
+        categoryField.textContent = t[3];
 
         const durationField = document.createElement('td');
-        durationField.textContent = t.duration;
+        durationField.textContent = t[6];
 
-        tableRow.title = t.description;
-        tableRow.append(indexField, titleField, categoryField, durationField);
+        const completedAtField = document.createElement('td');
+        completedAtField.textContent = t[5];
+
+        tableRow.title = t[2];
+        tableRow.append(indexField, titleField, categoryField, durationField, completedAtField);
         tableBody.append(tableRow);
     })
 }
 
 const updateDataAttribute = (data) => {
-    data = data.filter(t => new Date().toLocaleDateString('en-EN') ===  t.completedAt.split(' ')[0])
     let time = {hours:0, minutes:0, seconds:0}
     data.forEach((task) => {
-        const timeSplit = task.duration.split(':')
+        const timeSplit = task[6].split(':')
         const hours = parseInt(timeSplit[0])
         const minutes = parseInt(timeSplit[1])
         const seconds = parseInt(timeSplit[2])
@@ -97,10 +103,27 @@ const updateDataAttribute = (data) => {
 
 }
 
+const dates = {
+    start_date: "",
+    end_date: ""
+}
+
+startDateInputEl.addEventListener("change", (e) => {
+    dates.start_date = e.target.value;
+    ipc.send("completed_task_date_updated", dates)
+})
+
+endDateInputEl.addEventListener("change", (e) => {
+    dates.end_date = e.target.value;
+    ipc.send("completed_task_date_updated", dates)
+})
+
 
 ipc.on('completed-tasks-list', (_,data) => {
+    if (TABLEEL)
+        TABLEEL.remove();
     const tableBody = createTableElement();
-    createTaskListElements(data,tableBody);
+    createTaskListElements(data, tableBody);
     updateDataAttribute(data);
 })
 

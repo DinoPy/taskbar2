@@ -1,5 +1,4 @@
 import { google } from "googleapis";
-import { OAuth2Client } from "google-auth-library";
 import fs from "fs";
 import dotenv from "dotenv";
 
@@ -16,8 +15,7 @@ const oauth2Client = new google.auth.OAuth2(
     GOOGLE_REDIRECT_URI
 );
 
-const SCOPES = ['https://www.googleapis.com/auth/drive',
-    'https://www.googleapis.com/auth/spreadsheets',
+const SCOPES = [
     'https://www.googleapis.com/auth/userinfo.profile',
     'https://www.googleapis.com/auth/userinfo.email'
 ];
@@ -60,6 +58,7 @@ async function getAuthTokens(code) {
         fs.writeFileSync('tokens.json', JSON.stringify(tokens));
         getUserDetails();
     } catch (error) {
+        console.log("error occured");
         console.log(error);
     }
 }

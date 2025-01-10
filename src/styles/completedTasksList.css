@@ -91,12 +91,25 @@ td {
     padding-left: 14px;
 }
 
-.titleHeader {
-    width: 50%;
+.generalInfo {
+    width: 100%;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
 }
 
-.generalInfo {
-    float: right;
+.dateInput {
+    padding: .5em;
+    margin: 0 10px;
+    background-color: #292c35;
+    border-radius: 3px;
+    border: none;
+    color-scheme: dark;
+}
+
+
+.titleHeader {
+    width: 50%;
 }
 
 .tasksSoFar::after {

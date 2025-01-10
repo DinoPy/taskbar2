@@ -45,6 +45,7 @@ body {
 
 .task > .taskTitle {
 	padding-top: 10px;
+    padding-right: 5px;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
@@ -56,6 +57,13 @@ body {
 	top: -2px;
 	left: 5px;
 	text-transform: capitalize;
+}
+
+.task > .index {
+    position: absolute;
+    bottom: 0px;
+    right: 3px;
+    font-size: 10px;
 }
 
 .mainContent {
@@ -221,9 +229,10 @@ body:hover .noActiveTaskWarning {
 	display: none;
 }
 
-.search-container {
+.searchContainer {
     z-index: 10;
-    display: flex;
+    position: absolute;
+    display: none;
     justify-content: center;
     align-items: center;
     width: 100%;
@@ -231,7 +240,7 @@ body:hover .noActiveTaskWarning {
     margin: auto;
 }
 
-.search-input {
+.searchInput {
 	background-color: #292c35;
 	color: #949aa7;
 	border: none;

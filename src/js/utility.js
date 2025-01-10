@@ -1,6 +1,6 @@
 const { ipcRenderer } = require('electron');
 const ipc = ipcRenderer;
-import { isSocketConnected, tasks_compl_or_del_while_nocon } from "./newIndex.js";
+import { isSocketConnected, tasks_compl_or_del_while_nocon, tasks} from "./newIndex.js";
 
 export function formatCountdownText(time) {
     let minutes = Math.floor((time / 60) % 60);
@@ -11,12 +11,23 @@ export function formatCountdownText(time) {
 }
 
 export const formatCurrentDate = () => {
-    // get current time.
     const today = new Date();
-    // format the returned value to desired form
-    return `${today.getMonth() + 1
-        }/${today.getDate()}/${today.getFullYear()} ${today.getHours()}:${today.getMinutes()}:${today.getSeconds()}`;
+    const year = today.getFullYear()
+    const month = String(today.getMonth() + 1).padStart(2, "0")
+    const day = String(today.getDate()).padStart(2, "0")
+    const hours = String(today.getHours()).padStart(2, '0');
+    const minutes = String(today.getMinutes()).padStart(2, '0');
+    const seconds = String(today.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
 };
+
+
+export const taskIndexUpdater = (tasks) => {
+    const keys =  Object.keys(tasks);
+    for (let i = 0; i < keys.length; i++) {
+       tasks[keys[i]].updateIndex(i+1);
+    }
+}
 
 export class Task {
     constructor({
@@ -26,7 +37,6 @@ export class Task {
         taskEl,
         childrenEl,
         completedTasks,
-        tasks,
         taskContainer,
         barDetails,
         noActiveTaskWarning,
@@ -46,6 +56,7 @@ export class Task {
             titleEl: document.createElement('p'),
             timerEl: document.createElement('p'),
             categoryEl: document.createElement('p'),
+            indexEl: document.createElement('p'),
         },
         this.isFocused = isActive;
         this.taskTimerInterval = null;
@@ -199,9 +210,12 @@ export class Task {
                     this.addToCompletedTaskList();
                     this.destroySelfFromDOM();
                     delete tasks[this.id];
+
+                    taskIndexUpdater(tasks)
                 } else if (e.which === 3) {
                     this.openCtxMenu();
                     e.stopPropagation();
+                    taskIndexUpdater(tasks)
                 }
             });
         };
@@ -220,10 +234,13 @@ export class Task {
                 this.formatCountdownText(Math.ceil(this.duration / 1000));
             this.children.categoryEl.classList.add('taskCategory');
             this.children.categoryEl.textContent = this.category;
+            this.children.indexEl.classList.add("index")
+            this.children.indexEl.textContent = Object.keys(tasks).length;
 
             this.taskEl.append(this.children.titleEl);
             this.taskEl.append(this.children.timerEl);
             this.taskEl.append(this.children.categoryEl);
+            this.taskEl.append(this.children.indexEl);
         };
 
         setTaskUp (from_relative= false) {
@@ -233,6 +250,10 @@ export class Task {
             if (!from_relative)
                 ipc.send("task_create", this.formatTask("Object", false))
         };
+
+        updateIndex (num) {
+            this.children.indexEl.textContent = (num);
+        }
 
         openCtxMenu () {
             const props = { id: this.id, title: this.title, description: this.description, category: this.category };
@@ -295,10 +316,13 @@ export class Task {
         };
 
         formatCurrentDate () {
-            // get current time.
             const today = new Date();
-            // format the returned value to desired form
-            return `${today.getMonth() + 1
-                }/${today.getDate()}/${today.getFullYear()} ${today.getHours()}:${today.getMinutes()}:${today.getSeconds()}`;
+            const year = today.getFullYear()
+            const month = String(today.getMonth() + 1).padStart(2, "0")
+            const day = String(today.getDate()).padStart(2, "0")
+            const hours = String(today.getHours()).padStart(2, '0');
+            const minutes = String(today.getMinutes()).padStart(2, '0');
+            const seconds = String(today.getSeconds()).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
         };
 }

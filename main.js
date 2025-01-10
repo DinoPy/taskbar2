@@ -19,13 +19,15 @@ import { socketConnect } from "./ws.js";
 import { oauth2Client, authUrl, getAuthTokens, userInfo } from "./googleapis.js";
 
 
-const ipc = ipcMain;
-export { ipc };
+export const ipc = ipcMain;
 const homeDir = os.homedir();
 let socket = {
     isConnected: true,
     instance: null
 };
+
+let currentlySelectedScreenIndex = 0;
+let currentlySelectedScreenSide = "top";
 
 app.setName('Task yourself');
 app.setAppUserModelId(app.name);
@@ -41,7 +43,7 @@ let CATEGORIES = [];
 loadSettings();
 
 const createWindow = () => {
-    const displays = screen.getAllDisplays()[0];
+    const displays = screen.getAllDisplays()[currentlySelectedScreenIndex];
     win = new BrowserWindow({
         x: displays.workArea.x,
         y: displays.workArea.y,
@@ -156,36 +158,89 @@ app
         globalShortcut.register("CommandOrControl+Shift+k", () => {
             createKenbanWindow();
         })
+        globalShortcut.register("CommandOrControl+Shift+c", () => {
+            createCompletedTasksPopUp();
+        })
+        globalShortcut.register("CommandOrControl+Shift+s", () => {
+            win.focus();
+            win.webContents.send("task_switch_trigger");
+        })
 
 
         try {
             const token = await oauth2Client.getAccessToken()
-            if (token) return;
-        } catch (e) { }
+            if (token) {
+                setTimeout(() => {
+                    socket.instance = socketConnect(userInfo);
+                    if (!socket.instance) socket.isConnected = false;
 
-        const authWindow = new BrowserWindow({ width: 800, height: 600 });
-        authWindow.loadURL(authUrl);
+                    socketHandlers(socket.instance)
+                }, 1000)
+            }
+        } catch (e) {
+            const authWindow = new BrowserWindow({ width: 800, height: 600 });
+            authWindow.loadURL(authUrl);
 
-        authWindow.webContents.on('did-fail-load', async (event, errorCode, errorDescription, validatedUrl) => {
-            const url = new URL(validatedUrl);
-            const code = url.searchParams.get('code');
+            authWindow.webContents.on('did-fail-load', async (event, errorCode, errorDescription, validatedUrl) => {
+                const url = new URL(validatedUrl);
+                const code = url.searchParams.get('code');
 
-            authWindow.close(); // Close the window after getting the code
-            if (!code) console.log("Authentication failed - no code");
-            else getAuthTokens(code);
+                authWindow.close(); // Close the window after getting the code
+                if (!code) console.log("Authentication failed - no code");
+                else getAuthTokens(code);
 
-        });
+                setTimeout(() => {
+                    socket.instance = socketConnect(userInfo);
+                    if (!socket.instance) socket.isConnected = false;
 
+                    socketHandlers(socket.instance)
+                }, 1000)
+
+            });
+        }
     })
     .then(async () => {
         createWindow();
 
-        setTimeout(() => {
-            socket.instance = socketConnect(userInfo);
-            if (!socket.instance) socket.isConnected = false;
+          screen.on("display-added", (event, newDisplay) => {
+            console.log("Display added");
+            const displays = screen.getAllDisplays();
+            while (currentlySelectedScreenIndex > displays.length - 1) {
+                currentlySelectedScreenIndex -= 1;
+            }
 
-            socketHandlers(socket.instance)
-        }, 1000)
+            const y = currentlySelectedScreenSide === "bottom" ?
+                  displays[currentlySelectedScreenIndex].bounds.y + displays[currentlySelectedScreenIndex].bounds.height - 40 :
+                  displays[currentlySelectedScreenIndex].bounds.y;
+
+            win.setBounds({
+                x: displays[currentlySelectedScreenIndex].bounds.x,
+                y,
+                height: 40,
+                width: displays[currentlySelectedScreenIndex].bounds.width,
+            })
+          });
+
+          // Listen for a display being removed
+          screen.on("display-removed", (event, oldDisplay) => {
+            console.log("Display removed");
+            const displays = screen.getAllDisplays();
+            const y = currentlySelectedScreenSide === "bottom" ?
+                  displays[0].bounds.y + displays[0].bounds.height - 40 :
+                  displays[0].bounds.y;
+
+            win.setBounds({
+                x: displays[0].bounds.x,
+                y,
+                height: 40,
+                width: displays[0].bounds.width,
+            })
+          });
+
+          // Listen for changes to metrics (like resolution or orientation)
+          screen.on("display-metrics-changed", (event, changedDisplay, changedMetrics) => {
+            console.log("Display metrics changed");
+          });
     });
 
 
@@ -197,10 +252,10 @@ app.on('window-all-closed', () => {
 
 
 powerMonitor.on("suspend", () => {
-    console.log("sysem suspended");
+    console.log("system suspended");
 })
 powerMonitor.on("resume", () => {
-    console.log("sysem resumed");
+    console.log("system resumed");
 })
 
 // app.on('activate', () => {
@@ -278,6 +333,8 @@ function createContextMenu() {
         return {
             label: `Screen ${i} - Top`,
             click: () => {
+                currentlySelectedScreenIndex = i;
+                currentlySelectedScreenSide = "top";
                 win.setBounds({
                     x: d.bounds.x,
                     y: d.bounds.y,
@@ -293,6 +350,8 @@ function createContextMenu() {
             return {
                 label: `Screen ${i} - Bottom`,
                 click: () => {
+                    currentlySelectedScreenIndex = i;
+                    currentlySelectedScreenSide = "bottom";
                     win.setBounds({
                         x: d.bounds.x,
                         y: d.bounds.y + d.bounds.height - 40,
@@ -424,7 +483,11 @@ function createKenbanWindow(props) {
 
 function createEditWindow(props) {
     // properties of the browser window.
+    const cursorPosition = screen.getCursorScreenPoint();
+    const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
     taskWindow = new BrowserWindow({
+        x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 400/2),
+        y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.2 ),
         width: 400,
         minHeight: 200,
         minimizable: false,
@@ -566,8 +629,12 @@ function getCsvHeaders(list) {
 
 function createCompletedTasksPopUp() {
     try {
+        const cursorPosition = screen.getCursorScreenPoint();
+        const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
         completedTasksWindow = new BrowserWindow({
-            width: 800,
+            x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 1000/2),
+            y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.2 ),
+            width: 1000,
             minHeight: 1000,
             minimizable: false,
             resizable: false,
@@ -589,7 +656,11 @@ function createCompletedTasksPopUp() {
 
 
         completedTasksWindow.webContents.on('did-finish-load', () => {
-            win.webContents.send('request-list-of-completed-tasks');
+            socket.instance.emit("get_completed_tasks",
+                JSON.stringify({start_date: "", end_date: ""}),
+                (data) => {
+                completedTasksWindow.webContents.send('completed-tasks-list', data);
+            })
         });
 
 
@@ -599,15 +670,21 @@ function createCompletedTasksPopUp() {
         });
 
         // removes from memory the value of the taskWindow that was closed.
+        completedTasksWindow.on("close", () => {
+            completedTasksWindow = null;
+        })
     }
     catch (e) {
         console.log(e)
     }
 }
 
-ipc.on('sending-completed-tasks', (_, data) => {
-    completedTasksWindow.webContents.send('completed-tasks-list', data)
+ipc.on("completed_task_date_updated", (e, data) => {
+    socket.instance.emit("get_completed_tasks", JSON.stringify(data), (tasks) => {
+        completedTasksWindow.webContents.send('completed-tasks-list', tasks);
+    })
 })
+
 
 // ensures the communication between the children windows and the main task window.
 ipc.on("edit-submission-event-from-edit-popup", (e, { categories, ...data }) => {
@@ -628,6 +705,7 @@ ipc.on("task_complete", async (_, data) => {
         // TODO: Re enable posting to sheets.
         // await postTaskToSheets(data);
         console.log(`Task ${data.id} is completed`);
+        console.log(`completed_at: ${data.completed_at}`)
         socket.instance.emit("task_completed",JSON.stringify({
             id: data.id,
             duration: data.duration,
