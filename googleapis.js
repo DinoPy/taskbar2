@@ -25,29 +25,35 @@ const authUrl = oauth2Client.generateAuthUrl({
     scope: SCOPES,
 });
 
-try {
-    const savedTokens = JSON.parse(fs.readFileSync('tokens.json'));
-    if (savedTokens) {
-        oauth2Client.setCredentials(savedTokens);
-        getUserDetails();
+const login = async () => {
+    try {
+        const savedTokens = JSON.parse(fs.readFileSync('tokens.json'));
+        if (savedTokens) {
+            oauth2Client.setCredentials(savedTokens);
+            await getUserDetails();
+        }
+    } catch (error) {
+        console.log(error.message);
     }
-} catch (error) {
-    console.log(error.message);
 }
 
-async function getUserDetails() {
-    const oauth2 = google.oauth2({
-        auth: oauth2Client,
-        version: "v2",
-    });
+function getUserDetails() {
+    return new Promise(async (resolve) => {
+        const oauth2 = google.oauth2({
+            auth: oauth2Client,
+            version: "v2",
+        });
 
-    oauth2.userinfo.get((err, res) => {
-        if (err) {
-            console.log(err);
-            return;
-        }
-        Object.assign(userInfo, res.data);
-    });
+        await oauth2.userinfo.get((err, res) => {
+            if (err) {
+                console.log(err);
+                return;
+            }
+            Object.assign(userInfo, res.data);
+            resolve(res.data);
+            console.log("from googleapis.js", +new Date());
+        });
+    })
 }
 
 async function getAuthTokens(code) {
@@ -56,7 +62,7 @@ async function getAuthTokens(code) {
         const { tokens } = await oauth2Client.getToken(code);
         oauth2Client.setCredentials(tokens);
         fs.writeFileSync('tokens.json', JSON.stringify(tokens));
-        getUserDetails();
+        await getUserDetails();
     } catch (error) {
         console.log("error occured");
         console.log(error);
@@ -64,5 +70,5 @@ async function getAuthTokens(code) {
 }
 
 
-export { oauth2Client, authUrl, getAuthTokens, userInfo };
+export { oauth2Client,login, authUrl, getAuthTokens, userInfo };
 

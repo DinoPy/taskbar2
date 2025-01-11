@@ -11,6 +11,7 @@ const bodyEl = document.querySelector('body');
 const noActiveTaskParagraph = document.querySelector('.noActiveTaskWarning');
 const connectionStatusIcon = document.querySelector(".connection-status-icon");
 const userLoginIcon = document.querySelector(".user-icon");
+const userContainer = document.querySelector(".user");
 const searchContainer = document.querySelector(".searchContainer");
 const searchInput = document.querySelector(".searchInput");
 
@@ -28,9 +29,12 @@ ipc.on("print-to-console", (e, data) => {
 });
 
 // ----------- CONN & AUTH ----------------//
-ipc.on("user-login-status", (e, data) => {
-    if (data)
-        userLoginIcon.classList.add("logged-in-color");
+ipc.on("user-logged-in", (e, data) => {
+    userLoginIcon.classList.add("logged-in-color");
+});
+
+ipc.on("user-logged-out", (e, data) => {
+    userLoginIcon.classList.remove("logged-in-color");
 });
 
 ipc.on("socket-connected", (e, data) => {
@@ -230,7 +234,6 @@ ipc.on("request-current-task-data-for-edit", () => {
 });
 
 
-
 closeBtn.addEventListener('click', () => {
     ipc.send('close_app', completedTasks);
 });
@@ -238,6 +241,13 @@ closeBtn.addEventListener('click', () => {
 
 bodyEl.addEventListener('mousedown', (e) => {
     if (e.button === 2) ipc.send('show-general-context-menu');
+});
+
+userContainer.addEventListener('mousedown', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    console.log("user-icon pressed")
+    if (e.button === 2) ipc.send("show-login-context-menu");
 });
 
 // ------------------- TIMER -------------------- //
