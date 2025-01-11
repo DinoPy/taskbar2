@@ -2,10 +2,8 @@ import { google } from "googleapis";
 import fs from "fs";
 import os from "os";
 import path from "path";
-import dotenv from "dotenv";
 import {getSecretGoogleCreds} from "./googleapis_nothidden_credentials.js";
 
-dotenv.config();
 const userInfo = {};
 
 const GOOGLE_REDIRECT_URI = "http://localhost:3123";
@@ -42,7 +40,7 @@ const login = async () => {
 }
 
 function getUserDetails() {
-    return new Promise(async (resolve, reject) => {
+    return new Promise(async (resolve) => {
         const oauth2 = google.oauth2({
             auth: oauth2Client,
             version: "v2",
@@ -51,7 +49,6 @@ function getUserDetails() {
         await oauth2.userinfo.get((err, res) => {
             if (err) {
                 console.log(err);
-                reject(err)
                 return;
             }
             Object.assign(userInfo, res.data);

@@ -23,7 +23,9 @@ export const formatCurrentDate = () => {
 
 
 export const taskIndexUpdater = (tasks) => {
+    console.log(tasks);
     const keys =  Object.keys(tasks);
+    console.log(`Current number of tasks: ${keys.length}`);
     for (let i = 0; i < keys.length; i++) {
        tasks[keys[i]].updateIndex(i+1);
     }
@@ -83,6 +85,10 @@ export class Task {
 
         updateDescription (newDescription) {
             this.description = newDescription;
+        };
+
+        updateTags (netTags) {
+            this.tags = netTags;
         };
 
         updateCategory (newCategory, from_relative= false) {
@@ -215,7 +221,6 @@ export class Task {
                 } else if (e.which === 3) {
                     this.openCtxMenu();
                     e.stopPropagation();
-                    taskIndexUpdater(tasks)
                 }
             });
         };
@@ -256,7 +261,13 @@ export class Task {
         }
 
         openCtxMenu () {
-            const props = { id: this.id, title: this.title, description: this.description, category: this.category };
+            const props = {
+                id: this.id,
+                title: this.title,
+                description: this.description,
+                category: this.category,
+                tags: this.tags,
+            };
             ipc.send('show-task-context-menu', props);
         };
 

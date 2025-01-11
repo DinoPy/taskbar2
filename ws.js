@@ -5,6 +5,8 @@ let socket = null;
 let reconnectInterval = 1000;
 let timeout = null;
 
+let stage = "production";
+
 function socketConnect(userInfo) {
     if (socket) {
         if (!socket.connected)
@@ -13,7 +15,7 @@ function socketConnect(userInfo) {
     }
 
     try {
-        socket = io("http://localhost:8000", {
+        socket = io(stage === "developement" ? "http://localhost:8000" : "https://pythonws.dinodev.dev", {
             path: "/ws/taskbar",
             transports: ["websocket", "polling"],  // Make sure it's using WebSocket
             reconnectionAttempts: Infinity,   // Retry forever
@@ -37,8 +39,7 @@ function socketConnect(userInfo) {
     });
 
     socket.on("socket_connected", (data) => {
-        setUpTasks(data.tasks);
-        console.log(data);
+        setUpTasks(data);
     });
 
     socket.on("message", data => {

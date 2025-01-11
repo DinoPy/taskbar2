@@ -1,6 +1,6 @@
 const { ipcRenderer } = require('electron');
 const ipc = ipcRenderer;
-import { Task, formatCurrentDate, formatCountdownText } from './utility.js';
+import { Task, formatCurrentDate, formatCountdownText, taskIndexUpdater } from './utility.js';
 import { parseString } from './helpers.js';
 
 const closeBtn = document.getElementById('closeBtn');
@@ -25,7 +25,7 @@ let lastCategorySelected = 'none';
 
 // ----------- LOGGING ----------------//
 ipc.on("print-to-console", (e, data) => {
-    console.log(data);
+    console.log(JSON.stringify(data));
 });
 
 // ----------- CONN & AUTH ----------------//
@@ -121,6 +121,7 @@ ipc.on("resume-tasks", (e, data) => {
             if (!tasks_compl_or_del_while_nocon.includes(t[0]))
                 createTaskFromDataList(t);
         }
+        taskIndexUpdater(tasks);
     }
 
     tasks_compl_or_del_while_nocon = [];
@@ -130,11 +131,14 @@ ipc.on("refresh_tasks", (e, data) => {
     for (let t in tasks) {
         tasks[t].removeFocus(true);
         tasks[t].destroySelfFromDOM();
+        delete tasks[t];
     }
 
     for (let t of data) {
         createTaskFromDataList(t);
     }
+
+    taskIndexUpdater(tasks);
 })
 
 // -------------- FROM RELATED APP ----------------- //
@@ -170,12 +174,14 @@ ipc.on("related_task_deleted", (e, data) => {
     tasks[data.id].removeFocus(true);
     tasks[data.id].destroySelfFromDOM();
     delete tasks[data.id];
+    taskIndexUpdater(tasks)
 })
 
 ipc.on("related_task_edited", (e, data) => {
     tasks[data.id].updateTitle(data.title);
     tasks[data.id].updateDescription(data.description);
     tasks[data.id].updateCategory(data.category, true);
+    taskIndexUpdater(tasks)
 
 
 })
@@ -190,6 +196,7 @@ ipc.on('msg-redirected-to-parent', (e, data) => {
 
     tasks[data.id].updateTitle(data.title);
     tasks[data.id].updateDescription(data.description);
+    tasks[data.id].updateTags(data.tags);
     tasks[data.id].updateCategory(data.category);
 });
 
@@ -226,13 +233,30 @@ ipc.on("request-current-task-data-for-edit", () => {
                 id,
                 title: tasks[id].title,
                 description: tasks[id].description,
-                category: tasks[id].category
+                category: tasks[id].category,
+                tags: tasks[id].tags
             });
             break;
         }
     }
 });
 
+ipc.on("complete_current_task", () => {
+    for (let t in tasks) {
+        if (!tasks[t].isFocused)
+            continue;
+
+        tasks[t].removeFocus();
+        tasks[t].addToCompletedTaskList();
+        tasks[t].destroySelfFromDOM();
+
+        if (!isSocketConnected)
+            tasks_compl_or_del_while_nocon.push(data.id);
+    }
+
+})
+
+// ------------------ END OF HELPERS ------------------- //
 
 closeBtn.addEventListener('click', () => {
     ipc.send('close_app', completedTasks);

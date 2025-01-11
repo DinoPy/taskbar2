@@ -37,6 +37,40 @@ select {
 	resize: none;
 }
 
+.tags-input {
+    width: 70%;
+}
+
+.tags-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.tags-list-container {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.tags-item {
+    border-radius: 5px;
+    padding: 3px 7px;
+    background-color: #2c3644;
+    font-size: 0.9em;
+    cursor:pointer;
+}
+
+.btn.tags-button {
+    width: 20%;
+	color: #252525;
+	border: none;
+	background-color: #0566cf;
+    padding: 0.3em 1em;
+    margin: 0;
+    height: 30px;
+}
+
 main {
 	padding: 10px 15px;
 	background-color: #1b1d23;

@@ -2,12 +2,11 @@
   "name": "taskbar2",
   "main": "main.js",
   "type": "module",
-  "version": "1.0.0",
+  "version": "0.7.0",
   "peerDependencies": {
     "typescript": "^5.0.0"
   },
   "dependencies": {
-    "dotenv": "^16.4.7",
     "electron-localshortcut": "^3.2.1",
     "google-auth-library": "^9.15.0",
     "googleapis": "^144.0.0",

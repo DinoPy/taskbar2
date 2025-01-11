@@ -16,8 +16,10 @@ const createTableElement = () => {
     idHead.textContent = 'id';
 
     const titleHead = document.createElement('th');
-    titleHead.classList.add('titleHeader');
     titleHead.textContent = 'title';
+
+    const tagsHead = document.createElement('th');
+    tagsHead.textContent = 'tags';
 
     const categoryHead = document.createElement('th');
     categoryHead.textContent = 'category';
@@ -28,7 +30,7 @@ const createTableElement = () => {
     const completedAtHead = document.createElement('th');
     completedAtHead.textContent = 'Completed At';
 
-    tableHeadRow.append(idHead, titleHead, categoryHead, durationHead, completedAtHead);
+    tableHeadRow.append(idHead, titleHead, tagsHead, categoryHead, durationHead, completedAtHead);
     tableHeader.append(tableHeadRow);
     TABLEEL.append(tableHeader);
 
@@ -50,6 +52,9 @@ const createTaskListElements = (data, tableBody) => {
         const titleField = document.createElement('td');
         titleField.textContent = t[1];
 
+        const tagsField = document.createElement('td');
+        tagsField.textContent = t[7].replaceAll(",", " | ");
+
         const categoryField = document.createElement('td');
         categoryField.textContent = t[3];
 
@@ -60,7 +65,7 @@ const createTaskListElements = (data, tableBody) => {
         completedAtField.textContent = t[5];
 
         tableRow.title = t[2];
-        tableRow.append(indexField, titleField, categoryField, durationField, completedAtField);
+        tableRow.append(indexField, titleField, tagsField, categoryField, durationField, completedAtField);
         tableBody.append(tableRow);
     })
 }

@@ -23,6 +23,13 @@
 			<input id="title" placeholder="Title" minlength="3" />
 			<label for="category">Category</label>
 			<select type="text" id="category" name="category" value="none"></select>
+            <label for="tags">Tags</label>
+            <div class="tags-container">
+                <input class="tags-input" type="text" id="tags-input" name="tags"></input>
+                <button class="btn tags-button" id="tags-button"> Add </button>
+            </div>
+            <div class="tags-list-container">
+            </div>
 			<label for="description">Description</label>
 			<textarea id="description" type="text" rows="3" minlength="3"></textarea>
 			<button

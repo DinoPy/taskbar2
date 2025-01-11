@@ -4,6 +4,7 @@ const ipc = ipcRenderer;
 
 let ID;
 let category;
+let tags = [];
 
 const containerEl = document.querySelector(".body-container");
 const closeBtn = document.getElementById('closeBtn');
@@ -16,6 +17,10 @@ const addCategoryInput = document.getElementById('addCategoryInput');
 const titleInput = document.getElementById('title');
 const categorySelect = document.getElementById('category');
 const descriptionInput = document.getElementById('description');
+const tagsInput = document.getElementById("tags-input");
+const tagsButton = document.getElementById("tags-button");
+const tagsListContainer = document.querySelector(".tags-list-container");
+
 
 document.addEventListener("DOMContentLoaded", () => {
     titleInput.focus();
@@ -34,7 +39,31 @@ ipc.on('data-from-parent', (e, data) => {
 	categories = data.categories;
 	populateCategoryOptions();
 	categorySelect.value = data.category;
+
+    if (data.tags === "")
+        return;
+    tags = data.tags.split(",");
+    populateTags();
 });
+
+const createTagElement = (tag) => {
+    const p = document.createElement("p");
+    p.textContent = tag;
+    p.classList.add("tags-item");
+    tagsListContainer.append(p);
+
+    p.addEventListener("click", (e) => {
+        tags = tags.filter((t) => t !== tag);
+        e.target.remove();
+        console.log(tag, e, tags);
+    })
+}
+
+const populateTags = () => {
+    for (let tag of tags) {
+        createTagElement(tag);
+    }
+}
 
 const populateCategoryOptions = () => {
 	if (!categories.includes(category)) {
@@ -107,12 +136,14 @@ closeBtn.addEventListener('click', () => {
 });
 
 function handleSubmit() {
+    console.log("in sumit we have the following tags", tags);
     ipc.send("edit-submission-event-from-edit-popup", {
         title: parseString(titleInput.value),
         category: categorySelect.value.replaceAll(',', ''),
         description: parseString(descriptionInput.value),
         id: ID,
         categories: categories.filter((c) => c !== 'none'),
+        tags: tags.join(",")
     });
 }
 
@@ -125,7 +156,15 @@ containerEl.addEventListener("keydown", (e) => {
         handleSubmit();
 })
 
+tagsButton.addEventListener("click", (e) => {
+    if (tagsInput.value.length === 0)
+        return;
 
+    // add tag element and push to the list
+    tags.push(tagsInput.value);
+    createTagElement(tagsInput.value);
+    tagsInput.value = "";
+})
 
 titleInput.addEventListener('change', (e) => {
     console.log(categorySelect.value);
