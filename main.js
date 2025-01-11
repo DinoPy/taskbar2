@@ -1,3 +1,19 @@
+import fs from "fs";
+import os from "os";
+import path from "path";
+
+const logFile = fs.createWriteStream(path.join(os.homedir(), "app.log"), { flags: 'a' });
+const logStdout = process.stdout;
+
+console.log = function(...args) {
+  logFile.write(new Date().toISOString() + ' ' + args.join(' ') + '\n');
+  logStdout.write(new Date().toISOString() + ' ' + args.join(' ') + '\n');
+};
+
+console.error = console.log; // Redirect errors as well
+
+
+
 import {
     app,
     BrowserWindow,
@@ -11,9 +27,6 @@ import {
 } from "electron";
 import dotenv from "dotenv";
 dotenv.config();
-import path from "path";
-import fs from "fs";
-import os from "os";
 import electronLocalshortcut from "electron-localshortcut";
 import { socketConnect } from "./ws.js";
 import { oauth2Client, login, authUrl, getAuthTokens, userInfo } from "./googleapis.js";
@@ -156,6 +169,8 @@ app
             win.webContents.openDevTools();
             taskWindow?.webContents.openDevTools();
             completedTasksWindow?.webContents.openDevTools();
+            kenbanWindow?.webContents.openDevTools();
+            helpWindow?.webContents.openDevTools();
         });
         globalShortcut.register("CommandOrControl+Shift+e", () => {
             win.webContents.send("request-current-task-data-for-edit")
@@ -242,10 +257,10 @@ const doAuthentication = () => {
         async (event, errorCode, errorDescription, validatedUrl) => {
             const url = new URL(validatedUrl);
             const code = url.searchParams.get("code");
-
             authWindow.close(); // Close the window after getting the code
+
             if (!code) console.log("Authentication failed - no code");
-            else await getAuthTokens(code);
+            else user = await getAuthTokens(code);
 
             if (userInfo.hasOwnProperty("id")) {
                 win.webContents.send("user-logged-in", userInfo);
@@ -257,6 +272,14 @@ const doAuthentication = () => {
         });
 }
 
+
+process.on('uncaughtException', (err) => {
+  console.error('Unhandled Exception:', err);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('Unhandled Rejection:', reason, promise);
+});
 
 // if all windows are close then quit app.
 app.on("window-all-closed", () => {
@@ -663,17 +686,15 @@ function createHelpWindow () {
     const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
     try {
         helpWindow = new BrowserWindow({
-            x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 600/2),
+            x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 800/2),
             y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.2 ),
-            width: 600,
-            minHeight: 600,
+            width: 800,
+            minHeight: 1000,
             minimizable: false,
             resizable: false,
             modal: true,
-            show: false,
-            frame: false,
+            frame: true,
             alwaysOnTop: true,
-            transparent: true,
             webPreferences: {
                 webgl: true,
                 nodeIntegration: true,
@@ -687,6 +708,10 @@ function createHelpWindow () {
     } catch (e) {
         console.error(e);
     }
+
+    helpWindow.on("close", () => {
+        helpWindow = null;
+    })
 }
 
 

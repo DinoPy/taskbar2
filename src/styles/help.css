@@ -1,0 +1,15 @@
+html {
+	color: #949aa7;
+	background-color: #1b1d23;
+}
+
+body {
+	margin: 0;
+	height: 100%;
+	font-family: 'Nunito', sans-serif;
+    padding: 1rem 1rem;
+}
+
+.primary-text {
+    font-weight: bold;
+}

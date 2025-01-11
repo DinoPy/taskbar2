@@ -1,13 +1,15 @@
 import { google } from "googleapis";
 import fs from "fs";
+import os from "os";
+import path from "path";
 import dotenv from "dotenv";
+import {getSecretGoogleCreds} from "./googleapis_nothidden_credentials.js";
 
 dotenv.config();
 const userInfo = {};
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
 const GOOGLE_REDIRECT_URI = "http://localhost:3123";
+const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } = getSecretGoogleCreds();
 
 const oauth2Client = new google.auth.OAuth2(
     GOOGLE_CLIENT_ID,
@@ -24,10 +26,12 @@ const authUrl = oauth2Client.generateAuthUrl({
     access_type: "offline",
     scope: SCOPES,
 });
+console.log("auth url: ", authUrl);
 
 const login = async () => {
     try {
-        const savedTokens = JSON.parse(fs.readFileSync('tokens.json'));
+        const savedTokens = JSON.parse(
+            fs.readFileSync(path.join(os.homedir(), ".tokens.json")));
         if (savedTokens) {
             oauth2Client.setCredentials(savedTokens);
             await getUserDetails();
@@ -38,7 +42,7 @@ const login = async () => {
 }
 
 function getUserDetails() {
-    return new Promise(async (resolve) => {
+    return new Promise(async (resolve, reject) => {
         const oauth2 = google.oauth2({
             auth: oauth2Client,
             version: "v2",
@@ -47,6 +51,7 @@ function getUserDetails() {
         await oauth2.userinfo.get((err, res) => {
             if (err) {
                 console.log(err);
+                reject(err)
                 return;
             }
             Object.assign(userInfo, res.data);
@@ -61,7 +66,7 @@ async function getAuthTokens(code) {
         // Exchange the authorization code for tokens
         const { tokens } = await oauth2Client.getToken(code);
         oauth2Client.setCredentials(tokens);
-        fs.writeFileSync('tokens.json', JSON.stringify(tokens));
+        fs.writeFileSync(path.join(os.homedir(), ".tokens.json"), JSON.stringify(tokens));
         await getUserDetails();
     } catch (error) {
         console.log("error occured");

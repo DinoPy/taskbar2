@@ -1,5 +1,6 @@
 tokens.json
 test.html
+googleapis_nothidden_credentials.js
 
 # Based on https://raw.githubusercontent.com/github/gitignore/main/Node.gitignore
 
