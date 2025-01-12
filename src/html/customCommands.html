@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <title></title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="../styles/customCommands.css" rel="stylesheet">
+    </head>
+    <body>
+        <h1> Custom Commands </h1>
+        <form class="inputs-container">
+            <input class="key-input" placeholder="Key" minlength=1 maxlength=1 />
+            <input class="url-input" placeholder="Url"/>
+            <button type="submit"> Add </button>
+        </form>
+        <p class="error-message"></p>
+        <table >
+            <thead>
+                <tr>
+                    <th> Key </th>
+                    <th> Url </th>
+                    <th>  </th>
+                </tr>
+            </thead>
+            <tbody class="commands-container">
+            </tbody>
+        </table>
+
+        <script src="../js/customCommands.js"> </script>
+    </body>
+</html>

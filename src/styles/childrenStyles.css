@@ -37,6 +37,12 @@ select {
 	resize: none;
 }
 
+select:focus,
+input:focus,
+textarea:focus {
+    outline: auto;
+}
+
 .tags-input {
     width: 70%;
 }

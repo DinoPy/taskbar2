@@ -2,7 +2,7 @@
   "name": "taskbar2",
   "main": "main.js",
   "type": "module",
-  "version": "0.7.0",
+  "version": "0.8.0",
   "peerDependencies": {
     "typescript": "^5.0.0"
   },

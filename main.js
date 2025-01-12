@@ -30,7 +30,6 @@ import { oauth2Client, login, authUrl, getAuthTokens, userInfo } from "./googlea
 
 
 export const ipc = ipcMain;
-const homeDir = os.homedir();
 let socket = {
     isConnected: true,
     instance: null
@@ -50,7 +49,11 @@ let taskWindow = null;
 let completedTasksWindow = null;
 let kenbanWindow = null;
 let helpWindow = null;
+let customCommandsWindow = null;
 let openTaskProps = null;
+
+const reserved_keys = ["Space", "n", "j", "e", "k", "c", "s", "y"];
+const commands_and_windows = {};
 
 const createWindow = () => {
     const displays = screen.getAllDisplays()[currentlySelectedScreenIndex];
@@ -84,8 +87,8 @@ const createWindow = () => {
     win.loadFile("src/index.html");
     win.title = "Task bar";
 
+
     ipc.on("close_app", (_, args) => {
-        // exportCsv(args);
         taskWindow?.close();
         completedTasksWindow?.close();
         win.close();
@@ -166,6 +169,7 @@ app
             completedTasksWindow?.webContents.openDevTools();
             kenbanWindow?.webContents.openDevTools();
             helpWindow?.webContents.openDevTools();
+            customCommandsWindow?.webContents.openDevTools();
         });
         globalShortcut.register("CommandOrControl+Shift+e", () => {
             win.webContents.send("request-current-task-data-for-edit")
@@ -174,6 +178,7 @@ app
             createKenbanWindow();
         })
         globalShortcut.register("CommandOrControl+Shift+c", () => {
+            completedTasksWindow?.close();
             createCompletedTasksPopUp();
         })
         globalShortcut.register("CommandOrControl+Shift+s", () => {
@@ -183,6 +188,7 @@ app
         globalShortcut.register("CommandOrControl+Shift+y", () => {
             win.webContents.send("complete_current_task");
         })
+
     })
     .then(async () => {
         createWindow();
@@ -270,6 +276,34 @@ const doAuthentication = () => {
 }
 
 
+const createKeyWindow = (key, url) => {
+    const cursorPosition = screen.getCursorScreenPoint();
+    const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
+    commands_and_windows[key].window = new BrowserWindow({
+        x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width * 0.1),
+        y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.1),
+        height: Math.floor(activeDisplay.bounds.height * 0.8),
+        width: Math.floor(activeDisplay.bounds.width * 0.8),
+        minimizable: true,
+        resizable: true,
+        show: true,
+        frame: true,
+
+        webPreferences: {
+            webgl: true,
+            nodeIntegration: true,
+            contextIsolation: false,
+            devTools: true,
+        },
+    });
+    commands_and_windows[key].window.loadURL(url)
+
+    commands_and_windows[key].window.on("close", () => {
+        commands_and_windows[key].window = null;
+    });
+}
+
+
 process.on('uncaughtException', (err) => {
   console.error('Unhandled Exception:', err);
 });
@@ -289,6 +323,11 @@ powerMonitor.on("suspend", () => {
 })
 powerMonitor.on("resume", () => {
     console.log("system resumed");
+    socket.instance.emit("request_hard_refresh", "",  (data) => {
+        CATEGORIES = data.categories.split(",");
+        if (win && win.webContents)
+            win.webContents.send("refresh_tasks", data.tasks);
+    })
 })
 
 // app.on("activate", () => {
@@ -369,6 +408,12 @@ function createContextMenu() {
         type: "checkbox",
         checked: win.isAlwaysOnTop(),
         click: () => win.setAlwaysOnTop(!win.isAlwaysOnTop())
+    }))
+
+    menu.append(new MenuItem({
+        label: "Custom Commands",
+        toolTip: "Open settings window for custom commands",
+        click: () => !customCommandsWindow && createCustomCommandsWindow()
     }))
 
     menu.append(new MenuItem({
@@ -537,17 +582,19 @@ function createEditWindow(props) {
     });
 
     // shows the window when ready event is triggered.
-    taskWindow.on("ready-to-show", () => { });
+    taskWindow.on("ready-to-show", () => {taskWindow.focus() });
 
     // removes from memory the value of the taskWindow that was closed.
     taskWindow.on("close", () => {
         taskWindow = null;
+        openTaskProps = null;
     });
 }
 
+let from_completed = false;
+let from_completed_data = {start_date: "", end_date: "", tags: []};
 // ensures the communication between the children windows and the main task window.
 ipc.on("edit-submission-event-from-edit-popup", (e, { categories, ...data }) => {
-    console.log(JSON.stringify(data));
     win.webContents.send("msg-redirected-to-parent", data);
     // send an event to the server to update the categories of the user if they changed
     if (JSON.stringify(categories) !== JSON.stringify(CATEGORIES)) {
@@ -558,9 +605,20 @@ ipc.on("edit-submission-event-from-edit-popup", (e, { categories, ...data }) => 
     if (taskWindow) taskWindow.close();
     openTaskProps = null;
 
+    if (from_completed && completedTasksWindow) {
+        console.log("triggering refresh for tasks")
+        setTimeout(() => {
+            socket.instance.emit("get_completed_tasks", JSON.stringify(from_completed_data), (tasks) => {
+                completedTasksWindow.webContents.send("completed-tasks-list", tasks);
+            })
+        }, 500)
+        from_completed = false;
+    }
+
 });
 
 function createCompletedTasksPopUp() {
+    from_completed_data = {start_date: "", end_date: "", tags: []}
     try {
         const cursorPosition = screen.getCursorScreenPoint();
         const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
@@ -590,7 +648,7 @@ function createCompletedTasksPopUp() {
 
         completedTasksWindow.webContents.on("did-finish-load", () => {
             socket.instance.emit("get_completed_tasks",
-                JSON.stringify({start_date: "", end_date: ""}),
+                JSON.stringify(from_completed_data),
                 (data) => {
                 completedTasksWindow.webContents.send("completed-tasks-list", data);
             })
@@ -613,6 +671,7 @@ function createCompletedTasksPopUp() {
 }
 
 ipc.on("completed_task_date_updated", (e, data) => {
+    from_completed_data = data;
     socket.instance.emit("get_completed_tasks", JSON.stringify(data), (tasks) => {
         completedTasksWindow.webContents.send("completed-tasks-list", tasks);
     })
@@ -652,6 +711,83 @@ function createHelpWindow () {
     })
 }
 
+
+function createCustomCommandsWindow () {
+    const cursorPosition = screen.getCursorScreenPoint();
+    const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
+    try {
+        customCommandsWindow = new BrowserWindow({
+            x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 800/2),
+            y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.2 ),
+            width: 800,
+            minHeight: 1000,
+            minimizable: false,
+            resizable: false,
+            modal: true,
+            frame: true,
+            alwaysOnTop: true,
+            webPreferences: {
+                webgl: true,
+                nodeIntegration: true,
+                contextIsolation: false,
+                devTools: true,
+            },
+        });
+        customCommandsWindow.setBackgroundColor = "#1b1d23";
+        customCommandsWindow.loadFile("./src/html/customCommands.html");
+
+        customCommandsWindow.webContents.on("did-finish-load", () => {
+            const keyAndCommands = {};
+            for (let c in commands_and_windows) {
+                keyAndCommands[c] = {};
+                keyAndCommands[c]["key"] = commands_and_windows[c].key
+                keyAndCommands[c]["url"] = commands_and_windows[c].url
+            }
+            customCommandsWindow.webContents.send("data-from-parent",
+                {commands: keyAndCommands, reserved_keys});
+        });
+    } catch (e) {
+        console.error(e);
+    }
+
+    customCommandsWindow.on("close", () => {
+        customCommandsWindow = null;
+    })
+}
+
+ipc.on("new_command_added", (_, data) => {
+    console.log(JSON.stringify(data));
+    commands_and_windows[data.key] = {
+        window: null,
+        ...data
+    }
+
+    globalShortcut.register(`CommandOrControl+Shift+${data.key}`, () => {
+        createKeyWindow(data.key, data.url);
+    })
+
+    const keyAndCommands = {};
+    for (let c in commands_and_windows) {
+        keyAndCommands[c] = {};
+        keyAndCommands[c]["key"] = commands_and_windows[c].key
+        keyAndCommands[c]["url"] = commands_and_windows[c].url
+    }
+    socket.instance.emit("new_command_added", JSON.stringify(keyAndCommands));
+})
+
+ipc.on("command_removed", (_, data) => {
+    commands_and_windows[data.key]?.window?.close();
+    globalShortcut.unregister(`CommandOrControl+Shift+${data.key}`)
+    delete commands_and_windows[data.key];
+
+    const keyAndCommands = {};
+    for (let c in commands_and_windows) {
+        keyAndCommands[c] = {};
+        keyAndCommands[c]["key"] = commands_and_windows[c].key
+        keyAndCommands[c]["url"] = commands_and_windows[c].url
+    }
+    socket.instance.emit("command_removed", JSON.stringify(keyAndCommands));
+})
 
 
 function deleteTask(props) {
@@ -701,6 +837,13 @@ ipc.on("task_edit", async(_, data) => {
     socket.instance.emit("task_edit", JSON.stringify(data), (response) => {
         console.log(JSON.stringify(response));
     });
+
+    if (from_completed && completedTasksWindow) {
+        socket.instance.emit("get_completed_tasks", JSON.stringify(from_completed_data), (tasks) => {
+            completedTasksWindow.webContents.send("completed-tasks-list", tasks);
+        })
+        from_completed = false;
+    }
 })
 
 ipc.on("task_delete", (_, data) => {
@@ -710,6 +853,14 @@ ipc.on("task_delete", (_, data) => {
 
 ipc.on("toggle_current_task_edit", (_, data) => {
     console.log(JSON.stringify(data))
+    taskWindow?.close();
+    createEditWindow({ ...data, categories: CATEGORIES });
+    taskWindow?.focus();
+
+})
+
+ipc.on("toggle_given_task_edit", (_, data) => {
+    from_completed = true;
     taskWindow?.close();
     createEditWindow({ ...data, categories: CATEGORIES });
     taskWindow?.focus();
@@ -750,6 +901,39 @@ function socketHandlers(socket) {
             win.webContents.send("refresh_tasks", data.tasks)
     })
 
+    socket.on("related_added_command", (data) => {
+        data = JSON.parse(data);
+        for (let key in data) {
+            if (commands_and_windows.hasOwnProperty(key))
+                continue;
+
+            commands_and_windows[key] = {
+                window: null,
+                ...data[key]
+            }
+
+            globalShortcut.register(`CommandOrControl+Shift+${key}`, () => {
+                createKeyWindow(key, data[key].url);
+            })
+        }
+    })
+
+    socket.on("related_removed_command", (data) => {
+        data = JSON.parse(data);
+        for (let key in commands_and_windows) {
+            if (data.hasOwnProperty(key))
+                continue;
+
+            globalShortcut.unregister(`CommandOrControl+Shift+${key}`);
+            commands_and_windows[key]?.windows?.close();
+            delete commands_and_windows[key];
+        }
+    })
+
+    socket.on("related_updated_categories", (data) => {
+        CATEGORIES = data;
+    })
+
 }
 
 function handleSocketConnect() {
@@ -775,6 +959,20 @@ function setUpTasks(data) {
     if (win && win.webContents) {
         win.webContents.send("resume-tasks", data.tasks)
     }
+
+    const key_commands = JSON.parse(data.key_commands);
+    Object.keys(key_commands).forEach(command => {
+        if (reserved_keys.includes(command)) return;
+        commands_and_windows[command] = {
+            window: null,
+            key: command,
+            url: key_commands[command].url
+        }
+
+        globalShortcut.register(`CommandOrControl+Shift+${command}`, () => {
+            createKeyWindow(command, key_commands[command].url);
+        })
+    })
 }
 
 export { handleSocketConnect, handleSocketDisconnect, setUpTasks };

@@ -128,6 +128,7 @@ ipc.on("resume-tasks", (e, data) => {
 })
 
 ipc.on("refresh_tasks", (e, data) => {
+    console.log("refresh tasks triggered", JSON.stringify(data));
     for (let t in tasks) {
         tasks[t].removeFocus(true);
         tasks[t].destroySelfFromDOM();
@@ -189,15 +190,26 @@ ipc.on("related_task_edited", (e, data) => {
 // ---------- CRUD HELPERS ----------- //
 
 ipc.on('msg-redirected-to-parent', (e, data) => {
-    lastCategorySelected =
-        data.category !== tasks[data.id].getCategory()
-            ? data.category
-            : lastCategorySelected;
+    if (tasks.hasOwnProperty(data.id)) {
+        lastCategorySelected =
+            data.category !== tasks[data.id].getCategory()
+                ? data.category
+                : lastCategorySelected;
 
-    tasks[data.id].updateTitle(data.title);
-    tasks[data.id].updateDescription(data.description);
-    tasks[data.id].updateTags(data.tags);
-    tasks[data.id].updateCategory(data.category);
+        tasks[data.id].updateTitle(data.title);
+        tasks[data.id].updateDescription(data.description);
+        tasks[data.id].updateTags(data.tags);
+        tasks[data.id].updateCategory(data.category);
+    } else {
+        ipc.send("task_edit", {
+            category: data.category,
+            title: data.title,
+            description: data.description,
+            tags: data.tags,
+            id: data.id,
+            last_modified_at: +new Date(),
+        })
+    }
 });
 
 ipc.on('deleteTask', (e, data) => {
@@ -249,6 +261,9 @@ ipc.on("complete_current_task", () => {
         tasks[t].removeFocus();
         tasks[t].addToCompletedTaskList();
         tasks[t].destroySelfFromDOM();
+        delete tasks[t];
+
+        taskIndexUpdater(tasks);
 
         if (!isSocketConnected)
             tasks_compl_or_del_while_nocon.push(data.id);
@@ -445,8 +460,8 @@ function addTask(title) {
 ipc.on('addTask', () => handleAddTask());
 
 ipc.on('addEmergencyTask', () => {
-    const newId = addTask('To be replaced');
     Object.keys(tasks).forEach(t => tasks[t].removeFocus());
+    const newId = addTask('To be replaced');
     tasks[newId].addFocus();
 });
 
