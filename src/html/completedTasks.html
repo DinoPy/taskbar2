@@ -13,20 +13,29 @@
         <img id='closeBtn' src="../images/close.svg" />
         <h1> Completed Tasks </h1>
         <div class='generalInfo'>
-            <div class="datesContainer">
-                <input class="dateInput" id="startDate" type="date" />
-                <input class="dateInput" id="endDate" type="date" />
+            <div class="filterContainer">
+                <div class="filter-upper-half ">
+                    <form class="search-container">
+                        <input class="search-input" type="text" id="search-input" name="search"></input>
+                        <button class="btn seach-button" id="seach-button"> Search </button>
+                    </form>
+                    <select type="text" id="category" name="category" value="none"> </select>
+                    <input class="dateInput" id="startDate" type="date" />
+                    <input class="dateInput" id="endDate" type="date" />
+                </div>
+                <div class="statsCotainer">
+                    <p class="tasksSoFar" data-tasks> Tasks: </p>
+                    <p class="totalDuration" data-duration> Total duration: </p>
+                </div>
+            </div>
+            <div class="tag-search-container">
                 <form class="tags-container">
                     <input class="tags-input" type="text" id="tags-input" name="tags"></input>
                     <button class="btn tags-button" id="tags-button"> Add </button>
                 </form>
             </div>
-            <div class="statsCotainer">
-                <p class="tasksSoFar" data-tasks> Tasks so far: </p>
-                <p class="totalDuration" data-duration> Total duration: </p>
-            </div>
+            <div class="tags-list-container"> </div>
         </div>
-        <div class="tags-list-container"> </div>
     </div>
     <div class="tableContainer"> </div>
 </body>

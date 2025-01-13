@@ -92,12 +92,9 @@ td {
 
 .generalInfo {
     width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
 }
 
-.dateInput {
+input, select {
     padding: .5em;
     margin: 0 10px;
     background-color: #292c35;
@@ -106,11 +103,26 @@ td {
     color-scheme: dark;
 }
 
-.datesContainer {
+.filterContainer {
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    margin-bottom: 10px;
 }
 
+.search-container {
+    width: fit-content;
+}
+
+.filter-upper-half {
+    display: flex;
+}
+
+.tag-search-container {
+    display: flex;
+    gap: 1em;
+}
 
 .tasksSoFar::after {
     content: attr(data-tasks)
@@ -137,6 +149,7 @@ td {
 }
 
 .tags-list-container {
+    margin-top: 1em;
     display: flex;
     gap: 10px;
     flex-wrap: wrap;
@@ -150,8 +163,8 @@ td {
     cursor:pointer;
 }
 
-.btn.tags-button {
-    width: 20%;
+button {
+    max-width: fit-content;
 	color: #252525;
 	border: none;
 	background-color: #0566cf;

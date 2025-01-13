@@ -1,4 +1,3 @@
-const { webContents } = require('electron');
 const {ipcRenderer} = require('electron/renderer');
 const ipc = ipcRenderer;
 
@@ -8,6 +7,9 @@ const tagsInput = document.getElementById("tags-input");
 const tagsButton = document.getElementById("tags-button");
 const tagsListContainer = document.querySelector(".tags-list-container");
 const tagsContainer = document.querySelector(".tags-container");
+const searchContainer = document.querySelector(".search-container");
+const searchInput = document.getElementById("search-input")
+const categorySelect = document.getElementById("category");
 
 let TABLEEL;
 let tags = [];
@@ -15,6 +17,9 @@ const dates = {
     start_date: "",
     end_date: ""
 }
+let categories = [];
+let searchQuery = "";
+let selectedCategory = "";
 
 const createTableElement = () => {
     TABLEEL = document.createElement('table');
@@ -133,6 +138,32 @@ const updateDataAttribute = (data) => {
 
 }
 
+const populateCategoryOptions = () => {
+	let categoryOptions = `<option value=""> --- </option>`;
+
+	for (let cat of categories) {
+		let categoryEl = `<option value="${cat}">${cat}</option>`;
+		categoryOptions += categoryEl;
+	}
+
+    categorySelect.innerHTML = categoryOptions;
+}
+
+searchContainer.addEventListener("submit", (e) => {
+    e.preventDefault();
+    searchQuery = searchInput.value;
+
+    ipc.send("completed_task_date_updated",
+        {...dates, tags, search_query:searchQuery, category: selectedCategory})
+})
+
+categorySelect.addEventListener("change", (e) => {
+    e.preventDefault();
+    selectedCategory = e.target.value;
+    ipc.send("completed_task_date_updated",
+        {...dates, tags, search_query:searchQuery, category: selectedCategory})
+})
+
 const createTagElement = (tag) => {
     const p = document.createElement("p");
     p.textContent = tag;
@@ -142,7 +173,8 @@ const createTagElement = (tag) => {
     p.addEventListener("click", (e) => {
         tags = tags.filter((t) => t !== tag);
         e.target.remove();
-        ipc.send("completed_task_date_updated", {...dates, tags})
+        ipc.send("completed_task_date_updated",
+            {...dates, tags, search_query:searchQuery, category: selectedCategory})
     })
 }
 
@@ -159,18 +191,21 @@ tagsButton.addEventListener("click", (e) => {
     tags.push(tagsInput.value);
     createTagElement(tagsInput.value);
     tagsInput.value = "";
-    ipc.send("completed_task_date_updated", {...dates, tags})
+    ipc.send("completed_task_date_updated",
+        {...dates, tags, search_query:searchQuery, category: selectedCategory})
 })
 
 
 startDateInputEl.addEventListener("change", (e) => {
     dates.start_date = e.target.value;
-    ipc.send("completed_task_date_updated", {...dates, tags})
+    ipc.send("completed_task_date_updated",
+        {...dates, tags, search_query:searchQuery, category: selectedCategory})
 })
 
 endDateInputEl.addEventListener("change", (e) => {
     dates.end_date = e.target.value;
-    ipc.send("completed_task_date_updated", {...dates, tags})
+    ipc.send("completed_task_date_updated",
+        {...dates, tags, search_query:searchQuery, category: selectedCategory})
 })
 
 
@@ -178,8 +213,12 @@ ipc.on('completed-tasks-list', (_,data) => {
     if (TABLEEL)
         TABLEEL.remove();
     const tableBody = createTableElement();
-    createTaskListElements(data, tableBody);
-    updateDataAttribute(data);
+    createTaskListElements(data.tasks, tableBody);
+    updateDataAttribute(data.tasks);
+
+    categories = data.categories;
+    if (!selectedCategory)
+        populateCategoryOptions();
 })
 
 document.getElementById('closeBtn').addEventListener('click',() => {

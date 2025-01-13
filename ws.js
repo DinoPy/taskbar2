@@ -5,7 +5,7 @@ let socket = null;
 let reconnectInterval = 1000;
 let timeout = null;
 
-let stage = "developement";
+let stage = "production";
 
 function socketConnect(userInfo) {
     if (socket) {

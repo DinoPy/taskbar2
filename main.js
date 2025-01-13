@@ -6,8 +6,8 @@ const logFile = fs.createWriteStream(path.join(os.homedir(), "app.log"), { flags
 const logStdout = process.stdout;
 
 console.log = function(...args) {
-  logFile.write(new Date().toISOString() + ' ' + args.join(' ') + '\n');
-  logStdout.write(new Date().toISOString() + ' ' + args.join(' ') + '\n');
+    logFile.write(new Date().toISOString() + ' ' + args.join(' ') + '\n');
+    logStdout.write(new Date().toISOString() + ' ' + args.join(' ') + '\n');
 };
 
 console.error = console.log; // Redirect errors as well
@@ -52,7 +52,7 @@ let helpWindow = null;
 let customCommandsWindow = null;
 let openTaskProps = null;
 
-const reserved_keys = ["Space", "n", "j", "e", "k", "c", "s", "y"];
+const reserved_keys = ["Space", "n", "j", "e", "k", "c", "s", "y", "z"];
 const commands_and_windows = {};
 
 const createWindow = () => {
@@ -188,6 +188,9 @@ app
         globalShortcut.register("CommandOrControl+Shift+y", () => {
             win.webContents.send("complete_current_task");
         })
+        globalShortcut.register("CommandOrControl+Shift+z", () => {
+            !customCommandsWindow && createCustomCommandsWindow()
+        })
 
     })
     .then(async () => {
@@ -305,11 +308,11 @@ const createKeyWindow = (key, url) => {
 
 
 process.on('uncaughtException', (err) => {
-  console.error('Unhandled Exception:', err);
+    console.error('Unhandled Exception:', err);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-  console.error('Unhandled Rejection:', reason, promise);
+    console.error('Unhandled Rejection:', reason, promise);
 });
 
 // if all windows are close then quit app.
@@ -323,7 +326,7 @@ powerMonitor.on("suspend", () => {
 })
 powerMonitor.on("resume", () => {
     console.log("system resumed");
-    socket.instance.emit("request_hard_refresh", "",  (data) => {
+    socket.instance.emit("request_hard_refresh", "", (data) => {
         CATEGORIES = data.categories.split(",");
         if (win && win.webContents)
             win.webContents.send("refresh_tasks", data.tasks);
@@ -543,8 +546,8 @@ function createEditWindow(props) {
     const cursorPosition = screen.getCursorScreenPoint();
     const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
     taskWindow = new BrowserWindow({
-        x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 400/2),
-        y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.2 ),
+        x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 400 / 2),
+        y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.2),
         width: 400,
         minHeight: 200,
         minimizable: false,
@@ -582,7 +585,7 @@ function createEditWindow(props) {
     });
 
     // shows the window when ready event is triggered.
-    taskWindow.on("ready-to-show", () => {taskWindow.focus() });
+    taskWindow.on("ready-to-show", () => { taskWindow.focus() });
 
     // removes from memory the value of the taskWindow that was closed.
     taskWindow.on("close", () => {
@@ -592,7 +595,7 @@ function createEditWindow(props) {
 }
 
 let from_completed = false;
-let from_completed_data = {start_date: "", end_date: "", tags: []};
+let from_completed_data = { start_date: "", end_date: "", tags: [], category: "", search_query: "" };
 // ensures the communication between the children windows and the main task window.
 ipc.on("edit-submission-event-from-edit-popup", (e, { categories, ...data }) => {
     win.webContents.send("msg-redirected-to-parent", data);
@@ -609,7 +612,11 @@ ipc.on("edit-submission-event-from-edit-popup", (e, { categories, ...data }) => 
         console.log("triggering refresh for tasks")
         setTimeout(() => {
             socket.instance.emit("get_completed_tasks", JSON.stringify(from_completed_data), (tasks) => {
-                completedTasksWindow.webContents.send("completed-tasks-list", tasks);
+                completedTasksWindow.webContents.send("completed-tasks-list",
+                    {
+                        tasks,
+                        categories: CATEGORIES
+                    });
             })
         }, 500)
         from_completed = false;
@@ -618,15 +625,15 @@ ipc.on("edit-submission-event-from-edit-popup", (e, { categories, ...data }) => 
 });
 
 function createCompletedTasksPopUp() {
-    from_completed_data = {start_date: "", end_date: "", tags: []}
+    from_completed_data = { start_date: "", end_date: "", tags: [], category: "", search_query: "" }
     try {
         const cursorPosition = screen.getCursorScreenPoint();
         const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
         completedTasksWindow = new BrowserWindow({
-            x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 1000/2),
-            y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.2 ),
+            x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 1000 / 2),
+            y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.15),
             width: 1000,
-            minHeight: 1000,
+            height: 650,
             minimizable: false,
             resizable: false,
             modal: true,
@@ -650,8 +657,12 @@ function createCompletedTasksPopUp() {
             socket.instance.emit("get_completed_tasks",
                 JSON.stringify(from_completed_data),
                 (data) => {
-                completedTasksWindow.webContents.send("completed-tasks-list", data);
-            })
+                    completedTasksWindow.webContents.send("completed-tasks-list",
+                        {
+                            tasks: data,
+                            categories: CATEGORIES,
+                        });
+                })
         });
 
 
@@ -671,20 +682,26 @@ function createCompletedTasksPopUp() {
 }
 
 ipc.on("completed_task_date_updated", (e, data) => {
+    console.log(JSON.stringify(data));
     from_completed_data = data;
     socket.instance.emit("get_completed_tasks", JSON.stringify(data), (tasks) => {
-        completedTasksWindow.webContents.send("completed-tasks-list", tasks);
+        completedTasksWindow.webContents.send("completed-tasks-list",
+            {
+                tasks: tasks,
+                categories: CATEGORIES,
+            }
+        );
     })
 })
 
 
-function createHelpWindow () {
+function createHelpWindow() {
     const cursorPosition = screen.getCursorScreenPoint();
     const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
     try {
         helpWindow = new BrowserWindow({
-            x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 800/2),
-            y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.2 ),
+            x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 800 / 2),
+            y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.2),
             width: 800,
             minHeight: 1000,
             minimizable: false,
@@ -712,13 +729,13 @@ function createHelpWindow () {
 }
 
 
-function createCustomCommandsWindow () {
+function createCustomCommandsWindow() {
     const cursorPosition = screen.getCursorScreenPoint();
     const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
     try {
         customCommandsWindow = new BrowserWindow({
-            x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 800/2),
-            y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.2 ),
+            x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 800 / 2),
+            y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.2),
             width: 800,
             minHeight: 1000,
             minimizable: false,
@@ -744,7 +761,7 @@ function createCustomCommandsWindow () {
                 keyAndCommands[c]["url"] = commands_and_windows[c].url
             }
             customCommandsWindow.webContents.send("data-from-parent",
-                {commands: keyAndCommands, reserved_keys});
+                { commands: keyAndCommands, reserved_keys });
         });
     } catch (e) {
         console.error(e);
@@ -810,7 +827,7 @@ ipc.on("task_complete", async (_, data) => {
             completed_at: data.completed_at,
             last_modified_at: +new Date()
         }), (response) => {
-    })
+        })
     } catch (error) {
         win.webContents.send("post-task-error", JSON.stringify(error));
     }
@@ -832,7 +849,7 @@ ipc.on("task_toggle", (_, data) => {
     });
 })
 
-ipc.on("task_edit", async(_, data) => {
+ipc.on("task_edit", async (_, data) => {
     console.log(`Task ${data.id} is being edited`);
     socket.instance.emit("task_edit", JSON.stringify(data), (response) => {
         console.log(JSON.stringify(response));
@@ -840,7 +857,12 @@ ipc.on("task_edit", async(_, data) => {
 
     if (from_completed && completedTasksWindow) {
         socket.instance.emit("get_completed_tasks", JSON.stringify(from_completed_data), (tasks) => {
-            completedTasksWindow.webContents.send("completed-tasks-list", tasks);
+            completedTasksWindow.webContents.send("completed-tasks-list",
+                {
+                    tasks: tasks,
+                    categories: CATEGORIES,
+                }
+            );
         })
         from_completed = false;
     }
