@@ -507,6 +507,8 @@ const handleTaskChangeSearch = () => {
         const taskKeys = Object.keys(tasks);
         if (index > 0 && index <= taskKeys.length) {
             for (let k of taskKeys) {
+                if (k === taskKeys[index-1])
+                    continue;
                 tasks[k].removeFocus();
             }
             tasks[taskKeys[index-1]].addFocus();
