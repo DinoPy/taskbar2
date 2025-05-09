@@ -40,9 +40,9 @@ ipc.on('data-from-parent', (e, data) => {
 	populateCategoryOptions();
 	categorySelect.value = data.category;
 
-    if (data.tags === "")
+    if (data.tags.length === 0)
         return;
-    tags = data.tags.split(",");
+    tags = data.tags;
     populateTags();
 });
 
@@ -143,7 +143,7 @@ function handleSubmit() {
         description: parseString(descriptionInput.value),
         id: ID,
         categories: categories.filter((c) => c !== 'none'),
-        tags: tags.join(",")
+        tags: tags,
     });
 }
 

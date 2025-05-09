@@ -24,13 +24,13 @@ import {
 	MenuItem,
 } from "electron";
 import electronLocalshortcut from "electron-localshortcut";
-import { socketConnect } from "./ws.js";
+import { socketConnect, sendEvent } from "./ws.js";
 import { oauth2Client, login, authUrl, getAuthTokens, userInfo } from "./googleapis.js";
 
 
 export const ipc = ipcMain;
-let socket = {
-	isConnected: true,
+export let socket = {
+	manuallyClosed: false,
 	instance: null
 };
 
@@ -201,10 +201,7 @@ app
 
 			if (userInfo.hasOwnProperty("id")) {
 				win.webContents.send("user-logged-in", userInfo);
-				socket.instance = socketConnect(userInfo);
-				if (!socket.instance) socket.isConnected = false;
-
-				socketHandlers(socket.instance)
+				socketConnect(userInfo);
 			}
 
 			console.log("token: ", JSON.stringify(token));
@@ -269,10 +266,7 @@ const doAuthentication = () => {
 
 			if (userInfo.hasOwnProperty("id")) {
 				win.webContents.send("user-logged-in", userInfo);
-				socket.instance = socketConnect(userInfo);
-				if (!socket.instance) socket.isConnected = false;
-
-				socketHandlers(socket.instance)
+				socketConnect(userInfo);
 			}
 		});
 }
@@ -325,11 +319,7 @@ powerMonitor.on("suspend", () => {
 })
 powerMonitor.on("resume", () => {
 	console.log("system resumed");
-	socket.instance.emit("request_hard_refresh", "", (data) => {
-		CATEGORIES = data.categories.split(",");
-		if (win && win.webContents)
-			win.webContents.send("refresh_tasks", data.tasks);
-	})
+	sendEvent("request_hard_refresh", "")
 })
 
 // app.on("activate", () => {
@@ -493,13 +483,14 @@ function createLoginContextMenu(args) {
 			label: isLoggedIn ? "Sign Out" : "Sign In",
 			click: () => {
 				if (isLoggedIn) {
-					socket.instance.disconnect();
+					socket.instance.close();
 					socket.instance = null;
 					Object.keys(userInfo).forEach(key => delete userInfo[key]);
 					fs.unlink(path.join(os.homedir(), ".tokens.json"), (e) => {
 						console.log(e);
 					});
 					win.webContents.send("user-logged-out", userInfo);
+					socket.manuallyClosed = true;
 				} else {
 					doAuthentication();
 				}
@@ -594,13 +585,13 @@ function createEditWindow(props) {
 }
 
 let from_completed = false;
-let from_completed_data = { start_date: "", end_date: "", tags: [], category: "", search_query: "" };
+let from_completed_data = { start_date: null, end_date: null, tags: [], category: null, search_query: null };
 // ensures the communication between the children windows and the main task window.
 ipc.on("edit-submission-event-from-edit-popup", (e, { categories, ...data }) => {
 	win.webContents.send("msg-redirected-to-parent", data);
 	// send an event to the server to update the categories of the user if they changed
 	if (JSON.stringify(categories) !== JSON.stringify(CATEGORIES)) {
-		socket.instance.emit("user_updated_categories", JSON.stringify(categories));
+		sendEvent("user_updated_categories", categories);
 	}
 	CATEGORIES = categories;
 
@@ -610,21 +601,15 @@ ipc.on("edit-submission-event-from-edit-popup", (e, { categories, ...data }) => 
 	if (from_completed && completedTasksWindow) {
 		console.log("triggering refresh for tasks")
 		setTimeout(() => {
-			socket.instance.emit("get_completed_tasks", JSON.stringify(from_completed_data), (tasks) => {
-				completedTasksWindow.webContents.send("completed-tasks-list",
-					{
-						tasks,
-						categories: CATEGORIES
-					});
-			})
-		}, 500)
+			sendEvent("get_completed_tasks", from_completed_data);
+		}, 250)
 		from_completed = false;
 	}
 
 });
 
 function createCompletedTasksPopUp() {
-	from_completed_data = { start_date: "", end_date: "", tags: [], category: "", search_query: "" }
+	from_completed_data = { start_date: null, end_date: null, tags: [], category: null, search_query: null }
 	try {
 		const cursorPosition = screen.getCursorScreenPoint();
 		const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
@@ -653,16 +638,8 @@ function createCompletedTasksPopUp() {
 
 
 		completedTasksWindow.webContents.on("did-finish-load", () => {
-			socket.instance.emit("get_completed_tasks",
-				JSON.stringify(from_completed_data),
-				(data) => {
-					completedTasksWindow.webContents.send("completed-tasks-list",
-						{
-							tasks: data,
-							categories: CATEGORIES,
-						});
-				})
-		});
+			sendEvent("get_completed_tasks", from_completed_data);
+		})
 
 
 		completedTasksWindow.webContents.on("dom-ready", async () => {
@@ -681,16 +658,8 @@ function createCompletedTasksPopUp() {
 }
 
 ipc.on("completed_task_date_updated", (e, data) => {
-	console.log(JSON.stringify(data));
 	from_completed_data = data;
-	socket.instance.emit("get_completed_tasks", JSON.stringify(data), (tasks) => {
-		completedTasksWindow.webContents.send("completed-tasks-list",
-			{
-				tasks: tasks,
-				categories: CATEGORIES,
-			}
-		);
-	})
+	sendEvent("get_completed_tasks", data)
 })
 
 
@@ -788,7 +757,7 @@ ipc.on("new_command_added", (_, data) => {
 		keyAndCommands[c]["key"] = commands_and_windows[c].key
 		keyAndCommands[c]["url"] = commands_and_windows[c].url
 	}
-	socket.instance.emit("new_command_added", JSON.stringify(keyAndCommands));
+	sendEvent("new_command_added", JSON.stringify(keyAndCommands));
 })
 
 ipc.on("command_removed", (_, data) => {
@@ -802,7 +771,7 @@ ipc.on("command_removed", (_, data) => {
 		keyAndCommands[c]["key"] = commands_and_windows[c].key
 		keyAndCommands[c]["url"] = commands_and_windows[c].url
 	}
-	socket.instance.emit("command_removed", JSON.stringify(keyAndCommands));
+	sendEvent("command_removed", JSON.stringify(keyAndCommands));
 })
 
 
@@ -820,12 +789,11 @@ ipc.on("task_complete", async (_, data) => {
 		// TODO: Re enable posting to sheets.
 		// await postTaskToSheets(data);
 		console.log(`Task ${data.id} is completed`);
-		socket.instance.emit("task_completed", JSON.stringify({
+		sendEvent("task_completed", {
 			id: data.id,
 			duration: data.duration,
 			completed_at: data.completed_at,
 			last_modified_at: +new Date()
-		}), (response) => {
 		})
 	} catch (error) {
 		win.webContents.send("post-task-error", JSON.stringify(error));
@@ -834,46 +802,32 @@ ipc.on("task_complete", async (_, data) => {
 
 
 ipc.on("task_create", async (_, data) => {
-	// TODO: handle socket disconnect and retries
+	console.log(data);
 	console.log(`Task ${data.id} is being created`)
-	socket.instance.emit("task_create", JSON.stringify(data), (response) => {
-		console.log(JSON.stringify(response));
-	});
+	sendEvent("task_create", data);
+	// TODO: Add event for task_create_response
 })
 
 ipc.on("task_toggle", (_, data) => {
 	console.log(`Task ${data.uuid} is toggled ${data.is_active}`);
-	socket.instance.emit("task_toggle", JSON.stringify(data), (response) => {
-		console.log(JSON.stringify(response));
-	});
+	console.log(data)
+	sendEvent("task_toggle", data);
 })
+
 
 ipc.on("task_edit", async (_, data) => {
 	console.log(`Task ${data.id} is being edited`);
-	socket.instance.emit("task_edit", JSON.stringify(data), (response) => {
-		console.log(JSON.stringify(response));
-	});
-
-	if (from_completed && completedTasksWindow) {
-		socket.instance.emit("get_completed_tasks", JSON.stringify(from_completed_data), (tasks) => {
-			completedTasksWindow.webContents.send("completed-tasks-list",
-				{
-					tasks: tasks,
-					categories: CATEGORIES,
-				}
-			);
-		})
-		from_completed = false;
-	}
+	sendEvent("task_edit", data);
+	from_completed = false;
 })
 
 ipc.on("task_delete", (_, data) => {
 	console.log(`Task ${data.id} id deleted`);
-	socket.instance.emit("task_delete", JSON.stringify(data));
+	sendEvent("task_delete", data);
 })
 
 ipc.on("toggle_current_task_edit", (_, data) => {
-	console.log(JSON.stringify(data))
+	console.log(data)
 	taskWindow?.close();
 	createEditWindow({ ...data, categories: CATEGORIES });
 	taskWindow?.focus();
@@ -900,85 +854,85 @@ ipc.on("close-completed-list-window", () => {
 	completedTasksWindow = null;
 });
 
-function socketHandlers(socket) {
-	socket.on("new_task_created", data => {
-		win.webContents.send("new_task_from_relative", JSON.parse(data));
-	})
 
-	socket.on("related_task_toggled", data => {
-		win.webContents.send("related_task_toggled", JSON.parse(data));
-	})
 
-	socket.on("related_task_deleted", data => {
-		win.webContents.send("related_task_deleted", JSON.parse(data));
-	})
 
-	socket.on("related_task_edited", data => {
-		win.webContents.send("related_task_edited", JSON.parse(data));
-	})
-
-	socket.on("tasks_refresher", data => {
-		if (win && win.webContents)
-			win.webContents.send("refresh_tasks", data.tasks)
-	})
-
-	socket.on("related_added_command", (data) => {
-		data = JSON.parse(data);
-		for (let key in data) {
-			if (commands_and_windows.hasOwnProperty(key))
-				continue;
-
-			commands_and_windows[key] = {
-				window: null,
-				...data[key]
-			}
-
-			globalShortcut.register(`CommandOrControl+Shift+${key}`, () => {
-				createKeyWindow(key, data[key].url);
-			})
-		}
-	})
-
-	socket.on("related_removed_command", (data) => {
-		data = JSON.parse(data);
-		for (let key in commands_and_windows) {
-			if (data.hasOwnProperty(key))
-				continue;
-
-			globalShortcut.unregister(`CommandOrControl+Shift+${key}`);
-			commands_and_windows[key]?.windows?.close();
-			delete commands_and_windows[key];
-		}
-	})
-
-	socket.on("related_updated_categories", (data) => {
-		CATEGORIES = data;
-	})
-
+const WSOnNewTaskCreated = (data) => {
+	win.webContents.send("new_task_from_relative", data);
 }
 
-function handleSocketConnect() {
-	socket.isConnected = true;
+const WSOnRelatedTaskToggled = (data) => {
+	win.webContents.send("related_task_toggled", data);
+}
+
+const WSOnRelatedTaskDeleted = (data) => {
+	win.webContents.send("related_task_deleted", data);
+}
+
+const WSOnRelatedTaskEdited = (data) => {
+	win.webContents.send("related_task_edited", data);
+}
+
+const WSOnTaskRefresher = (data) => {
 	if (win && win.webContents)
+		win.webContents.send("refresh_tasks", data.tasks)
+}
+
+const WSOnRelatedAddedCommand = (data) => {
+	data = JSON.parse(data);
+	for (let key in data) {
+		if (commands_and_windows.hasOwnProperty(key))
+			continue;
+
+		commands_and_windows[key] = {
+			window: null,
+			...data[key]
+		}
+
+		globalShortcut.register(`CommandOrControl+Shift+${key}`, () => {
+			createKeyWindow(key, data[key].url);
+		})
+	}
+}
+
+const WSOnRelatedRemovedCommand = (data) => {
+	data = JSON.parse(data);
+	for (let key in commands_and_windows) {
+		if (data.hasOwnProperty(key))
+			continue;
+
+		globalShortcut.unregister(`CommandOrControl+Shift+${key}`);
+		commands_and_windows[key]?.windows?.close();
+		delete commands_and_windows[key];
+	}
+}
+
+const WSOnRelatedUpdatedCategories = (data) => {
+	CATEGORIES = data;
+}
+
+const handleSocketConnect = () => {
+	if (win && win.webContents) {
 		win.webContents.send("socket-connected");
+	}
 	else
 		setTimeout(handleSocketConnect, 1000);
 }
 
-function handleSocketDisconnect() {
-	socket.isConnected = false;
+const handleSocketDisconnect = () => {
 	if (win && win.webContents)
 		win.webContents.send("socket-disconnected");
 	else
 		setTimeout(handleSocketDisconnect, 1000);
 }
 
-function setUpTasks(data) {
+const setUpTasks = (data) => {
 	if (data.categories) {
 		CATEGORIES = data.categories.split(",");
 	}
 	if (win && win.webContents) {
-		win.webContents.send("resume-tasks", data.tasks)
+		setTimeout(() => { win.webContents.send("refresh_tasks", data.tasks) }, 1000)
+		setTimeout(handleSocketConnect, 1000)
 	}
 
 	const key_commands = JSON.parse(data.key_commands);
@@ -996,4 +950,35 @@ function setUpTasks(data) {
 	})
 }
 
-export { handleSocketConnect, handleSocketDisconnect, setUpTasks };
+const WSOnGetCompletedTasks = (data) => {
+	if (completedTasksWindow) {
+		completedTasksWindow.webContents.send("completed-tasks-list",
+			{
+				tasks: data,
+				categories: CATEGORIES,
+			});
+	}
+}
+
+const WSOnRequestHardRefresh = (data) => {
+	CATEGORIES = data.categories.split(",");
+	if (win && win.webContents)
+		win.webContents.send("refresh_tasks", data.tasks);
+}
+
+
+export {
+	handleSocketConnect,
+	handleSocketDisconnect,
+	setUpTasks,
+	WSOnTaskRefresher,
+	WSOnNewTaskCreated,
+	WSOnRelatedTaskEdited,
+	WSOnRelatedTaskDeleted,
+	WSOnRelatedTaskToggled,
+	WSOnRelatedAddedCommand,
+	WSOnRelatedRemovedCommand,
+	WSOnRelatedUpdatedCategories,
+	WSOnGetCompletedTasks,
+	WSOnRequestHardRefresh,
+};

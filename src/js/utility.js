@@ -45,7 +45,7 @@ export class Task {
         category,
         isActive = false,
         description = "no description",
-        tags = "",
+        tags = [],
         duration = 0,
         toggledFocusAt = 0,
         last_modified_at = +new Date()
@@ -87,8 +87,8 @@ export class Task {
             this.description = newDescription;
         };
 
-        updateTags (netTags) {
-            this.tags = netTags;
+        updateTags (newTags) {
+            this.tags = newTags;
         };
 
         updateCategory (newCategory, from_relative= false) {
@@ -212,7 +212,7 @@ export class Task {
                     if (this.isFocused) this.removeFocus();
                     else this.addFocus();
                 } else if (e.which === 2) {
-                    this.removeFocus();
+                    this.removeFocus(true);
                     this.addToCompletedTaskList();
                     this.destroySelfFromDOM();
                     delete tasks[this.id];
@@ -273,7 +273,7 @@ export class Task {
 
         formatTask (type, isCompleted) {
             const formatedDescription = '"' + this.description.replaceAll(',', '') + '"';
-            const formatedCompletedAt = this.formatCurrentDate();
+            const formatedCompletedAt = new Date().toISOString();
             const formatedDuration =
                 this.formatTaskDuration(Math.ceil(this.duration / 1000));
 
@@ -287,7 +287,7 @@ export class Task {
                         completed_at: formatedCompletedAt,
                         duration: formatedDuration,
                         category: this.category,
-                        tags: "",
+                        tags: this.tags,
                         toggled_at: this.toggledFocusAt,
                         is_completed: isCompleted,
                         is_active: false,
