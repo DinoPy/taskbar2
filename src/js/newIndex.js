@@ -70,29 +70,29 @@ ipc.on('task-post-error', (e, data) => {
 
 // add last change property and only make change if the update is the most recent on the server.
 function createTaskFromDataList(t) {
-	const durationStringSplit = t[5].split(":");
+	const durationStringSplit = t.duration.split(":");
 	const durationInt = (parseInt(durationStringSplit[0]) * 60 * 60 +
 		parseInt(durationStringSplit[1]) * 60 +
 		parseInt(durationStringSplit[2])) * 1000;
-	tasks[t[0]] = new Task({
-		id: t[0],
-		title: t[1],
-		description: t[2],
-		createdAt: t[3],
+	tasks[t.id] = new Task({
+		id: t.id,
+		title: t.title,
+		description: t.description,
+		createdAt: t.created_at,
 		duration: durationInt,
-		category: t[6],
-		tags: t[7],
-		isActive: Boolean(t[9]),
-		toggledFocusAt: t[8],
-		last_modified_at: t[12],
+		category: t.category,
+		tags: t.tags,
+		isActive: t.is_active,
+		toggledFocusAt: t.toggled_at.Int64,
+		last_modified_at: t.last_modified_at.Int64,
 		completedTasks,
 		tasks,
 		taskContainer,
 		barDetails,
 		noActiveTaskWarning: noActiveTaskParagraph,
 	});
-	tasks[t[0]].setTaskUp(true);
-	tasks[t[0]].addTaskListeners();
+	tasks[t.id].setTaskUp(true);
+	tasks[t.id].addTaskListeners();
 }
 
 ipc.on("resume-tasks", (e, data) => {
@@ -101,24 +101,24 @@ ipc.on("resume-tasks", (e, data) => {
 	// this won't do well for situations without connection.
 
 	for (let t of data) {
-		if (tasks.hasOwnProperty(t[0])) {
-			console.log(`task: ${t[0]} exists`)
-			//11th
-			if (tasks[t[0]].last_modified_at > t[12]) {
-				console.log(`task: ${t[0]} with time: ${t[12]} has more updated information locally`)
+		console.log(t)
+		if (tasks.hasOwnProperty(t.id)) {
+			console.log(`task: ${t} - ${t.title} exists`)
+			if (tasks[t.id].last_modified_at > t.last_modified_at) {
+				console.log(`task: ${t.id} - ${t.title} with time: ${t.last_modified_at} has more updated information locally`)
 				continue;
-			} else if (tasks[t[0]].last_modified_at < t[12]) {
-				console.log(`task: ${t[0]} with time: ${t[12]} is outdated`)
-				tasks[t[0]].removeFocus(true);
-				tasks[t[0]].destroySelfFromDOM();
+			} else if (tasks[t.id].last_modified_at < t.last_modified_at) {
+				console.log(`task: ${t.id} - ${t.title} with time: ${t.last_modified_at} is outdated`)
+				tasks[t.id].removeFocus(true);
+				tasks[t.id].destroySelfFromDOM();
 				createTaskFromDataList(t);
 			} else {
-				console.log(`task: ${t[0]} with time: ${t[12]} is the same`)
+				console.log(`task: ${t.id} - ${t.title} with time: ${t.last_modified_at} is the same`)
 				continue;
 			}
 		} else {
-			console.log(`task: ${t[0]} does not exist`)
-			if (!tasks_compl_or_del_while_nocon.includes(t[0]))
+			console.log(`task: ${t.id} - ${t.title} does not exist`)
+			if (!tasks_compl_or_del_while_nocon.includes(t.id))
 				createTaskFromDataList(t);
 		}
 		taskIndexUpdater(tasks);
@@ -128,7 +128,6 @@ ipc.on("resume-tasks", (e, data) => {
 })
 
 ipc.on("refresh_tasks", (e, data) => {
-	console.log("refresh tasks triggered", JSON.stringify(data));
 	for (let t in tasks) {
 		tasks[t].removeFocus(true);
 		tasks[t].destroySelfFromDOM();
@@ -167,9 +166,9 @@ ipc.on("new_task_from_relative", (e, data) => {
 
 ipc.on("related_task_toggled", (e, data) => {
 	if (data.is_active)
-		tasks[data.uuid].addFocus(true);
+		tasks[data.id].addFocus(true);
 	else
-		tasks[data.uuid].removeFocus(true);
+		tasks[data.id].removeFocus(true);
 })
 
 ipc.on("related_task_deleted", (e, data) => {
@@ -183,6 +182,7 @@ ipc.on("related_task_edited", (e, data) => {
 	tasks[data.id].updateTitle(data.title);
 	tasks[data.id].updateDescription(data.description);
 	tasks[data.id].updateCategory(data.category, true);
+	tasks[data.id].updateTags(data.tags);
 	taskIndexUpdater(tasks)
 })
 
@@ -444,7 +444,7 @@ function addTask(title) {
 	tasks[newId] = new Task({
 		id: newId,
 		title: parseString(title),
-		createdAt: formatCurrentDate(),
+		createdAt: new Date().toISOString(),
 		category: lastCategorySelected,
 		completedTasks,
 		tasks,
