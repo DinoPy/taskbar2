@@ -59,6 +59,21 @@ textarea:focus {
     flex-wrap: wrap;
 }
 
+.time-input-container {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.time-input-container input {
+    width: 60px;
+}
+
+.time-input-container span {
+    font-size: 0.9em;
+    color: #949aa7;
+}
+
 .tags-item {
     border-radius: 5px;
     padding: 3px 7px;

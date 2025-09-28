@@ -5,10 +5,10 @@ import path from "path";
 const logFile = fs.createWriteStream(path.join(os.homedir(), "app.log"), { flags: 'a' });
 const logStdout = process.stdout;
 
-console.log = function(...args) {
-	logFile.write(new Date().toISOString() + ' ' + args.join(' ') + '\n');
-	logStdout.write(new Date().toISOString() + ' ' + args.join(' ') + '\n');
-};
+// console.log = function(...args) {
+// 	logFile.write(new Date().toISOString() + ' ' + args.join(' ') + '\n');
+// 	logStdout.write(new Date().toISOString() + ' ' + args.join(' ') + '\n');
+// };
 
 console.error = console.log; // Redirect errors as well
 
@@ -42,6 +42,8 @@ app.setAppUserModelId(app.name);
 
 let isTimerRunning = true;
 let CATEGORIES = [];
+let showAllTasks = false;
+let taskbarHeight = 80;
 
 let win = null;
 let taskWindow = null;
@@ -61,9 +63,9 @@ const createWindow = () => {
 		y: displays.workArea.y,
 		width: displays.workAreaSize.width,
 		width: displays.workAreaSize.width,
-		height: 40,
+		height: taskbarHeight,
 		minHeight: 40,
-		maxHeight: 40,
+		maxHeight: 80,
 		minWidth: 1280,
 		frame: false,
 		alwaysOnTop: true,
@@ -218,13 +220,13 @@ app
 			}
 
 			const y = currentlySelectedScreenSide === "bottom" ?
-				displays[currentlySelectedScreenIndex].bounds.y + displays[currentlySelectedScreenIndex].bounds.height - 40 :
+				displays[currentlySelectedScreenIndex].bounds.y + displays[currentlySelectedScreenIndex].bounds.height - taskbarHeight :
 				displays[currentlySelectedScreenIndex].bounds.y;
 
 			win.setBounds({
 				x: displays[currentlySelectedScreenIndex].bounds.x,
 				y,
-				height: 40,
+				height: taskbarHeight,
 				width: displays[currentlySelectedScreenIndex].bounds.width,
 			})
 		});
@@ -234,13 +236,13 @@ app
 			console.log("Display removed");
 			const displays = screen.getAllDisplays();
 			const y = currentlySelectedScreenSide === "bottom" ?
-				displays[0].bounds.y + displays[0].bounds.height - 40 :
+				displays[0].bounds.y + displays[0].bounds.height - taskbarHeight :
 				displays[0].bounds.y;
 
 			win.setBounds({
 				x: displays[0].bounds.x,
 				y,
-				height: 40,
+				height: taskbarHeight,
 				width: displays[0].bounds.width,
 			})
 		});
@@ -340,7 +342,7 @@ function createContextMenu() {
 				win.setBounds({
 					x: d.bounds.x,
 					y: d.bounds.y,
-					height: 40,
+					height: taskbarHeight,
 					width: d.bounds.width,
 				});
 			},
@@ -356,8 +358,8 @@ function createContextMenu() {
 					currentlySelectedScreenSide = "bottom";
 					win.setBounds({
 						x: d.bounds.x,
-						y: d.bounds.y + d.bounds.height - 40,
-						height: 40,
+						y: d.bounds.y + d.bounds.height - taskbarHeight,
+						height: taskbarHeight,
 						width: d.bounds.width,
 					});
 				},
@@ -412,6 +414,19 @@ function createContextMenu() {
 		label: "Help",
 		toolTip: "Opens the help window",
 		click: () => !helpWindow && createHelpWindow()
+	}))
+
+	menu.append(new MenuItem({
+		label: "Show all tasks",
+		toolTip: "Toggle between showing all tasks or only tasks that are due soon",
+		type: "checkbox",
+		checked: showAllTasks,
+		click: () => {
+			showAllTasks = !showAllTasks;
+			win.webContents.send("toggle-show-all-tasks", {
+				showAllTasks: showAllTasks
+			});
+		},
 	}))
 
 	menu.popup(win, 0, 0);

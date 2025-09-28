@@ -10,9 +10,9 @@ p {
 
 html {
 	height: 100%;
-	color: #949aa7;
-	background-color: #1b1d23;
-	border: 1px solid #343b38;
+	color: #4a4a4a;
+	background-color: lch(86 24.64 78.64);
+	border: 1px solid lch(75 20 78.64);
 }
 
 body {
@@ -28,10 +28,11 @@ body {
 }
 
 .task {
-	border-right: 1px solid #343b38;
+	background-color: lch(88 18 78.64);
+	border: 1px solid lch(75 20 78.64);
 	height: 70%;
-	padding: 0 5px;
-	border-radius: 2px;
+	padding: 8px 12px;
+	border-radius: 8px;
 
 	display: flex;
 	min-width: 60px;
@@ -54,7 +55,7 @@ body {
 .task > .taskCategory {
 	font-size: 9px;
 	position: absolute;
-	top: -2px;
+	top: 2px;
 	left: 5px;
 	text-transform: capitalize;
 }
@@ -69,7 +70,7 @@ body {
 .mainContent {
 	height: 100%;
 	display: flex;
-	width: calc(100% - 205px);
+	width: calc(100% - 255px);
 }
 
 .taskContainer,
@@ -86,51 +87,64 @@ body {
 }
 
 .timerAndActions {
-	width: fit-content;
-    min-width: 255px;
-	justify-content: flex-end;
+	width: 255px;
+	min-width: 255px;
+	flex-shrink: 0;
+	justify-content: center;
 }
 
-@keyframes Jump {
-	0% {
-		transform: scale(1);
+@keyframes bounce {
+	0%, 100% { 
+		transform: translateY(0); 
 	}
-	40% {
-		transform: scale(1.08);
+	50% { 
+		transform: translateY(-10px); 
 	}
-	50% {
-		transform: scale(0.98);
+}
+
+@keyframes neonBorder {
+	0% { 
+		border-color: #ff0000;  /* Red */
 	}
-	55% {
-		transform: scale(1.02);
+	25% { 
+		border-color: #ff4500;  /* Orange Red */
 	}
-	60% {
-		transform: scale(0.98);
+	50% { 
+		border-color: #ff8c00;  /* Dark Orange */
 	}
-	100% {
-		transform: scale(1);
+	75% { 
+		border-color: #ffa500;  /* Orange */
+	}
+	100% { 
+		border-color: #ffff00;  /* Yellow */
 	}
 }
 
 .countdown {
     text-wrap: nowrap;
 	height: 80%;
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 
 .activeTask {
-	animation: 2s Jump ease-out infinite;
-	animation-play-state: paused;
-	background-color: #3cf39ed2;
+	background-color: lch(72.69% 74.85 71.15);
+	border: 3px solid #ff0000;
+	animation: 
+		bounce 1s ease-in-out infinite,
+		neonBorder 2s ease-in-out infinite;
+	transform-origin: center;
 	font-size: 1.1rem;
 	font-weight: bold;
-	color: #252525;
+	color: #ffffff;
 }
 
 .activeTaskTimer {
 	/* display: none; */
-	color: gray;
+	color: rgb(74, 74, 74);
 	position: absolute;
-	top: -2px;
+	top: 2px;
 	right: 8px;
 	font-size: 9px;
 	font-weight: normal;
@@ -143,10 +157,10 @@ body {
 }
 
 .addTaskInput {
-	background-color: #292c35;
-	color: #949aa7;
-	border: none;
-	outline: #949aa7;
+	background-color: lch(90 15 78.64);
+	color: #4a4a4a;
+	border: 1px solid lch(80 20 78.64);
+	outline: lch(70 30 78.64);
 	height: 60%;
 	border-radius: 1px;
 	padding: 2px 5px;
@@ -156,34 +170,35 @@ body {
 
 .user, .connection-status {
     padding: 5px 0 5px 10px;
-	border-left: 1px solid #343b38;
+	border-left: 1px solid lch(75 20 78.64);
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
 .user-icon, .connection-status-icon {
-    fill: red;
+    fill: #e74c3c;
 }
 
 .logged-in-color {
-    fill: green;
+    fill: #27ae60;
 }
 
 .timer {
 	display: flex;
 	align-items: center;
+	justify-content: center;
 
 	height: 70%;
-	border-left: 1px solid #343b38;
-	border-right: 1px solid #343b38;
-	padding: 0 10px 0 5px;
+	border-left: 1px solid lch(75 20 78.64);
+	border-right: 1px solid lch(75 20 78.64);
+	padding: 0 10px;
 }
 
 .button {
 	background-color: inherit;
-	fill: #949aa7;
-	color: #949aa7;
+	fill: #4a4a4a;
+	color: #4a4a4a;
 	border-radius: 100%;
 	height: 34px;
 	width: 34px;
@@ -195,11 +210,11 @@ body {
 }
 
 .button:hover {
-	background-color: #343b38;
+	background-color: lch(80 20 78.64);
 }
 
 .button:active {
-	background-color: #4f9eee6c;
+	background-color: lch(70 30 78.64);
 }
 
 .skipPauseIcon {
@@ -207,14 +222,14 @@ body {
 }
 
 .noActiveTaskWarning {
-	color: yellowgreen;
+	color: #e67e22;
 	font-weight: 900;
 	font-size: 24px;
 	position: absolute;
 	left: 50%;
 	top: 50%;
 	transform: translateX(-50%) translateY(-50%);
-	text-shadow: 0px 0px 1px white, 0px 0px 10px #252525;
+	text-shadow: 0px 0px 1px white, 0px 0px 10px #333333;
 }
 
 .invisible {
@@ -222,7 +237,7 @@ body {
 }
 
 .noActiveTaskBodyWarning {
-	background-color: rgb(228, 99, 44);
+	background-color: lch(60 35 78.64);
 }
 
 body:hover .noActiveTaskWarning {
@@ -241,10 +256,10 @@ body:hover .noActiveTaskWarning {
 }
 
 .searchInput {
-	background-color: #292c35;
-	color: #949aa7;
-	border: none;
-	outline: #949aa7;
+	background-color: lch(90 15 78.64);
+	color: #4a4a4a;
+	border: 1px solid lch(80 20 78.64);
+	outline: lch(70 30 78.64);
 	height: 60%;
 	border-radius: 1px;
 	padding: 2px 5px;

@@ -48,6 +48,9 @@ export class Task {
         tags = [],
         duration = 0,
         toggledFocusAt = 0,
+        priority = null,
+        due_at = null,
+        show_before_due_time = null,
         last_modified_at = +new Date()
     }) {
         this.id = id;
@@ -67,6 +70,9 @@ export class Task {
         this.category = category;
         this.toggledFocusAt = toggledFocusAt;
         this.tags = tags
+        this.priority = priority;
+        this.due_at = due_at;
+        this.show_before_due_time = show_before_due_time;
 
         this.taskContainer = taskContainer;
         this.barDetails = barDetails;
@@ -91,6 +97,63 @@ export class Task {
             this.tags = newTags;
         };
 
+        updatePriority (newPriority, from_relative = false) {
+            const currentEpochTime = +new Date();
+            this.priority = newPriority;
+            this.last_modified_at = currentEpochTime;
+
+            if (!from_relative)
+                ipc.send("task_edit", {
+                    category: this.category,
+                    title: this.title,
+                    description: this.description,
+                    tags: this.tags,
+                    priority: newPriority,
+                    due_at: this.due_at,
+                    show_before_due_time: this.show_before_due_time,
+                    id: this.id,
+                    last_modified_at: currentEpochTime,
+                })
+        };
+
+        updateDueAt (newDueAt, from_relative = false) {
+            const currentEpochTime = +new Date();
+            this.due_at = newDueAt;
+            this.last_modified_at = currentEpochTime;
+
+            if (!from_relative)
+                ipc.send("task_edit", {
+                    category: this.category,
+                    title: this.title,
+                    description: this.description,
+                    tags: this.tags,
+                    priority: this.priority,
+                    due_at: newDueAt,
+                    show_before_due_time: this.show_before_due_time,
+                    id: this.id,
+                    last_modified_at: currentEpochTime,
+                })
+        };
+
+        updateShowBeforeDueTime (newShowBeforeDueTime, from_relative = false) {
+            const currentEpochTime = +new Date();
+            this.show_before_due_time = newShowBeforeDueTime;
+            this.last_modified_at = currentEpochTime;
+
+            if (!from_relative)
+                ipc.send("task_edit", {
+                    category: this.category,
+                    title: this.title,
+                    description: this.description,
+                    tags: this.tags,
+                    priority: this.priority,
+                    due_at: this.due_at,
+                    show_before_due_time: newShowBeforeDueTime,
+                    id: this.id,
+                    last_modified_at: currentEpochTime,
+                })
+        };
+
         updateCategory (newCategory, from_relative= false) {
             const currentEpochTime = +new Date();
 
@@ -104,6 +167,9 @@ export class Task {
                     title: this.title,
                     description: this.description,
                     tags: this.tags,
+                    priority: this.priority,
+                    due_at: this.due_at,
+                    show_before_due_time: this.show_before_due_time,
                     id: this.id,
                     last_modified_at: currentEpochTime,
                 })
@@ -196,6 +262,14 @@ export class Task {
             // check if the taskEl still exists after removal as variable, if so equal it to null not to waste memory
         };
 
+        show () {
+            this.taskEl.style.display = 'flex';
+        };
+
+        hide () {
+            this.taskEl.style.display = 'none';
+        };
+
         addToCompletedTaskList () {
             this.completedTasks.push(this.formatTask('Object', true));
             if (!isSocketConnected)
@@ -267,6 +341,9 @@ export class Task {
                 description: this.description,
                 category: this.category,
                 tags: this.tags,
+                priority: this.priority,
+                due_at: this.due_at,
+                show_before_due_time: this.show_before_due_time,
             };
             ipc.send('show-task-context-menu', props);
         };
@@ -288,6 +365,9 @@ export class Task {
                         duration: formatedDuration,
                         category: this.category,
                         tags: this.tags,
+                        priority: this.priority,
+                        due_at: this.due_at,
+                        show_before_due_time: this.show_before_due_time,
                         toggled_at: this.toggledFocusAt,
                         is_completed: isCompleted,
                         is_active: false,

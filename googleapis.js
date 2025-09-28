@@ -52,6 +52,7 @@ function getUserDetails() {
                 return;
             }
             Object.assign(userInfo, res.data);
+            console.log("userInfo", userInfo);
             resolve(res.data);
             console.log("from googleapis.js", +new Date());
         });

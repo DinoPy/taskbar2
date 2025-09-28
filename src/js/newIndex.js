@@ -22,6 +22,7 @@ export let tasks_compl_or_del_while_nocon = []
 export let isSocketConnected = false;
 let isTimerRunning = true;
 let lastCategorySelected = 'none';
+let showAllTasks = false;
 
 // ----------- LOGGING ----------------//
 ipc.on("print-to-console", (e, data) => {
@@ -84,6 +85,9 @@ function createTaskFromDataList(t) {
 		tags: t.tags,
 		isActive: t.is_active,
 		toggledFocusAt: t.toggled_at.Int64,
+		priority: t.priority.Int32,
+		due_at: t.due_at.Time,
+		show_before_due_time: t.show_before_due_time.Int32,
 		last_modified_at: t.last_modified_at.Int64,
 		completedTasks,
 		tasks,
@@ -93,6 +97,12 @@ function createTaskFromDataList(t) {
 	});
 	tasks[t.id].setTaskUp(true);
 	tasks[t.id].addTaskListeners();
+	
+	// Apply visibility filter to task from server
+	const shouldShow = shouldShowTask(tasks[t.id]);
+	if (!shouldShow) {
+		tasks[t.id].hide();
+	}
 }
 
 ipc.on("resume-tasks", (e, data) => {
@@ -124,6 +134,8 @@ ipc.on("resume-tasks", (e, data) => {
 		taskIndexUpdater(tasks);
 	}
 
+	// Apply visibility filter to all tasks after resume
+	updateTaskVisibility();
 	tasks_compl_or_del_while_nocon = [];
 })
 
@@ -138,6 +150,8 @@ ipc.on("refresh_tasks", (e, data) => {
 		createTaskFromDataList(t);
 	}
 
+	// Apply visibility filter to all tasks after refresh
+	updateTaskVisibility();
 	taskIndexUpdater(tasks);
 })
 
@@ -149,10 +163,14 @@ ipc.on("new_task_from_relative", (e, data) => {
 		title: data.title,
 		createdAt: data.created_at,
 		category: data.category,
+		description: data.description,
 		completedTasks,
 		tasks,
 		taskContainer,
 		barDetails,
+		priority: t.priority.Int32,
+		due_at: t.due_at.Time,
+		show_before_due_time: t.show_before_due_time.Int32,
 		noActiveTaskWarning: noActiveTaskParagraph,
 		tags: data.tags,
 		isActive: data.is_active
@@ -160,6 +178,13 @@ ipc.on("new_task_from_relative", (e, data) => {
 
 	tasks[data.id].setTaskUp(true);
 	tasks[data.id].addTaskListeners();
+	
+	// Apply visibility filter to task from relative
+	const shouldShow = shouldShowTask(tasks[data.id]);
+	if (!shouldShow) {
+		tasks[data.id].hide();
+	}
+	
 	taskIndexUpdater(tasks);
 })
 
@@ -183,6 +208,15 @@ ipc.on("related_task_edited", (e, data) => {
 	tasks[data.id].updateDescription(data.description);
 	tasks[data.id].updateCategory(data.category, true);
 	tasks[data.id].updateTags(data.tags);
+	
+	// Update visibility after property changes
+	const shouldShow = shouldShowTask(tasks[data.id]);
+	if (shouldShow) {
+		tasks[data.id].show();
+	} else {
+		tasks[data.id].hide();
+	}
+	
 	taskIndexUpdater(tasks)
 })
 
@@ -199,12 +233,26 @@ ipc.on('msg-redirected-to-parent', (e, data) => {
 		tasks[data.id].updateDescription(data.description);
 		tasks[data.id].updateTags(data.tags);
 		tasks[data.id].updateCategory(data.category);
+		tasks[data.id].updatePriority(data.priority);
+		tasks[data.id].updateDueAt(data.due_at);
+		tasks[data.id].updateShowBeforeDueTime(data.show_before_due_time);
+		
+		// Update visibility after property changes
+		const shouldShow = shouldShowTask(tasks[data.id]);
+		if (shouldShow) {
+			tasks[data.id].show();
+		} else {
+			tasks[data.id].hide();
+		}
 	} else {
 		ipc.send("task_edit", {
 			category: data.category,
 			title: data.title,
 			description: data.description,
 			tags: data.tags,
+			priority: data.priority,
+			due_at: data.due_at,
+			show_before_due_time: data.show_before_due_time,
 			id: data.id,
 			last_modified_at: +new Date(),
 		})
@@ -238,6 +286,50 @@ ipc.on('update-task-category', (e, data) => {
 	lastCategorySelected = data.newCategory;
 });
 
+ipc.on('toggle-show-all-tasks', (e, data) => {
+	showAllTasks = data.showAllTasks;
+	updateTaskVisibility();
+});
+
+// Function to check if a task should be visible based on due date
+function shouldShowTask(task) {
+	if (showAllTasks) return true;
+	
+	// If no due date is set, always show the task
+	if (!task.due_at) return true;
+	
+	const currentTime = new Date();
+	const dueDate = new Date(task.due_at);
+	const showBeforeMinutes = task.show_before_due_time || 0;
+	
+	// Calculate the time when the task should start showing
+	const showTime = new Date(dueDate.getTime() - (showBeforeMinutes * 60 * 1000));
+	
+	// Show task if current time is after the show time
+	return currentTime >= showTime;
+}
+
+// Function to update task visibility based on the showAllTasks flag
+function updateTaskVisibility() {
+	for (let id in tasks) {
+		const task = tasks[id];
+		const shouldShow = shouldShowTask(task);
+		
+		if (shouldShow) {
+			task.show();
+		} else {
+			task.hide();
+		}
+	}
+}
+
+// Timer to check task visibility every 30 seconds
+setInterval(() => {
+	if (!showAllTasks) {
+		updateTaskVisibility();
+	}
+}, 30000); // 30 seconds
+
 // -------------- CMD HELPERS ---------------------- //
 
 ipc.on("request-current-task-data-for-edit", () => {
@@ -248,7 +340,10 @@ ipc.on("request-current-task-data-for-edit", () => {
 				title: tasks[id].title,
 				description: tasks[id].description,
 				category: tasks[id].category,
-				tags: tasks[id].tags
+				tags: tasks[id].tags,
+				priority: tasks[id].priority,
+				due_at: tasks[id].due_at,
+				show_before_due_time: tasks[id].show_before_due_time
 			});
 			break;
 		}
@@ -446,6 +541,9 @@ function addTask(title) {
 		title: parseString(title),
 		createdAt: new Date().toISOString(),
 		category: lastCategorySelected,
+		priority: null,
+		due_at: null,
+		show_before_due_time: null,
 		completedTasks,
 		tasks,
 		taskContainer,
@@ -455,6 +553,13 @@ function addTask(title) {
 
 	tasks[newId].setTaskUp();
 	tasks[newId].addTaskListeners();
+	
+	// Apply visibility filter to new task
+	const shouldShow = shouldShowTask(tasks[newId]);
+	if (!shouldShow) {
+		tasks[newId].hide();
+	}
+	
 	return newId
 }
 

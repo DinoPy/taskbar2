@@ -34,13 +34,14 @@ function socketConnect(userInfo) {
 			email: userInfo.email,
 			first_name: userInfo.given_name,
 			last_name: userInfo.family_name,
+			google_uid: userInfo.id,
 		})
 	};
 
 	socket.instance.onmessage = (event) => {
 		const msg = JSON.parse(event.data);
 		if (msg.event != "ping")
-			console.log(msg);
+			console.log(msg.data);
 
 		switch (msg.event) {
 			case "ping":

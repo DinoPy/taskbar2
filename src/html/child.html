@@ -30,6 +30,17 @@
             </div>
             <div class="tags-list-container">
             </div>
+            <label for="priority">Priority (1-10)</label>
+            <input type="number" id="priority" name="priority" min="1" max="10" placeholder="1-10" />
+            <label for="due_at">Due Date</label>
+            <input type="datetime-local" id="due_at" name="due_at" min="" />
+            <label for="show_before_due_time">Show Before Due</label>
+            <div class="time-input-container">
+                <input type="number" id="show_before_due_hours" name="show_before_due_hours" min="0" max="23" placeholder="0" />
+                <span>hours</span>
+                <input type="number" id="show_before_due_minutes" name="show_before_due_minutes" min="0" max="59" placeholder="0" />
+                <span>minutes</span>
+            </div>
 			<label for="description">Description</label>
 			<textarea id="description" type="text" rows="3" minlength="3"></textarea>
 			<button
