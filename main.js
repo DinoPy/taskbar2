@@ -5,10 +5,10 @@ import path from "path";
 const logFile = fs.createWriteStream(path.join(os.homedir(), "app.log"), { flags: 'a' });
 const logStdout = process.stdout;
 
-// console.log = function(...args) {
-// 	logFile.write(new Date().toISOString() + ' ' + args.join(' ') + '\n');
-// 	logStdout.write(new Date().toISOString() + ' ' + args.join(' ') + '\n');
-// };
+console.log = function(...args) {
+logFile.write(new Date().toISOString() + ' ' + args.join(' ') + '\n');
+logStdout.write(new Date().toISOString() + ' ' + args.join(' ') + '\n');
+};
 
 console.error = console.log; // Redirect errors as well
 

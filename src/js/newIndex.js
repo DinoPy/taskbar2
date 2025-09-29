@@ -293,20 +293,34 @@ ipc.on('toggle-show-all-tasks', (e, data) => {
 
 // Function to check if a task should be visible based on due date
 function shouldShowTask(task) {
+	console.log('shouldShowTask for task:', task.id, 'due_at:', task.due_at, 'showAllTasks:', showAllTasks);
+	
 	if (showAllTasks) return true;
 	
-	// If no due date is set, always show the task
-	if (!task.due_at) return true;
+	// If no due date is set or it's the default invalid date, always show the task
+	if (!task.due_at || task.due_at === "0001-01-01T00:00:00Z" || task.due_at === "0001-01-01T00:00:00.000Z") {
+		console.log('Task has no valid due date, showing');
+		return true;
+	}
 	
 	const currentTime = new Date();
 	const dueDate = new Date(task.due_at);
+	
+	// Check if the date is valid
+	if (isNaN(dueDate.getTime())) {
+		console.log('Invalid due date, showing task');
+		return true;
+	}
+	
 	const showBeforeMinutes = task.show_before_due_time || 0;
 	
 	// Calculate the time when the task should start showing
 	const showTime = new Date(dueDate.getTime() - (showBeforeMinutes * 60 * 1000));
 	
 	// Show task if current time is after the show time
-	return currentTime >= showTime;
+	const shouldShow = currentTime >= showTime;
+	console.log('Task due date check - currentTime:', currentTime, 'showTime:', showTime, 'shouldShow:', shouldShow);
+	return shouldShow;
 }
 
 // Function to update task visibility based on the showAllTasks flag

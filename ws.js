@@ -18,7 +18,7 @@ import {
 
 let reconnectInterval = 3000;
 
-let stage = "development";
+let stage = "prod";
 let user = {};
 
 const prodUrl = "https://pythonws.dinodev.dev/ws/taskbar"
