@@ -1,4 +1,105 @@
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400&display=swap');
+
+/* CSS Custom Properties - Design System */
+:root {
+	/* Colors - Base Theme */
+	--color-primary: lch(86 24.64 78.64);
+	--color-primary-border: lch(75 20 78.64);
+	--color-text-primary: #4a4a4a;
+	--color-text-secondary: rgb(74, 74, 74);
+	--color-text-white: #ffffff;
+	--color-text-warning: #e67e22;
+	
+	/* Task Colors */
+	--color-task-bg: lch(88 18 78.64);
+	--color-task-border: lch(75 20 78.64);
+	--color-task-active-bg: lch(72.69% 74.85 71.15);
+	--color-task-active-border: #ff0000;
+	
+	/* Input Colors */
+	--color-input-bg: lch(90 15 78.64);
+	--color-input-border: lch(80 20 78.64);
+	--color-input-outline: lch(70 30 78.64);
+	
+	/* Button Colors */
+	--color-button-hover: lch(80 20 78.64);
+	--color-button-active: lch(70 30 78.64);
+	--color-button-warning-bg: lch(60 35 78.64);
+	
+	/* Status Colors */
+	--color-status-error: #e74c3c;
+	--color-status-success: #27ae60;
+	--color-status-warning: #e67e22;
+	--color-status-danger: #c74242;
+	
+	/* Neon Border Colors */
+	--color-neon-red: #ff0000;
+	--color-neon-orange-red: #ff4500;
+	--color-neon-dark-orange: #ff8c00;
+	--color-neon-orange: #ffa500;
+	--color-neon-yellow: #ffff00;
+	
+	/* Sizes - Layout */
+	--size-taskbar-height: 60px;
+	--size-task-height: 86%;
+	--size-task-width: 200px;
+	--size-task-min-width: 60px;
+	--size-timer-width: 255px;
+	--size-timer-min-width: 255px;
+	--size-main-content-width: calc(100% - 255px);
+	
+	/* Sizes - Spacing */
+	--spacing-task-padding: 4px 6px;
+	--spacing-task-gap: 4px;
+	--spacing-container-gap: 10px;
+	--spacing-container-padding-left: 15px;
+	--spacing-timer-padding: 0 10px;
+	--spacing-button-margin: 0 3px;
+	--spacing-input-margin-left: 5px;
+	--spacing-input-padding: 2px 5px;
+	--spacing-user-padding: 5px 0 5px 10px;
+	--spacing-search-margin-right: 280px;
+	
+	/* Sizes - Typography */
+	--font-size-category: 10px;
+	--font-size-timer: 10px;
+	--font-size-due-date: 10px;
+	--font-size-index: 10px;
+	--font-size-title: 15px;
+	--font-size-warning: 24px;
+	
+	/* Sizes - Elements */
+	--size-button-height: 34px;
+	--size-button-width: 34px;
+	--size-input-height: 60%;
+	--size-timer-height: 70%;
+	--size-countdown-height: 80%;
+	--title-line-clamp: 3;
+	--size-title-max-height: calc(var(--title-line-clamp) * var(--line-height-title));
+	--size-border-radius: 8px;
+	--size-border-radius-small: 1px;
+	--size-border-radius-medium: 5px;
+	--size-border-radius-button: 100%;
+	
+	/* Sizes - Borders */
+	--border-width: 1px;
+	--border-width-active: 3px;
+	
+	/* Line Heights */
+	--line-height-tight: 0.8;
+	--line-height-normal: 1.1;
+	--line-height-title: 0.85;
+	
+	/* Animations */
+	--animation-bounce-duration: 1s;
+	--animation-neon-duration: 2s;
+	--animation-transition: 0.3s;
+	--animation-background-transition: 250ms;
+	
+	/* Z-Index */
+	--z-index-search: 10;
+}
+
 * {
 	box-sizing: border-box;
 	user-select: none;
@@ -10,9 +111,9 @@ p {
 
 html {
 	height: 100%;
-	color: #4a4a4a;
-	background-color: lch(86 24.64 78.64);
-	border: 1px solid lch(75 20 78.64);
+	color: var(--color-text-primary);
+	background-color: var(--color-primary);
+	border: var(--border-width) solid var(--color-primary-border);
 }
 
 body {
@@ -24,20 +125,20 @@ body {
 
 	display: flex;
 	justify-content: space-between;
-	transition: background-color 250ms ease-in-out;
+	transition: background-color var(--animation-background-transition) ease-in-out;
 }
 
 .task {
-	background-color: lch(88 18 78.64);
-	border: 1px solid lch(75 20 78.64);
-	height: 86%;
-	padding: 4px 6px;
-	border-radius: 8px;
+	background-color: var(--color-task-bg);
+	border: var(--border-width) solid var(--color-task-border);
+	height: var(--size-task-height);
+	padding: var(--spacing-task-padding);
+	border-radius: var(--size-border-radius);
 
 	display: flex;
 	flex-direction: column;
-	min-width: 60px;
-	width: 200px;
+	min-width: var(--size-task-min-width);
+	width: var(--size-task-width);
 
 	cursor: pointer;
 
@@ -56,11 +157,11 @@ body {
 	white-space: normal;
 	overflow: hidden;
 	text-overflow: ellipsis;
-	line-height: 1.1;
-	font-size: 1em;
-	max-height: 2.2em; /* 2 lines * 1.1 line-height */
+	line-height: var(--line-height-title);
+	font-size: var(--font-size-title);
+	max-height: var(--size-title-max-height);
 	display: -webkit-box;
-	-webkit-line-clamp: 2;
+	-webkit-line-clamp: 3;
 	line-clamp: 2;
 	-webkit-box-orient: vertical;
 	word-wrap: break-word;
@@ -75,119 +176,149 @@ body {
 	margin-top: 0;
 	height: auto;
 	min-height: 0;
-	line-height: 0.8;
-	gap: 4px;
+	line-height: var(--line-height-tight);
+	gap: var(--spacing-task-gap);
 }
 
 .task  .taskCategory {
-	font-size: 10px;
+	font-size: var(--font-size-category);
 	text-transform: capitalize;
-	line-height: 0.8;
+	line-height: var(--line-height-tight);
 	margin: 0;
 	padding: 0;
 }
 
 .activeTask .taskCategory {
-	color: #ffffff;
+	color: var(--color-text-white);
 }
 
 .task > .index {
     position: absolute;
     bottom: 0px;
     right: 3px;
-    font-size: 10px;
+    font-size: var(--font-size-index);
 }
 
 .mainContent {
 	height: 100%;
 	display: flex;
-	width: calc(100% - 255px);
+	width: var(--size-main-content-width);
 }
 
 .taskContainer,
 .timerAndActions {
 	height: 100%;
 	display: flex;
-	gap: 10px;
+	gap: var(--spacing-container-gap);
 	align-items: center;
 }
 
 .taskContainer {
 	overflow: hidden;
-	padding-left: 15px;
+	padding-left: var(--spacing-container-padding-left);
 }
 
 .timerAndActions {
-	width: 255px;
-	min-width: 255px;
+	width: var(--size-timer-width);
+	min-width: var(--size-timer-min-width);
 	flex-shrink: 0;
 	justify-content: center;
 }
 
 @keyframes bounce {
-	0%, 100% { 
+	0% { 
 		transform: translateY(0); 
 	}
-	50% { 
-		transform: translateY(-10px); 
+	20% { 
+		transform: translateY(-4px); 
+	}
+	25% { 
+		transform: translateY(-4px) translateX(-1px); 
+	}
+	30% { 
+		transform: translateY(-4px) translateX(1px); 
+	}
+	35% { 
+		transform: translateY(-4px) translateX(-1px); 
+	}
+	40% { 
+		transform: translateY(-4px) translateX(0); 
+	}
+	60% { 
+		transform: translateY(4px); 
+	}
+	65% { 
+		transform: translateY(4px) translateX(-1px); 
+	}
+	70% { 
+		transform: translateY(4px) translateX(1px); 
+	}
+	75% { 
+		transform: translateY(4px) translateX(-1px); 
+	}
+	80% { 
+		transform: translateY(4px) translateX(0); 
+	}
+	100% { 
+		transform: translateY(0); 
 	}
 }
 
 @keyframes neonBorder {
 	0% { 
-		border-color: #ff0000;  /* Red */
+		border-color: var(--color-neon-red);
 	}
 	25% { 
-		border-color: #ff4500;  /* Orange Red */
+		border-color: var(--color-neon-orange-red);
 	}
 	50% { 
-		border-color: #ff8c00;  /* Dark Orange */
+		border-color: var(--color-neon-dark-orange);
 	}
 	75% { 
-		border-color: #ffa500;  /* Orange */
+		border-color: var(--color-neon-orange);
 	}
 	100% { 
-		border-color: #ffff00;  /* Yellow */
+		border-color: var(--color-neon-yellow);
 	}
 }
 
 .countdown {
     text-wrap: nowrap;
-	height: 80%;
+	height: var(--size-countdown-height);
 	display: flex;
 	align-items: center;
 	justify-content: center;
 }
 
 .activeTask {
-	background-color: lch(72.69% 74.85 71.15);
-	border: 3px solid #ff0000;
+	background-color: var(--color-task-active-bg);
+	border: var(--border-width-active) solid var(--color-task-active-border);
 	animation: 
-		bounce 1s ease-in-out infinite,
-		neonBorder 2s ease-in-out infinite;
+		bounce var(--animation-bounce-duration) ease-in-out infinite,
+		neonBorder var(--animation-neon-duration) ease-in-out infinite;
 	transform-origin: center;
 	font-weight: bold;
-	color: #ffffff;
+	color: var(--color-text-white);
 }
 
 .activeTaskTimer {
 	/* display: none; */
-	color: rgb(74, 74, 74);
-	font-size: 10px;
+	color: var(--color-text-secondary);
+	font-size: var(--font-size-timer);
 	font-weight: normal;
-	line-height: 0.8;
+	line-height: var(--line-height-tight);
 	margin: 0;
 	padding: 0;
 }
 
 .activeTask .activeTaskTimer {
-	color: #ffffff;
+	color: var(--color-text-white);
 }
 
 .taskDueDate {
-	font-size: 10px;
-	color: rgb(74, 74, 74);
-	line-height: 0.8;
+	font-size: var(--font-size-due-date);
+	color: var(--color-text-secondary);
+	line-height: var(--line-height-tight);
 	margin: 0;
 	padding: 0;
 	flex: 1;
@@ -195,7 +326,7 @@ body {
 }
 
 .activeTask .taskDueDate {
-	color: #ffffff;
+	color: var(--color-text-white);
 }
 
 .addTaskContainer {
@@ -205,31 +336,31 @@ body {
 }
 
 .addTaskInput {
-	background-color: lch(90 15 78.64);
-	color: #4a4a4a;
-	border: 1px solid lch(80 20 78.64);
-	outline: lch(70 30 78.64);
-	height: 60%;
-	border-radius: 1px;
-	padding: 2px 5px;
-	margin-left: 5px;
+	background-color: var(--color-input-bg);
+	color: var(--color-text-primary);
+	border: var(--border-width) solid var(--color-input-border);
+	outline: var(--color-input-outline);
+	height: var(--size-input-height);
+	border-radius: var(--size-border-radius-small);
+	padding: var(--spacing-input-padding);
+	margin-left: var(--spacing-input-margin-left);
 	font-family: 'Nunito', sans-serif;
 }
 
 .user, .connection-status {
-    padding: 5px 0 5px 10px;
-	border-left: 1px solid lch(75 20 78.64);
+    padding: var(--spacing-user-padding);
+	border-left: var(--border-width) solid var(--color-primary-border);
     display: flex;
     justify-content: center;
     align-items: center;
 }
 
 .user-icon, .connection-status-icon {
-    fill: #e74c3c;
+    fill: var(--color-status-error);
 }
 
 .logged-in-color {
-    fill: #27ae60;
+    fill: var(--color-status-success);
 }
 
 .timer {
@@ -237,32 +368,32 @@ body {
 	align-items: center;
 	justify-content: center;
 
-	height: 70%;
-	border-left: 1px solid lch(75 20 78.64);
-	border-right: 1px solid lch(75 20 78.64);
-	padding: 0 10px;
+	height: var(--size-timer-height);
+	border-left: var(--border-width) solid var(--color-primary-border);
+	border-right: var(--border-width) solid var(--color-primary-border);
+	padding: var(--spacing-timer-padding);
 }
 
 .button {
 	background-color: inherit;
-	fill: #4a4a4a;
-	color: #4a4a4a;
-	border-radius: 100%;
-	height: 34px;
-	width: 34px;
+	fill: var(--color-text-primary);
+	color: var(--color-text-primary);
+	border-radius: var(--size-border-radius-button);
+	height: var(--size-button-height);
+	width: var(--size-button-width);
 	border: none;
 
-	transition: all 0.3s;
+	transition: all var(--animation-transition);
 	cursor: pointer;
-	margin: 0 3px;
+	margin: var(--spacing-button-margin);
 }
 
 .button:hover {
-	background-color: lch(80 20 78.64);
+	background-color: var(--color-button-hover);
 }
 
 .button:active {
-	background-color: lch(70 30 78.64);
+	background-color: var(--color-button-active);
 }
 
 .skipPauseIcon {
@@ -270,9 +401,9 @@ body {
 }
 
 .noActiveTaskWarning {
-	color: #e67e22;
+	color: var(--color-text-warning);
 	font-weight: 900;
-	font-size: 24px;
+	font-size: var(--font-size-warning);
 	position: absolute;
 	left: 50%;
 	top: 50%;
@@ -285,7 +416,7 @@ body {
 }
 
 .noActiveTaskBodyWarning {
-	background-color: lch(60 35 78.64);
+	background-color: var(--color-button-warning-bg);
 }
 
 body:hover .noActiveTaskWarning {
@@ -293,7 +424,7 @@ body:hover .noActiveTaskWarning {
 }
 
 .searchContainer {
-    z-index: 10;
+    z-index: var(--z-index-search);
     position: absolute;
     display: none;
     justify-content: end;
@@ -304,15 +435,15 @@ body:hover .noActiveTaskWarning {
 }
 
 .searchInput {
-	background-color: lch(90 15 78.64);
-	color: #4a4a4a;
-	border: 1px solid lch(80 20 78.64);
-	outline: lch(70 30 78.64);
-	height: 60%;
-	border-radius: 1px;
-	padding: 2px 5px;
-    margin-right: 280px;
+	background-color: var(--color-input-bg);
+	color: var(--color-text-primary);
+	border: var(--border-width) solid var(--color-input-border);
+	outline: var(--color-input-outline);
+	height: var(--size-input-height);
+	border-radius: var(--size-border-radius-small);
+	padding: var(--spacing-input-padding);
+    margin-right: var(--spacing-search-margin-right);
 	font-family: 'Nunito', sans-serif;
     width: 40px;
-    border-radius: 5px;
+    border-radius: var(--size-border-radius-medium);
 }
