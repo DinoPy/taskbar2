@@ -43,7 +43,7 @@ app.setAppUserModelId(app.name);
 let isTimerRunning = true;
 let CATEGORIES = [];
 let showAllTasks = false;
-let taskbarHeight = 80;
+let taskbarHeight = 60;
 
 let win = null;
 let taskWindow = null;

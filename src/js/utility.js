@@ -86,7 +86,14 @@ export class Task {
         updateTitle (newTitle) {
             this.title = newTitle;
             this.taskEl.title = newTitle;
-            this.children.titleEl.textContent = newTitle;
+            // Update the span element inside the title paragraph
+            const titleSpan = this.children.titleEl.querySelector('span');
+            if (titleSpan) {
+                titleSpan.textContent = newTitle;
+            } else {
+                // Fallback if span doesn't exist
+                this.children.titleEl.textContent = newTitle;
+            }
         };
 
         updateDescription (newDescription) {
@@ -120,6 +127,22 @@ export class Task {
             const currentEpochTime = +new Date();
             this.due_at = newDueAt;
             this.last_modified_at = currentEpochTime;
+
+            // Update the due date element in the DOM
+            const dueDateEl = this.taskEl.querySelector('.taskDueDate');
+            if (dueDateEl) {
+                if (newDueAt) {
+                    const dueDate = new Date(newDueAt);
+                    // Check if date is valid (not year 0001 or invalid)
+                    if (dueDate.getFullYear() > 1900 && !isNaN(dueDate.getTime())) {
+                        dueDateEl.textContent = dueDate.toLocaleDateString() + ' ' + dueDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                    } else {
+                        dueDateEl.textContent = '';
+                    }
+                } else {
+                    dueDateEl.textContent = '';
+                }
+            }
 
             if (!from_relative)
                 ipc.send("task_edit", {
@@ -193,7 +216,6 @@ export class Task {
             else
                 this.startTimer();
             this.taskEl.classList.add('activeTask');
-            this.children.timerEl.style.color = '#1b1d23';
             this.noActiveTaskWarning.classList.add('invisible');
             // TODO: On toggle, update the duration
             if (!from_relative)
@@ -213,7 +235,6 @@ export class Task {
             this.isFocused = false;
             this.stopTimer();
             this.taskEl.classList.remove('activeTask');
-            this.children.timerEl.style.color = 'gray';
             if (!from_delete)
                 ipc.send("task_toggle",
                     { uuid: this.id,
@@ -264,6 +285,7 @@ export class Task {
 
         show () {
             this.taskEl.style.display = 'flex';
+            this.taskEl.style.flexDirection = 'column';
         };
 
         hide () {
@@ -306,8 +328,14 @@ export class Task {
         };
 
         setChildrenElUp () {
+            // Create top row container for category, due date, and timer
+            const topRowEl = document.createElement('div');
+            topRowEl.classList.add('taskTopRow');
+            
             this.children.titleEl.classList.add('taskTitle');
-            this.children.titleEl.textContent = this.title;
+            const titleSpan = document.createElement('span');
+            titleSpan.textContent = this.title;
+            this.children.titleEl.appendChild(titleSpan);
             this.children.timerEl.classList.add('activeTaskTimer');
             this.children.timerEl.textContent =
                 this.formatCountdownText(Math.ceil(this.duration / 1000));
@@ -316,9 +344,28 @@ export class Task {
             this.children.indexEl.classList.add("index")
             this.children.indexEl.textContent = Object.keys(tasks).length;
 
+            // Create due date element
+            const dueDateEl = document.createElement('p');
+            dueDateEl.classList.add('taskDueDate');
+            if (this.due_at) {
+                const dueDate = new Date(this.due_at);
+                // Check if date is valid (not year 0001 or invalid)
+                if (dueDate.getFullYear() > 1900 && !isNaN(dueDate.getTime())) {
+                    dueDateEl.textContent = dueDate.toLocaleDateString() + ' ' + dueDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                } else {
+                    dueDateEl.textContent = '';
+                }
+            } else {
+                dueDateEl.textContent = '';
+            }
+
+            // Add category, due date, and timer to top row
+            topRowEl.append(this.children.categoryEl);
+            topRowEl.append(dueDateEl);
+            topRowEl.append(this.children.timerEl);
+
+            this.taskEl.append(topRowEl);
             this.taskEl.append(this.children.titleEl);
-            this.taskEl.append(this.children.timerEl);
-            this.taskEl.append(this.children.categoryEl);
             this.taskEl.append(this.children.indexEl);
         };
 
