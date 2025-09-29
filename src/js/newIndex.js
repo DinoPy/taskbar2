@@ -168,9 +168,9 @@ ipc.on("new_task_from_relative", (e, data) => {
 		tasks,
 		taskContainer,
 		barDetails,
-		priority: t.priority.Int32,
-		due_at: t.due_at.Time,
-		show_before_due_time: t.show_before_due_time.Int32,
+		priority: data.priority?.Int32 || data.priority,
+		due_at: data.due_at?.Time || data.due_at,
+		show_before_due_time: data.show_before_due_time?.Int32 || data.show_before_due_time,
 		noActiveTaskWarning: noActiveTaskParagraph,
 		tags: data.tags,
 		isActive: data.is_active

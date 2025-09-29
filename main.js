@@ -465,6 +465,15 @@ function createTaskContextMenu(args) {
 		})
 
 	);
+
+	ctxMenu.append(
+		new MenuItem({
+			label: "Duplicate",
+			click: () => {
+				duplicateTask(args);
+			},
+		})
+	);
 	ctxMenu.append(
 		new MenuItem({
 			label: "Category",
@@ -799,6 +808,13 @@ function completeTask(props) {
 	if (openTaskProps && props.id === openTaskProps.id) openTaskProps = null;
 }
 
+function duplicateTask(props) {
+	console.log(`Task ${props.id} is being duplicated`);
+	sendEvent("task_duplicate", {
+		task_id: props.id
+	});
+}
+
 ipc.on("task_complete", async (_, data) => {
 	try {
 		// TODO: Re enable posting to sheets.
@@ -873,6 +889,7 @@ ipc.on("close-completed-list-window", () => {
 
 
 const WSOnNewTaskCreated = (data) => {
+	console.log("new task created", data);
 	win.webContents.send("new_task_from_relative", data);
 }
 
