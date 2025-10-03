@@ -182,3 +182,35 @@ button {
     padding-right: 10px;
     cursor: pointer;
 }
+
+/* Date header styling */
+.date-header-row {
+    background-color: transparent;
+    border: none;
+}
+
+.date-header {
+    color: #b8c1c8;
+    font-weight: bold;
+    font-size: 1.1em;
+    padding: 12px 16px;
+    text-align: left;
+    margin-bottom: 1rem;
+}
+
+.date-text {
+    color: #b8c1c8;
+}
+
+.date-stats {
+    color: #8a9297;
+    font-weight: normal;
+    font-size: 0.9em;
+}
+
+/* Task group spacing */
+.date-task-group-end::after {
+    content: "";
+    display: block;
+    height: 2rem;
+}

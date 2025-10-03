@@ -59,47 +59,160 @@ const createTableElement = () => {
 
 const createTaskListElements = (data, tableBody) => {
 	console.log(data);
-	data
-		.map((t, i) => {
-			const tableRow = document.createElement('tr');
+	
+	// Group tasks by completion date
+	const groupedByDate = {};
+	
+	data.forEach((task) => {
+		if (task.completed_at.Valid) {
+			const completionDate = new Date(task.completed_at.Time);
+			const dateKey = completionDate.toDateString(); // e.g., "Fri Oct 03 2025"
+			
+			if (!groupedByDate[dateKey]) {
+				groupedByDate[dateKey] = {
+					date: completionDate,
+					tasks: []
+				};
+			}
+			groupedByDate[dateKey].tasks.push(task);
+		}
+	});
+	
+	// Sort dates in descending order (most recent first)
+	const sortedDateKeys = Object.keys(groupedByDate).sort((a, b) => {
+		return new Date(b) - new Date(a);
+	});
+	
+	let globalIndex = 1;
+	
+	sortedDateKeys.forEach((dateKey) => {
+		const dateGroup = groupedByDate[dateKey];
+		
+		// Create date header row with stats
+		const dateHeaderRow = document.createElement('tr');
+		dateHeaderRow.classList.add('date-header-row');
+		
+		const dateHeaderCell = document.createElement('td');
+		dateHeaderCell.colSpan = 7; // Span all columns
+		
+		// Calculate daily stats
+		const taskCount = dateGroup.tasks.length;
+		const totalDuration = calculateTotalDuration(dateGroup.tasks);
+		
+		// Create date header content
+		const dateText = formatDateHeader(dateGroup.date);
+		const statsText = ` • ${taskCount} task${taskCount !== 1 ? 's' : ''} • ${totalDuration}`;
+		
+		dateHeaderCell.innerHTML = `
+			<span class="date-text">${dateText}</span>
+			<span class="date-stats">${statsText}</span>
+		`;
+		dateHeaderCell.classList.add('date-header');
+		
+		dateHeaderRow.append(dateHeaderCell);
+		tableBody.append(dateHeaderRow);
+		
+		// Add tasks for this date (sorted by completion time - earliest first)
+		const sortedTasks = dateGroup.tasks.sort((a, b) => new Date(a.completed_at.Time) - new Date(b.completed_at.Time));
+		
+		sortedTasks.forEach((t, taskIndex) => {
+				const tableRow = document.createElement('tr');
 
-			const indexField = document.createElement('td');
-			indexField.textContent = i + 1;
+				const indexField = document.createElement('td');
+				indexField.textContent = globalIndex++;
 
-			const titleField = document.createElement('td');
-			titleField.textContent = t.title;
+				const titleField = document.createElement('td');
+				titleField.textContent = t.title;
 
-			const tagsField = document.createElement('td');
-			if (t.tags && t.tags.length > 0)
-				tagsField.textContent = t.tags.join(" | ");
+				const tagsField = document.createElement('td');
+				if (t.tags && t.tags.length > 0)
+					tagsField.textContent = t.tags.join(" | ");
 
-			const categoryField = document.createElement('td');
-			categoryField.textContent = t.category;
+				const categoryField = document.createElement('td');
+				categoryField.textContent = t.category;
 
-			const durationField = document.createElement('td');
-			durationField.textContent = t.duration;
+				const durationField = document.createElement('td');
+				durationField.textContent = t.duration;
 
-			const completedAtField = document.createElement('td');
-			if (t.completed_at.Valid)
-				completedAtField.textContent = new Date(t.completed_at.Time).toLocaleString();
+				const completedAtField = document.createElement('td');
+				if (t.completed_at.Valid) {
+					const completedTime = new Date(t.completed_at.Time);
+					completedAtField.textContent = completedTime.toLocaleTimeString('en-US', {
+						hour: 'numeric',
+						minute: '2-digit',
+						hour12: true
+					});
+				}
 
-			const editActionField = document.createElement('td');
-			editActionField.classList.add("edit-action-button");
-			editActionField.textContent = "Edit";
-			editActionField.addEventListener("click", (e) => {
-				ipc.send("toggle_given_task_edit", {
-					id: t.id,
-					title: t.title,
-					description: t.descripiton,
-					category: t.category,
-					tags: t.tags,
+				const editActionField = document.createElement('td');
+				editActionField.classList.add("edit-action-button");
+				editActionField.textContent = "Edit";
+				editActionField.addEventListener("click", (e) => {
+					ipc.send("toggle_given_task_edit", {
+						id: t.id,
+						title: t.title,
+						description: t.descripiton,
+						category: t.category,
+						tags: t.tags,
+					})
 				})
-			})
 
-			tableRow.title = t.title;
-			tableRow.append(indexField, titleField, tagsField, categoryField, durationField, completedAtField, editActionField);
-			tableBody.append(tableRow);
-		})
+				tableRow.title = t.title;
+				tableRow.append(indexField, titleField, tagsField, categoryField, durationField, completedAtField, editActionField);
+				
+				// Add spacing class to last task row of each date group (except the last date group)
+				const isLastTaskOfGroup = taskIndex === sortedTasks.length - 1;
+				const isLastDateGroup = dateKey === sortedDateKeys[sortedDateKeys.length - 1];
+				
+				if (isLastTaskOfGroup && !isLastDateGroup) {
+					tableRow.classList.add('date-task-group-end');
+				}
+				
+				tableBody.append(tableRow);
+			});
+	});
+}
+
+// Helper function to format date header
+const formatDateHeader = (date) => {
+	const options = { 
+		weekday: 'long', 
+		year: 'numeric', 
+		month: 'long', 
+		day: 'numeric' 
+	};
+	return date.toLocaleDateString('en-US', options);
+}
+
+// Helper function to calculate total duration for a group of tasks
+const calculateTotalDuration = (tasks) => {
+	let time = { hours: 0, minutes: 0, seconds: 0 };
+	
+	tasks.forEach((task) => {
+		const timeSplit = task.duration.split(':');
+		const hours = parseInt(timeSplit[0]);
+		const minutes = parseInt(timeSplit[1]);
+		const seconds = parseInt(timeSplit[2]);
+
+		time.hours += hours;
+		time.minutes += minutes;
+		time.seconds += seconds;
+	});
+
+	// Convert seconds to minutes
+	const minutesFromSeconds = Math.floor(time.seconds / 60);
+	const secondsReminder = time.seconds % 60;
+	time.minutes += minutesFromSeconds;
+	time.seconds = secondsReminder;
+
+	// Convert minutes to hours
+	const hoursFromMinutes = Math.floor(time.minutes / 60);
+	const minutesReminder = time.minutes % 60;
+	time.hours += hoursFromMinutes;
+	time.minutes = minutesReminder;
+
+	const timeAsString = (unit) => unit <= 9 ? `0${unit}` : unit;
+	return `${timeAsString(time.hours)}:${timeAsString(time.minutes)}:${timeAsString(time.seconds)}`;
 }
 
 const updateDataAttribute = (data) => {

@@ -216,6 +216,8 @@ body {
 .taskContainer {
 	overflow: hidden;
 	padding-left: var(--spacing-container-padding-left);
+	width: 100%;
+	justify-content: center;
 }
 
 .timerAndActions {
