@@ -51,6 +51,7 @@ let completedTasksWindow = null;
 let kenbanWindow = null;
 let helpWindow = null;
 let customCommandsWindow = null;
+let taskSplitWindow = null;
 let openTaskProps = null;
 
 const reserved_keys = ["Space", "n", "j", "e", "k", "c", "s", "y", "z"];
@@ -92,6 +93,7 @@ const createWindow = () => {
 	ipc.on("close_app", (_, args) => {
 		taskWindow?.close();
 		completedTasksWindow?.close();
+		taskSplitWindow?.close();
 		win.close();
 	});
 
@@ -474,6 +476,16 @@ function createTaskContextMenu(args) {
 			},
 		})
 	);
+
+	ctxMenu.append(
+		new MenuItem({
+			label: "Split",
+			click: () => {
+				taskSplitWindow?.close();
+				createTaskSplitWindow(args);
+			},
+		})
+	);
 	ctxMenu.append(
 		new MenuItem({
 			label: "Category",
@@ -764,6 +776,57 @@ function createCustomCommandsWindow() {
 	})
 }
 
+function createTaskSplitWindow(props) {
+	// properties of the browser window.
+	const cursorPosition = screen.getCursorScreenPoint();
+	const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
+	taskSplitWindow = new BrowserWindow({
+		x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 700 / 2),
+		y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.1),
+		width: 700,
+		minHeight: 500,
+		minimizable: false,
+		resizable: true,
+		modal: true,
+		alwaysOnTop: true,
+		show: false,
+		frame: false,
+		transparent: true,
+
+		webPreferences: {
+			webgl: true,
+			nodeIntegration: true,
+			contextIsolation: false,
+			devTools: true,
+		},
+	});
+	taskSplitWindow.setBackgroundColor = "#1b1d23";
+	taskSplitWindow.loadFile("src/html/taskSplit.html");
+
+	taskSplitWindow.webContents.on("dom-ready", async () => {
+		const height = await taskSplitWindow.webContents.executeJavaScript(
+			"document.body.offsetHeight"
+		);
+
+		taskSplitWindow.setSize(700, Math.max(height + 27, 500));
+		taskSplitWindow.show();
+	});
+
+	// when the window is loaded we send the data from the parent props received via the context menu
+	// and populate the page with the intended values.
+	taskSplitWindow.webContents.on("did-finish-load", () => {
+		taskSplitWindow.webContents.send("data-from-parent", props);
+	});
+
+	// shows the window when ready event is triggered.
+	taskSplitWindow.on("ready-to-show", () => { taskSplitWindow.focus() });
+
+	// removes from memory the value of the taskSplitWindow that was closed.
+	taskSplitWindow.on("close", () => {
+		taskSplitWindow = null;
+	});
+}
+
 ipc.on("new_command_added", (_, data) => {
 	console.log(JSON.stringify(data));
 	commands_and_windows[data.key] = {
@@ -888,6 +951,12 @@ ipc.on("delete-task", (_, data) => {
 	deleteTask({ id: data.id });
 });
 
+ipc.on("open-task-split", (_, data) => {
+	console.log(`Main: Opening split window for task ${data.id}`);
+	taskSplitWindow?.close();
+	createTaskSplitWindow(data.taskData);
+});
+
 ipc.on("toggle-show-all-tasks", () => {
 	console.log("Toggling show all tasks");
 	showAllTasks = !showAllTasks;
@@ -922,8 +991,17 @@ ipc.on("switch-screen", (_, data) => {
 
 ipc.on("close-children-window", () => {
 	if (taskWindow) taskWindow.close();
+	if (taskSplitWindow) taskSplitWindow.close();
 	openTaskProps = null;
 	taskWindow = null;
+	taskSplitWindow = null;
+});
+
+ipc.on("task-split-submission", (_, data) => {
+	console.log(`Task ${data.task_id} is being split`);
+	sendEvent("task_split", data);
+	if (taskSplitWindow) taskSplitWindow.close();
+	taskSplitWindow = null;
 });
 
 ipc.on("toggle-always-on-top", () => {

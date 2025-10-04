@@ -1,0 +1,387 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400&display=swap');
+
+/* CSS Custom Properties - Consistent with main app */
+:root {
+	/* Colors - Base Theme */
+	--color-primary: lch(86 24.64 78.64);
+	--color-primary-border: lch(75 20 78.64);
+	--color-text-primary: #4a4a4a;
+	--color-text-secondary: rgb(74, 74, 74);
+	--color-text-white: #ffffff;
+	--color-text-warning: #e67e22;
+	
+	/* Input Colors */
+	--color-input-bg: lch(90 15 78.64);
+	--color-input-border: lch(80 20 78.64);
+	--color-input-outline: lch(70 30 78.64);
+	
+	/* Button Colors */
+	--color-button-hover: lch(80 20 78.64);
+	--color-button-active: lch(70 30 78.64);
+	--color-button-warning-bg: lch(60 35 78.64);
+	
+	/* Status Colors */
+	--color-status-error: #e74c3c;
+	--color-status-success: #27ae60;
+	--color-status-warning: #e67e22;
+	--color-status-danger: #c74242;
+	
+	/* Sizes - Layout */
+	--size-border-radius: 8px;
+	--size-border-radius-small: 1px;
+	--size-border-radius-medium: 5px;
+	--size-border-radius-button: 100%;
+	
+	/* Sizes - Spacing */
+	--spacing-container-padding: 20px;
+	--spacing-section-gap: 20px;
+	--spacing-input-padding: 8px 12px;
+	--spacing-button-padding: 10px 20px;
+	
+	/* Sizes - Typography */
+	--font-size-title: 18px;
+	--font-size-subtitle: 16px;
+	--font-size-body: 14px;
+	--font-size-small: 12px;
+	
+	/* Sizes - Elements */
+	--size-button-height: 40px;
+	--size-input-height: 36px;
+	--size-table-row-height: 50px;
+	
+	/* Sizes - Borders */
+	--border-width: 1px;
+	
+	/* Line Heights */
+	--line-height-normal: 1.4;
+	--line-height-tight: 1.2;
+	
+	/* Animations */
+	--animation-transition: 0.3s;
+}
+
+* {
+	box-sizing: border-box;
+	user-select: none;
+}
+
+body {
+	margin: 0;
+	font-family: 'Nunito', sans-serif;
+	background-color: var(--color-primary);
+	color: var(--color-text-primary);
+	line-height: var(--line-height-normal);
+}
+
+.body-container {
+	padding: var(--spacing-container-padding);
+	max-width: 100%;
+	margin: 0 auto;
+}
+
+/* Task Header */
+.task-header {
+	background-color: var(--color-input-bg);
+	border: var(--border-width) solid var(--color-input-border);
+	border-radius: var(--size-border-radius);
+	padding: var(--spacing-container-padding);
+	margin-bottom: var(--spacing-section-gap);
+}
+
+.task-title {
+	font-size: var(--font-size-title);
+	font-weight: bold;
+	margin: 0 0 10px 0;
+	color: var(--color-text-primary);
+}
+
+.task-description {
+	font-size: var(--font-size-body);
+	margin: 0 0 15px 0;
+	color: var(--color-text-secondary);
+	min-height: 20px;
+}
+
+.task-meta {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	font-size: var(--font-size-small);
+	font-weight: bold;
+}
+
+.task-duration {
+	color: var(--color-text-primary);
+}
+
+.remaining-duration {
+	color: var(--color-status-success);
+}
+
+.remaining-duration.warning {
+	color: var(--color-status-warning);
+}
+
+.remaining-duration.error {
+	color: var(--color-status-error);
+}
+
+.remaining-duration.success {
+	color: var(--color-status-success);
+	font-weight: bold;
+}
+
+/* Splits Container */
+.splits-container {
+	margin-bottom: var(--spacing-section-gap);
+}
+
+.splits-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 15px;
+}
+
+.splits-header h3 {
+	font-size: var(--font-size-subtitle);
+	font-weight: bold;
+	margin: 0;
+	color: var(--color-text-primary);
+}
+
+/* Table Styles */
+.table-container {
+	background-color: var(--color-input-bg);
+	border: var(--border-width) solid var(--color-input-border);
+	border-radius: var(--size-border-radius);
+	overflow: hidden;
+}
+
+table {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+thead {
+	background-color: var(--color-primary-border);
+}
+
+th {
+	padding: 12px 8px;
+	text-align: left;
+	font-weight: bold;
+	font-size: var(--font-size-small);
+	color: var(--color-text-primary);
+	border-bottom: var(--border-width) solid var(--color-input-border);
+}
+
+th:nth-child(1) {
+	width: 25%;
+}
+
+th:nth-child(2) {
+	width: 45%;
+}
+
+th:nth-child(3) {
+	width: 20%;
+}
+
+th:last-child {
+	width: 10%;
+	text-align: center;
+}
+
+tbody tr {
+	border-bottom: var(--border-width) solid var(--color-input-border);
+}
+
+tbody tr:last-child {
+	border-bottom: none;
+}
+
+tbody tr:hover {
+	background-color: var(--color-button-hover);
+}
+
+td {
+	padding: 8px;
+	vertical-align: middle;
+}
+
+/* Input Styles */
+input[type="text"], 
+input[type="time"], 
+textarea {
+	width: 100%;
+	height: var(--size-input-height);
+	background-color: var(--color-primary);
+	border: var(--border-width) solid var(--color-input-border);
+	border-radius: var(--size-border-radius-small);
+	padding: var(--spacing-input-padding);
+	font-family: 'Nunito', sans-serif;
+	font-size: var(--font-size-body);
+	color: var(--color-text-primary);
+	transition: border-color var(--animation-transition);
+}
+
+input[type="text"]:focus, 
+input[type="time"]:focus, 
+textarea:focus {
+	outline: none;
+	border-color: var(--color-input-outline);
+}
+
+textarea {
+	height: auto;
+	min-height: var(--size-input-height);
+	resize: vertical;
+}
+
+input[type="time"] {
+	width: 120px;
+}
+
+/* Button Styles */
+.btn {
+	background-color: var(--color-primary);
+	border: var(--border-width) solid var(--color-input-border);
+	border-radius: var(--size-border-radius-medium);
+	padding: var(--spacing-button-padding);
+	font-family: 'Nunito', sans-serif;
+	font-size: var(--font-size-body);
+	color: var(--color-text-primary);
+	cursor: pointer;
+	transition: all var(--animation-transition);
+	height: var(--size-button-height);
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.btn:hover {
+	background-color: var(--color-button-hover);
+}
+
+.btn:active {
+	background-color: var(--color-button-active);
+}
+
+.add-btn {
+	background-color: var(--color-status-success);
+	color: var(--color-text-white);
+	border-color: var(--color-status-success);
+}
+
+.add-btn:hover {
+	background-color: #1e7e34;
+}
+
+.submitBtn {
+	background-color: var(--color-status-success);
+	color: var(--color-text-white);
+	border-color: var(--color-status-success);
+}
+
+.submitBtn:hover {
+	background-color: #1e7e34;
+}
+
+.submitBtn:disabled {
+	background-color: var(--color-text-secondary);
+	border-color: var(--color-text-secondary);
+	cursor: not-allowed;
+	opacity: 0.6;
+}
+
+.cancelBtn {
+	background-color: var(--color-status-error);
+	color: var(--color-text-white);
+	border-color: var(--color-status-error);
+}
+
+.cancelBtn:hover {
+	background-color: #c0392b;
+}
+
+.delete-btn {
+	background-color: var(--color-status-error);
+	color: var(--color-text-white);
+	border-color: var(--color-status-error);
+	padding: 4px 8px;
+	font-size: var(--font-size-small);
+	height: auto;
+}
+
+.delete-btn:hover {
+	background-color: #c0392b;
+}
+
+/* Action Buttons */
+.action-buttons {
+	display: flex;
+	gap: 15px;
+	justify-content: flex-end;
+	margin-top: var(--spacing-section-gap);
+}
+
+/* Close Button */
+.closeIcon {
+	position: absolute;
+	top: 15px;
+	right: 15px;
+	width: 24px;
+	height: 24px;
+	cursor: pointer;
+	transition: opacity var(--animation-transition);
+}
+
+.closeIcon:hover {
+	opacity: 0.7;
+}
+
+/* Empty State */
+.empty-state {
+	text-align: center;
+	padding: 40px 20px;
+	color: var(--color-text-secondary);
+	font-style: italic;
+}
+
+/* Validation Styles */
+input.error {
+	border-color: var(--color-status-error);
+	background-color: rgba(231, 76, 60, 0.1);
+}
+
+.error-message {
+	color: var(--color-status-error);
+	font-size: var(--font-size-small);
+	margin-top: 4px;
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+	.body-container {
+		padding: 15px;
+	}
+	
+	.splits-header {
+		flex-direction: column;
+		align-items: stretch;
+		gap: 10px;
+	}
+	
+	.action-buttons {
+		flex-direction: column;
+	}
+	
+	table {
+		font-size: var(--font-size-small);
+	}
+	
+	th, td {
+		padding: 6px 4px;
+	}
+}

@@ -481,6 +481,7 @@ export class Task {
                 priority: this.priority,
                 due_at: this.due_at,
                 show_before_due_time: this.show_before_due_time,
+                duration: this.formatTaskDuration(Math.ceil(this.duration / 1000)),
             };
             ipc.send('show-task-context-menu', props);
         };

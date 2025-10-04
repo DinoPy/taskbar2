@@ -697,6 +697,12 @@ const parseCommand = (input) => {
 		return { type: 'always_on_top' };
 	}
 	
+	// Split task: sp1, sp2, etc.
+	if (trimmed.match(/^sp(\d+)$/)) {
+		const match = trimmed.match(/^sp(\d+)$/);
+		return { type: 'split', index: parseInt(match[1]) };
+	}
+	
 	// Screen switch commands: sw0d, sw0u, sw1d, sw1u, etc.
 	if (trimmed.match(/^sw(\d+)([du])$/)) {
 		const match = trimmed.match(/^sw(\d+)([du])$/);
@@ -807,6 +813,19 @@ const executeCommand = (command) => {
 			ipc.send("toggle-always-on-top");
 			return { success: true, message: "Toggled always on top" };
 			
+		case 'split':
+			if (command.index > 0 && command.index <= taskKeys.length) {
+				const taskId = taskKeys[command.index - 1];
+				const taskData = tasks[taskId];
+				if (taskData) {
+					console.log(`Command: Splitting task ${command.index} (ID: ${taskId})`);
+					ipc.send("open-task-split", { id: taskId, taskData: taskData.formatTask('Object') });
+					return { success: true, message: `Opening split window for task ${command.index}` };
+				}
+				return { success: false, message: `Task ${command.index} not found` };
+			}
+			return { success: false, message: `Invalid task index: ${command.index}` };
+			
 		case 'screen_switch':
 			ipc.send("switch-screen", { 
 				screenIndex: command.screenIndex, 
@@ -852,12 +871,20 @@ const getCommandSuggestions = (input) => {
 		{ command: 'sat', description: 'show all tasks', pattern: /^sat$/ },
 		{ command: 'ec', description: 'edit current task', pattern: /^ec$/ },
 		{ command: 'aot', description: 'toggle always on top', pattern: /^aot$/ },
+		{ command: 'sp', description: 'split task', pattern: /^sp(\d+)$/ },
 		{ command: 'sw', description: 'switch screen', pattern: /^sw(\d+)([du])$/ }
 	];
 	
 	// Handle all command types with consistent logic
 	if (trimmed.startsWith('sw')) {
 		suggestions.push({ command: 'sw_n_d/u', description: 'switch to screen n down/up' });
+	} else if (trimmed.startsWith('sp')) {
+		if (trimmed.match(/^sp\d+$/)) {
+			const match = trimmed.match(/^sp(\d+)$/);
+			suggestions.push({ command: trimmed, description: `split task ${match[1]}` });
+		} else {
+			suggestions.push({ command: 'sp1, sp2, sp3...', description: 'split task' });
+		}
 	} else if (trimmed.startsWith('s')) {
 		if (trimmed.match(/^s\d+$/)) {
 			const match = trimmed.match(/^s(\d+)$/);
@@ -927,6 +954,9 @@ const getCommandSuggestions = (input) => {
 					} else if (trimmed.match(/^d{2,}(\d+)$/)) {
 						const match = trimmed.match(/^d{2,}(\d+)$/);
 						suggestions.push({ command: trimmed, description: `delete task ${match[1]}` });
+					} else if (trimmed.match(/^sp(\d+)$/)) {
+						const match = trimmed.match(/^sp(\d+)$/);
+						suggestions.push({ command: trimmed, description: `split task ${match[1]}` });
 					} else if (trimmed === 'sat') {
 						suggestions.push({ command: trimmed, description: 'show all tasks' });
 					} else if (trimmed === 'ec') {
@@ -952,6 +982,8 @@ const getCommandSuggestions = (input) => {
 						suggestions.push({ command: 'ec', description: 'edit current task' });
 					} else if (cmd.command === 'aot') {
 						suggestions.push({ command: 'aot', description: 'toggle always on top' });
+					} else if (cmd.command === 'sp') {
+						suggestions.push({ command: 'sp1, sp2, sp3...', description: 'split task' });
 					} else if (cmd.command === 'sw') {
 						suggestions.push({ command: 'sw_n_d/u', description: 'switch to screen n down/up' });
 					}
