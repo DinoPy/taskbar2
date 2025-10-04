@@ -32,6 +32,26 @@
 	--color-status-warning: #e67e22;
 	--color-status-danger: #c74242;
 	
+	/* Urgency Border Colors */
+	--color-urgency-border-low: #4CAF50; /* Green */
+	--color-urgency-border-medium: #FFC107; /* Amber */
+	--color-urgency-border-medium-high: #FF9800; /* Orange */
+	--color-urgency-border-high: #FF5722; /* Deep Orange */
+	--color-urgency-border-critical: #F44336; /* Red */
+	
+	/* Urgency Corner Indicator Colors */
+	--color-urgency-corner-low: #4CAF50; /* Green */
+	--color-urgency-corner-medium: #FFC107; /* Amber */
+	--color-urgency-corner-medium-high: #FF9800; /* Orange */
+	--color-urgency-corner-high: #FF5722; /* Deep Orange */
+	--color-urgency-corner-critical: #F44336; /* Red */
+	
+	/* Urgency Sizes */
+	--size-urgency-border-width: 4px;
+	--size-urgency-corner-dot: 8px;
+	--size-urgency-corner-top: 14px; 
+	--size-urgency-corner-right: 5px;
+	
 	/* Neon Border Colors */
 	--color-neon-red: #ff0000;
 	--color-neon-orange-red: #ff4500;
@@ -283,6 +303,21 @@ body {
 	}
 }
 
+@keyframes pulse {
+	0% {
+		opacity: 0.8;
+		transform: scale(1);
+	}
+	50% {
+		opacity: 1;
+		transform: scale(1.2);
+	}
+	100% {
+		opacity: 0.8;
+		transform: scale(1);
+	}
+}
+
 .countdown {
     text-wrap: nowrap;
 	height: var(--size-countdown-height);
@@ -481,4 +516,80 @@ body:hover .noActiveTaskWarning {
 
 .helpItem:last-child {
     margin-bottom: 0;
+}
+
+/* Urgency Level Styles - Border-based system */
+.task.urgency-low {
+    border-left: var(--size-urgency-border-width) solid var(--color-urgency-border-low);
+    transition: border-left-color var(--animation-transition) ease-in-out;
+}
+
+.task.urgency-medium {
+    border-left: var(--size-urgency-border-width) solid var(--color-urgency-border-medium);
+    transition: border-left-color var(--animation-transition) ease-in-out;
+}
+
+.task.urgency-medium-high {
+    border-left: var(--size-urgency-border-width) solid var(--color-urgency-border-medium-high);
+    transition: border-left-color var(--animation-transition) ease-in-out;
+}
+
+.task.urgency-high {
+    border-left: var(--size-urgency-border-width) solid var(--color-urgency-border-high);
+    transition: border-left-color var(--animation-transition) ease-in-out;
+}
+
+.task.urgency-critical {
+    border-left: var(--size-urgency-border-width) solid var(--color-urgency-border-critical);
+    box-shadow: 0 0 10px rgba(244, 67, 54, 0.3); /* Subtle glow */
+    transition: border-left-color var(--animation-transition) ease-in-out, box-shadow var(--animation-transition) ease-in-out;
+}
+
+/* Ensure active tasks maintain their styling priority over urgency */
+.activeTask.urgency-low,
+.activeTask.urgency-medium,
+.activeTask.urgency-medium-high,
+.activeTask.urgency-high,
+.activeTask.urgency-critical {
+    border-left: var(--size-urgency-border-width) solid var(--color-task-active-border);
+    box-shadow: none; /* Remove urgency glow for active tasks */
+}
+
+/* Corner indicator dots for urgency levels */
+.task::after {
+    content: '';
+    position: absolute;
+    top: var(--size-urgency-corner-top);
+    right: var(--size-urgency-corner-right);
+    width: var(--size-urgency-corner-dot);
+    height: var(--size-urgency-corner-dot);
+    border-radius: 50%;
+    opacity: 0.8;
+    transition: all var(--animation-transition) ease-in-out;
+}
+
+.task.urgency-low::after {
+    background-color: var(--color-urgency-corner-low);
+}
+
+.task.urgency-medium::after {
+    background-color: var(--color-urgency-corner-medium);
+}
+
+.task.urgency-medium-high::after {
+    background-color: var(--color-urgency-corner-medium-high);
+}
+
+.task.urgency-high::after {
+    background-color: var(--color-urgency-corner-high);
+}
+
+.task.urgency-critical::after {
+    background-color: var(--color-urgency-corner-critical);
+    animation: pulse 1s infinite;
+}
+
+/* Hide corner indicators for active tasks */
+.activeTask::after {
+    display: none;
 }

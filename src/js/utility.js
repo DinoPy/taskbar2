@@ -31,6 +31,42 @@ export const taskIndexUpdater = (tasks) => {
     }
 }
 
+// Urgency calculation function - Refined 5-level system
+export const calculateUrgencyLevel = (due_at) => {
+    // If no due date is set or it's invalid, return null (no urgency)
+    if (!due_at || due_at === "0001-01-01T00:00:00Z" || due_at === "0001-01-01T00:00:00.000Z") {
+        return null;
+    }
+    
+    const currentTime = new Date();
+    const dueDate = new Date(due_at);
+    
+    // Check if the date is valid
+    if (isNaN(dueDate.getTime())) {
+        return null;
+    }
+    
+    const timeRemaining = dueDate.getTime() - currentTime.getTime();
+    const hoursRemaining = timeRemaining / (1000 * 60 * 60);
+    
+    // Return urgency level based on refined thresholds
+    if (hoursRemaining <= 0) {
+        return 'critical'; // Past due
+    } else if (hoursRemaining <= 0.5) { // 30 minutes
+        return 'critical'; 
+    } else if (hoursRemaining <= 2) { // 2 hours
+        return 'high';
+    } else if (hoursRemaining <= 6) { // 6 hours
+        return 'medium-high';
+    } else if (hoursRemaining <= 12) { // 12 hours
+        return 'medium';
+    } else if (hoursRemaining <= 24) { // 24 hours
+        return 'low';
+    } else {
+        return null; // Beyond 24 hours, no urgency styling
+    }
+}
+
 export class Task {
     constructor({
         id,
@@ -143,6 +179,9 @@ export class Task {
                     dueDateEl.textContent = '';
                 }
             }
+
+            // Update urgency styling when due date changes
+            this.updateUrgencyStyling();
 
             if (!from_relative)
                 ipc.send("task_edit", {
@@ -286,10 +325,24 @@ export class Task {
         show () {
             this.taskEl.style.display = 'flex';
             this.taskEl.style.flexDirection = 'column';
+            this.updateUrgencyStyling();
         };
 
         hide () {
             this.taskEl.style.display = 'none';
+        };
+
+        updateUrgencyStyling () {
+            // Remove all existing urgency classes
+            this.taskEl.classList.remove('urgency-low', 'urgency-medium', 'urgency-medium-high', 'urgency-high', 'urgency-critical');
+            
+            // Calculate urgency level
+            const urgencyLevel = calculateUrgencyLevel(this.due_at);
+            
+            // Apply urgency class if there's an urgency level
+            if (urgencyLevel) {
+                this.taskEl.classList.add(`urgency-${urgencyLevel}`);
+            }
         };
 
         addToCompletedTaskList () {
@@ -373,6 +426,7 @@ export class Task {
             this.setTaskElUp();
             this.setChildrenElUp();
             this.taskContainer.append(this.taskEl);
+            this.updateUrgencyStyling();
             if (!from_relative)
                 ipc.send("task_create", this.formatTask("Object", false))
         };

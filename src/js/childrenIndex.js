@@ -8,6 +8,7 @@ let tags = [];
 let priority = null;
 let due_at = null;
 let show_before_due_time = null;
+let originalDueAt = null; // Track original due date to detect changes
 
 const containerEl = document.querySelector(".body-container");
 const closeBtn = document.getElementById('closeBtn');
@@ -38,12 +39,8 @@ document.addEventListener("DOMContentLoaded", () => {
 	const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 	dueAtInput.min = localDateTime;
 
-	// Set default value when user focuses on empty due date field
-	dueAtInput.addEventListener('focus', () => {
-		if (!dueAtInput.value) {
-			dueAtInput.value = localDateTime;
-		}
-	});
+	// Don't automatically set a default value when user focuses on empty due date field
+	// This prevents accidentally setting a due date when user just wants to see the field
 })
 
 console.log(containerEl);
@@ -65,6 +62,7 @@ ipc.on('data-from-parent', (e, data) => {
 	priority = data.priority;
 	due_at = data.due_at;
 	show_before_due_time = data.show_before_due_time;
+	originalDueAt = data.due_at; // Store original due date
 
 
 
@@ -191,7 +189,15 @@ function handleSubmit() {
 
 	// Get values from form inputs
 	const priorityValue = priorityInput.value ? parseInt(priorityInput.value) : null;
-	const dueAtValue = dueAtInput.value ? new Date(dueAtInput.value).toISOString() : null;
+	
+	// Only process due date if it was actually changed
+	let dueAtValue = null;
+	if (dueAtInput.value) {
+		const newDueAt = new Date(dueAtInput.value).toISOString();
+		dueAtValue = newDueAt;
+	}
+	// If dueAtInput.value is empty, dueAtValue remains null
+	// This means if there was an original due date and user clears the field, it will be set to null
 
 	// Convert hours and minutes to total minutes
 	const hours = parseInt(showBeforeDueHoursInput.value) || 0;
