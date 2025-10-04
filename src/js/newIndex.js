@@ -1,6 +1,6 @@
 const { ipcRenderer } = require('electron');
 const ipc = ipcRenderer;
-import { Task, formatCurrentDate, formatCountdownText, taskIndexUpdater } from './utility.js';
+import { Task, formatCurrentDate, formatCountdownText, taskIndexUpdater, calculateUrgencyLevel, calculateCountdownText } from './utility.js';
 import { parseString } from './helpers.js';
 
 const closeBtn = document.getElementById('closeBtn');
@@ -372,6 +372,17 @@ setInterval(() => {
 		updateTaskVisibility();
 	}
 }, 30000); // 30 seconds
+
+// Timer to update countdown indicators every minute
+setInterval(() => {
+	// Update urgency styling for all visible tasks to refresh countdown text
+	for (let id in tasks) {
+		const task = tasks[id];
+		if (task.taskEl.style.display !== 'none') {
+			task.updateUrgencyStyling();
+		}
+	}
+}, 60000); // 60 seconds
 
 // -------------- CMD HELPERS ---------------------- //
 

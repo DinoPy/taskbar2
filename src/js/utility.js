@@ -67,6 +67,39 @@ export const calculateUrgencyLevel = (due_at) => {
     }
 }
 
+// Function to calculate countdown text for corner indicator
+export const calculateCountdownText = (due_at) => {
+    // If no due date is set or it's invalid, return empty string
+    if (!due_at || due_at === "0001-01-01T00:00:00Z" || due_at === "0001-01-01T00:00:00.000Z") {
+        return '';
+    }
+    
+    const currentTime = new Date();
+    const dueDate = new Date(due_at);
+    
+    // Check if the date is valid
+    if (isNaN(dueDate.getTime())) {
+        return '';
+    }
+    
+    const timeRemaining = dueDate.getTime() - currentTime.getTime();
+    const minutesRemaining = Math.floor(timeRemaining / (1000 * 60));
+    
+    // Return appropriate countdown text
+    if (minutesRemaining <= 0) {
+        return 'OVER'; // Past due
+    } else if (minutesRemaining < 60) {
+        return `${minutesRemaining}m`; // Less than 1 hour - show minutes
+    } else if (minutesRemaining < 1440) { // Less than 24 hours
+        const hours = Math.floor(minutesRemaining / 60);
+        const minutes = minutesRemaining % 60;
+        return `${hours}:${minutes.toString().padStart(2, '0')}`; // Show hours:minutes format
+    } else {
+        const days = Math.floor(minutesRemaining / 1440);
+        return `${days}d`; // Show days
+    }
+}
+
 export class Task {
     constructor({
         id,
@@ -256,6 +289,7 @@ export class Task {
                 this.startTimer();
             this.taskEl.classList.add('activeTask');
             this.noActiveTaskWarning.classList.add('invisible');
+            
             // TODO: On toggle, update the duration
             if (!from_relative)
                 ipc.send("task_toggle",
@@ -274,6 +308,7 @@ export class Task {
             this.isFocused = false;
             this.stopTimer();
             this.taskEl.classList.remove('activeTask');
+            
             if (!from_delete)
                 ipc.send("task_toggle",
                     { uuid: this.id,
@@ -298,9 +333,6 @@ export class Task {
 
             // update when the task was focused
             this.toggledFocusAt = existentTime || new Date().getTime();
-
-            // play animation when timer is counting
-            this.taskEl.style.animationPlayState = 'running';
         };
 
         stopTimer () {
@@ -309,9 +341,6 @@ export class Task {
 
             // update the duration
             if (this.toggledFocusAt > 0) this.duration += new Date().getTime() - this.toggledFocusAt;
-
-            // pause animation when timer is not counting
-            this.taskEl.style.animationPlayState = 'paused';
 
             // helps avoiding a bug where the time passed during the break causes the task timer to blow up.
             this.toggledFocusAt = 0;
@@ -342,6 +371,13 @@ export class Task {
             // Apply urgency class if there's an urgency level
             if (urgencyLevel) {
                 this.taskEl.classList.add(`urgency-${urgencyLevel}`);
+                
+                // Update corner indicator with countdown text
+                const countdownText = calculateCountdownText(this.due_at);
+                this.taskEl.style.setProperty('--corner-text', `"${countdownText}"`);
+            } else {
+                // Clear corner indicator text for tasks without urgency
+                this.taskEl.style.setProperty('--corner-text', '""');
             }
         };
 

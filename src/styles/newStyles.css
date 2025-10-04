@@ -48,9 +48,11 @@
 	
 	/* Urgency Sizes */
 	--size-urgency-border-width: 4px;
-	--size-urgency-corner-dot: 8px;
-	--size-urgency-corner-top: 14px; 
-	--size-urgency-corner-right: 5px;
+	--size-urgency-corner-min-width: 24px; /* Minimum width */
+	--size-urgency-corner-padding: 0 2px; /* Horizontal and vertical padding */
+	--size-urgency-corner-bottom: 0px; 
+	--size-urgency-corner-right: 12px;
+	--size-urgency-corner-border-radius: 10px; /* Rounded corners */
 	
 	/* Neon Border Colors */
 	--color-neon-red: #ff0000;
@@ -318,6 +320,33 @@ body {
 	}
 }
 
+@keyframes urgencyPulse {
+	0% {
+		transform: scale(1);
+		opacity: 1;
+	}
+	5% {
+		transform: scale(1.05);
+		opacity: 0.8;
+	}
+	10% {
+		transform: scale(1);
+		opacity: 1;
+	}
+	10.1% {
+		opacity: 1;
+	}
+	100% {
+		opacity: 0.99;
+	}
+}
+
+/* Applied to high and critical urgency */
+.task.urgency-high:not(.activeTask),
+.task.urgency-critical:not(.activeTask) {
+    animation: urgencyPulse 5s ease-in-out infinite;
+}
+
 .countdown {
     text-wrap: nowrap;
 	height: var(--size-countdown-height);
@@ -326,7 +355,7 @@ body {
 	justify-content: center;
 }
 
-.activeTask {
+.task.activeTask {
 	background-color: var(--color-task-active-bg);
 	border: var(--border-width-active) solid var(--color-task-active-border);
 	animation: 
@@ -553,19 +582,32 @@ body:hover .noActiveTaskWarning {
 .activeTask.urgency-critical {
     border-left: var(--size-urgency-border-width) solid var(--color-task-active-border);
     box-shadow: none; /* Remove urgency glow for active tasks */
+    animation: 
+        bounce var(--animation-bounce-duration) ease-in-out infinite,
+        neonBorder var(--animation-neon-duration) ease-in-out infinite; /* Restore active task animations */
 }
 
-/* Corner indicator dots for urgency levels */
+/* Corner indicator for urgency levels - Rectangular with rounded corners */
 .task::after {
-    content: '';
+    content: var(--corner-text, '');
     position: absolute;
-    top: var(--size-urgency-corner-top);
+    bottom: var(--size-urgency-corner-bottom);
     right: var(--size-urgency-corner-right);
-    width: var(--size-urgency-corner-dot);
-    height: var(--size-urgency-corner-dot);
-    border-radius: 50%;
-    opacity: 0.8;
+    min-width: var(--size-urgency-corner-min-width);
+    padding: var(--size-urgency-corner-padding);
+    border-radius: var(--size-urgency-corner-border-radius);
+    opacity: 0.95;
     transition: all var(--animation-transition) ease-in-out;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+    z-index: 1;
+    white-space: nowrap; /* Prevent text wrapping */
+    box-sizing: border-box;
 }
 
 .task.urgency-low::after {
@@ -589,7 +631,3 @@ body:hover .noActiveTaskWarning {
     animation: pulse 1s infinite;
 }
 
-/* Hide corner indicators for active tasks */
-.activeTask::after {
-    display: none;
-}
