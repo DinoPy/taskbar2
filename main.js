@@ -926,6 +926,13 @@ ipc.on("close-children-window", () => {
 	taskWindow = null;
 });
 
+ipc.on("toggle-always-on-top", () => {
+	console.log("Toggling always on top");
+	const isAlwaysOnTop = win.isAlwaysOnTop();
+	win.setAlwaysOnTop(!isAlwaysOnTop);
+	console.log(`Always on top: ${!isAlwaysOnTop}`);
+});
+
 ipc.on("close-completed-list-window", () => {
 	if (completedTasksWindow) completedTasksWindow.close();
 	completedTasksWindow = null;

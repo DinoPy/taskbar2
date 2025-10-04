@@ -244,13 +244,27 @@ ipc.on('msg-redirected-to-parent', (e, data) => {
 				? data.category
 				: lastCategorySelected;
 
+		// Update all properties without sending individual edit events
 		tasks[data.id].updateTitle(data.title);
 		tasks[data.id].updateDescription(data.description);
 		tasks[data.id].updateTags(data.tags);
-		tasks[data.id].updateCategory(data.category);
-		tasks[data.id].updatePriority(data.priority);
-		tasks[data.id].updateDueAt(data.due_at);
-		tasks[data.id].updateShowBeforeDueTime(data.show_before_due_time);
+		tasks[data.id].updateCategory(data.category, true); // from_relative = true to prevent individual event
+		tasks[data.id].updatePriority(data.priority, true); // from_relative = true to prevent individual event
+		tasks[data.id].updateDueAt(data.due_at, true); // from_relative = true to prevent individual event
+		tasks[data.id].updateShowBeforeDueTime(data.show_before_due_time, true); // from_relative = true to prevent individual event
+		
+		// Send a single edit event with all the updated data
+		ipc.send("task_edit", {
+			category: data.category,
+			title: data.title,
+			description: data.description,
+			tags: data.tags,
+			priority: data.priority,
+			due_at: data.due_at,
+			show_before_due_time: data.show_before_due_time,
+			id: data.id,
+			last_modified_at: +new Date(),
+		});
 		
 		// Update visibility after property changes
 		const shouldShow = shouldShowTask(tasks[data.id]);
@@ -667,6 +681,11 @@ const parseCommand = (input) => {
 		return { type: 'edit_current' };
 	}
 	
+	// Always on top toggle: aot
+	if (trimmed === 'aot') {
+		return { type: 'always_on_top' };
+	}
+	
 	// Screen switch commands: sw0d, sw0u, sw1d, sw1u, etc.
 	if (trimmed.match(/^sw(\d+)([du])$/)) {
 		const match = trimmed.match(/^sw(\d+)([du])$/);
@@ -772,6 +791,11 @@ const executeCommand = (command) => {
 			}
 			return { success: false, message: "No task is currently focused" };
 			
+		case 'always_on_top':
+			console.log("Command: Toggling always on top");
+			ipc.send("toggle-always-on-top");
+			return { success: true, message: "Toggled always on top" };
+			
 		case 'screen_switch':
 			ipc.send("switch-screen", { 
 				screenIndex: command.screenIndex, 
@@ -815,6 +839,8 @@ const getCommandSuggestions = (input) => {
 		{ command: 'd', description: 'duplicate task', pattern: /^d(\d+)$/ },
 		{ command: 'ddd', description: 'delete task', pattern: /^d{2,}(\d+)$/ },
 		{ command: 'sat', description: 'show all tasks', pattern: /^sat$/ },
+		{ command: 'ec', description: 'edit current task', pattern: /^ec$/ },
+		{ command: 'aot', description: 'toggle always on top', pattern: /^aot$/ },
 		{ command: 'sw', description: 'switch screen', pattern: /^sw(\d+)([du])$/ }
 	];
 	
@@ -867,6 +893,8 @@ const getCommandSuggestions = (input) => {
 		suggestions.push({ command: 'sat', description: 'show all tasks' });
 	} else if (trimmed === 'ec') {
 		suggestions.push({ command: 'ec', description: 'edit current task' });
+	} else if (trimmed === 'aot') {
+		suggestions.push({ command: 'aot', description: 'toggle always on top' });
 	} else {
 		// Find matching commands for other cases
 		for (const cmd of allCommands) {
@@ -890,6 +918,10 @@ const getCommandSuggestions = (input) => {
 						suggestions.push({ command: trimmed, description: `delete task ${match[1]}` });
 					} else if (trimmed === 'sat') {
 						suggestions.push({ command: trimmed, description: 'show all tasks' });
+					} else if (trimmed === 'ec') {
+						suggestions.push({ command: trimmed, description: 'edit current task' });
+					} else if (trimmed === 'aot') {
+						suggestions.push({ command: trimmed, description: 'toggle always on top' });
 					}
 				} else {
 					// Partial match - collect command names only
@@ -905,6 +937,12 @@ const getCommandSuggestions = (input) => {
 						suggestions.push({ command: 'ddd1, ddd2, ddd3...', description: 'delete task' });
 					} else if (cmd.command === 'sat') {
 						suggestions.push({ command: 'sat', description: 'show all tasks' });
+					} else if (cmd.command === 'ec') {
+						suggestions.push({ command: 'ec', description: 'edit current task' });
+					} else if (cmd.command === 'aot') {
+						suggestions.push({ command: 'aot', description: 'toggle always on top' });
+					} else if (cmd.command === 'sw') {
+						suggestions.push({ command: 'sw_n_d/u', description: 'switch to screen n down/up' });
 					}
 				}
 			}
