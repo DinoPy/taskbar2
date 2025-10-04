@@ -37,6 +37,13 @@ document.addEventListener("DOMContentLoaded", () => {
 	const now = new Date();
 	const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 	dueAtInput.min = localDateTime;
+
+	// Set default value when user focuses on empty due date field
+	dueAtInput.addEventListener('focus', () => {
+		if (!dueAtInput.value) {
+			dueAtInput.value = localDateTime;
+		}
+	});
 })
 
 console.log(containerEl);
@@ -70,10 +77,8 @@ ipc.on('data-from-parent', (e, data) => {
 		const localDateTime = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
 		dueAtInput.value = localDateTime;
 	} else {
-		// Set default to current time
-		const now = new Date();
-		const localDateTime = new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-		dueAtInput.value = localDateTime;
+		// Leave empty if no due date is set
+		dueAtInput.value = '';
 	}
 
 	// Convert minutes to hours and minutes
