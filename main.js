@@ -873,12 +873,58 @@ ipc.on("toggle_given_task_edit", (_, data) => {
 
 })
 
+ipc.on("duplicate-task", (_, data) => {
+	console.log(`Main: Duplicating task ${data.id}`);
+	duplicateTask({ id: data.id });
+});
+
+ipc.on("complete-task", (_, data) => {
+	console.log(`Main: Completing task ${data.id}`);
+	win.webContents.send("completeTask", { id: data.id });
+});
+
+ipc.on("delete-task", (_, data) => {
+	console.log(`Main: Deleting task ${data.id}`);
+	deleteTask({ id: data.id });
+});
+
+ipc.on("toggle-show-all-tasks", () => {
+	console.log("Toggling show all tasks");
+	showAllTasks = !showAllTasks;
+	win.webContents.send("toggle-show-all-tasks", {
+		showAllTasks: showAllTasks
+	});
+});
+
+ipc.on("switch-screen", (_, data) => {
+	console.log(`Switching to screen ${data.screenIndex} ${data.direction}`);
+	const displays = screen.getAllDisplays();
+	
+	if (data.screenIndex >= 0 && data.screenIndex < displays.length) {
+		currentlySelectedScreenIndex = data.screenIndex;
+		currentlySelectedScreenSide = data.direction;
+		
+		const display = displays[data.screenIndex];
+		const y = data.direction === "down" ?
+			display.bounds.y + display.bounds.height - taskbarHeight :
+			display.bounds.y;
+			
+		win.setBounds({
+			x: display.bounds.x,
+			y: y,
+			height: taskbarHeight,
+			width: display.bounds.width,
+		});
+	}
+});
+
+
+
 ipc.on("close-children-window", () => {
 	if (taskWindow) taskWindow.close();
 	openTaskProps = null;
 	taskWindow = null;
 });
-
 
 ipc.on("close-completed-list-window", () => {
 	if (completedTasksWindow) completedTasksWindow.close();

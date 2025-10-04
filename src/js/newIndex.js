@@ -158,22 +158,33 @@ ipc.on("refresh_tasks", (e, data) => {
 // -------------- FROM RELATED APP ----------------- //
 
 ipc.on("new_task_from_relative", (e, data) => {
+	console.log("Frontend: Received new task from relative:", data);
+	
+	// Calculate duration if provided
+	const durationInt = data.duration ? 
+		(parseInt(data.duration.split(":")[0]) * 60 * 60 +
+		 parseInt(data.duration.split(":")[1]) * 60 +
+		 parseInt(data.duration.split(":")[2])) * 1000 : 0;
+	
 	tasks[data.id] = new Task({
 		id: data.id,
 		title: data.title,
 		createdAt: data.created_at,
 		category: data.category,
 		description: data.description,
+		duration: durationInt,
+		tags: data.tags,
+		isActive: data.is_active,
+		toggledFocusAt: data.toggled_at?.Int64 || data.toggled_at || 0,
+		priority: data.priority?.Int32 || data.priority,
+		due_at: data.due_at?.Time || data.due_at,
+		show_before_due_time: data.show_before_due_time?.Int32 || data.show_before_due_time,
+		last_modified_at: data.last_modified_at?.Int64 || data.last_modified_at || +new Date(),
 		completedTasks,
 		tasks,
 		taskContainer,
 		barDetails,
-		priority: data.priority?.Int32 || data.priority,
-		due_at: data.due_at?.Time || data.due_at,
-		show_before_due_time: data.show_before_due_time?.Int32 || data.show_before_due_time,
 		noActiveTaskWarning: noActiveTaskParagraph,
-		tags: data.tags,
-		isActive: data.is_active
 	});
 
 	tasks[data.id].setTaskUp(true);
@@ -181,8 +192,12 @@ ipc.on("new_task_from_relative", (e, data) => {
 	
 	// Apply visibility filter to task from relative
 	const shouldShow = shouldShowTask(tasks[data.id]);
+	console.log("Should show duplicated task:", shouldShow);
 	if (!shouldShow) {
 		tasks[data.id].hide();
+		console.log("Hiding duplicated task due to visibility filter");
+	} else {
+		console.log("Showing duplicated task");
 	}
 	
 	taskIndexUpdater(tasks);
@@ -608,39 +623,378 @@ setInterval(() => {
 }, 2500);
 
 
+// Command parsing system
+const parseCommand = (input) => {
+	const trimmed = input.trim().toLowerCase();
+	
+	// Switch command: s1, s2, etc.
+	if (trimmed.match(/^s(\d+)$/)) {
+		const match = trimmed.match(/^s(\d+)$/);
+		return { type: 'switch', index: parseInt(match[1]) };
+	}
+	
+	// Edit command: e1, e2, etc.
+	if (trimmed.match(/^e(\d+)$/)) {
+		const match = trimmed.match(/^e(\d+)$/);
+		return { type: 'edit', index: parseInt(match[1]) };
+	}
+	
+	// Duplicate command: d1, d2, dd1, dd2, etc. (single or double d)
+	if (trimmed.match(/^d{1,2}\d+$/)) {
+		const match = trimmed.match(/^d{1,2}(\d+)$/);
+		return { type: 'duplicate', index: parseInt(match[1]) };
+	}
+	
+	// Delete command: ddd1, ddd2, etc. (triple d or more for confirmation)
+	if (trimmed.match(/^d{3,}(\d+)$/)) {
+		const match = trimmed.match(/^d{3,}(\d+)$/);
+		return { type: 'delete', index: parseInt(match[1]), confirmation: match[0].match(/d/g).length };
+	}
+	
+	// Complete command: c1, c2, etc.
+	if (trimmed.match(/^c(\d+)$/)) {
+		const match = trimmed.match(/^c(\d+)$/);
+		return { type: 'complete', index: parseInt(match[1]) };
+	}
+	
+	// Show all tasks toggle: sat
+	if (trimmed === 'sat') {
+		return { type: 'show_all_tasks' };
+	}
+	
+	// Edit current task: ec
+	if (trimmed === 'ec') {
+		return { type: 'edit_current' };
+	}
+	
+	// Screen switch commands: sw0d, sw0u, sw1d, sw1u, etc.
+	if (trimmed.match(/^sw(\d+)([du])$/)) {
+		const match = trimmed.match(/^sw(\d+)([du])$/);
+		return { 
+			type: 'screen_switch', 
+			screenIndex: parseInt(match[1]), 
+			direction: match[2] === 'd' ? 'down' : 'up' 
+		};
+	}
+	
+	// Fallback to old numeric input for backward compatibility
+	const numericIndex = parseInt(trimmed);
+	if (!isNaN(numericIndex)) {
+		return { type: 'switch', index: numericIndex };
+	}
+	
+	return { type: 'invalid', input: trimmed };
+};
+
+const executeCommand = (command) => {
+	const taskKeys = Object.keys(tasks);
+	
+	switch (command.type) {
+		case 'switch':
+			if (command.index > 0 && command.index <= taskKeys.length) {
+				// Remove focus from all tasks
+				for (let k of taskKeys) {
+					if (k === taskKeys[command.index - 1]) continue;
+					tasks[k].removeFocus();
+				}
+				// Focus the selected task
+				tasks[taskKeys[command.index - 1]].addFocus();
+				return { success: true, message: `Switched to task ${command.index}` };
+			}
+			return { success: false, message: `Invalid task index: ${command.index}` };
+			
+		case 'edit':
+			if (command.index > 0 && command.index <= taskKeys.length) {
+				const taskId = taskKeys[command.index - 1];
+				// Send the task data for editing
+				const taskData = tasks[taskId];
+				if (taskData) {
+					ipc.send("toggle_given_task_edit", taskData.formatTask('Object'));
+					return { success: true, message: `Editing task ${command.index}` };
+				}
+				return { success: false, message: `Task ${command.index} not found` };
+			}
+			return { success: false, message: `Invalid task index: ${command.index}` };
+			
+		case 'duplicate':
+			if (command.index > 0 && command.index <= taskKeys.length) {
+				const taskId = taskKeys[command.index - 1];
+				const taskData = tasks[taskId];
+				if (taskData) {
+					console.log(`Command: Duplicating task ${command.index} (ID: ${taskId})`);
+					console.log('Task data:', taskData.formatTask('Object'));
+					ipc.send("duplicate-task", { id: taskId });
+					return { success: true, message: `Duplicating task ${command.index}` };
+				}
+				return { success: false, message: `Task ${command.index} not found` };
+			}
+			return { success: false, message: `Invalid task index: ${command.index}` };
+			
+		case 'delete':
+			if (command.index > 0 && command.index <= taskKeys.length) {
+				const taskId = taskKeys[command.index - 1];
+				const taskData = tasks[taskId];
+				if (taskData) {
+					console.log(`Command: Deleting task ${command.index} (ID: ${taskId})`);
+					ipc.send("delete-task", { id: taskId });
+					return { success: true, message: `Deleting task ${command.index} (${command.confirmation} confirmations)` };
+				}
+				return { success: false, message: `Task ${command.index} not found` };
+			}
+			return { success: false, message: `Invalid task index: ${command.index}` };
+			
+		case 'complete':
+			if (command.index > 0 && command.index <= taskKeys.length) {
+				const taskId = taskKeys[command.index - 1];
+				const taskData = tasks[taskId];
+				if (taskData) {
+					console.log(`Command: Completing task ${command.index} (ID: ${taskId})`);
+					// Send the task data for completion using the correct IPC event
+					ipc.send("complete-task", { id: taskId });
+					return { success: true, message: `Completing task ${command.index}` };
+				}
+				return { success: false, message: `Task ${command.index} not found` };
+			}
+			return { success: false, message: `Invalid task index: ${command.index}` };
+			
+		case 'show_all_tasks':
+			ipc.send("toggle-show-all-tasks");
+			return { success: true, message: "Toggled show all tasks" };
+			
+		case 'edit_current':
+			// Find the currently focused task
+			const focusedTaskId = Object.keys(tasks).find(id => tasks[id].isFocused);
+			if (focusedTaskId) {
+				const taskData = tasks[focusedTaskId];
+				console.log(`Command: Editing current task (ID: ${focusedTaskId})`);
+				ipc.send("toggle_given_task_edit", taskData.formatTask('Object'));
+				return { success: true, message: "Editing current task" };
+			}
+			return { success: false, message: "No task is currently focused" };
+			
+		case 'screen_switch':
+			ipc.send("switch-screen", { 
+				screenIndex: command.screenIndex, 
+				direction: command.direction 
+			});
+			return { success: true, message: `Switching to screen ${command.screenIndex} ${command.direction}` };
+			
+		case 'invalid':
+			return { success: false, message: `Invalid command: ${command.input}` };
+			
+		default:
+			return { success: false, message: "Unknown command" };
+	}
+};
+
+// Command help system
+const getCommandSuggestions = (input) => {
+	const trimmed = input.trim().toLowerCase();
+	const suggestions = [];
+	
+	if (trimmed.length === 0) {
+		// Show all available commands when input is empty
+		return [
+			{ command: 's1', description: 'switch to task 1' },
+			{ command: 'e2', description: 'edit task 2' },
+			{ command: 'c3', description: 'complete task 3' },
+			{ command: 'd4', description: 'duplicate task 4' },
+			{ command: 'ddd5', description: 'delete task 5' },
+			{ command: 'ec', description: 'edit current task' },
+			{ command: 'sat', description: 'show all tasks' },
+			{ command: 'sw0d', description: 'screen 0 down' },
+			{ command: 'sw0u', description: 'screen 0 up' }
+		];
+	}
+	
+	// Filter commands that start with the input
+	const allCommands = [
+		{ command: 's', description: 'switch to task', pattern: /^s(\d+)$/ },
+		{ command: 'e', description: 'edit task', pattern: /^e(\d+)$/ },
+		{ command: 'c', description: 'complete task', pattern: /^c(\d+)$/ },
+		{ command: 'd', description: 'duplicate task', pattern: /^d(\d+)$/ },
+		{ command: 'ddd', description: 'delete task', pattern: /^d{2,}(\d+)$/ },
+		{ command: 'sat', description: 'show all tasks', pattern: /^sat$/ },
+		{ command: 'sw', description: 'switch screen', pattern: /^sw(\d+)([du])$/ }
+	];
+	
+	// Handle all command types with consistent logic
+	if (trimmed.startsWith('sw')) {
+		suggestions.push({ command: 'sw_n_d/u', description: 'switch to screen n down/up' });
+	} else if (trimmed.startsWith('s')) {
+		if (trimmed.match(/^s\d+$/)) {
+			const match = trimmed.match(/^s(\d+)$/);
+			suggestions.push({ command: trimmed, description: `switch to task ${match[1]}` });
+		} else {
+			suggestions.push({ command: 's1, s2, s3...', description: 'switch to task' });
+		}
+	} else if (trimmed.startsWith('e')) {
+		if (trimmed.match(/^e\d+$/)) {
+			const match = trimmed.match(/^e(\d+)$/);
+			suggestions.push({ command: trimmed, description: `edit task ${match[1]}` });
+		} else {
+			suggestions.push({ command: 'e1, e2, e3...', description: 'edit task' });
+		}
+	} else if (trimmed.startsWith('c')) {
+		if (trimmed.match(/^c\d+$/)) {
+			const match = trimmed.match(/^c(\d+)$/);
+			suggestions.push({ command: trimmed, description: `complete task ${match[1]}` });
+		} else {
+			suggestions.push({ command: 'c1, c2, c3...', description: 'complete task' });
+		}
+	} else if (trimmed.startsWith('ddd')) {
+		if (trimmed.match(/^ddd\d+$/)) {
+			const match = trimmed.match(/^ddd(\d+)$/);
+			suggestions.push({ command: trimmed, description: `delete task ${match[1]}` });
+		} else {
+			suggestions.push({ command: 'ddd1, ddd2, ddd3...', description: 'delete task' });
+		}
+	} else if (trimmed.startsWith('dd')) {
+		if (trimmed.match(/^dd\d+$/)) {
+			const match = trimmed.match(/^dd(\d+)$/);
+			suggestions.push({ command: trimmed, description: `duplicate task ${match[1]}` });
+		} else {
+			suggestions.push({ command: 'dd1, dd2, dd3...', description: 'duplicate task' });
+		}
+	} else if (trimmed.startsWith('d')) {
+		if (trimmed.match(/^d\d+$/)) {
+			const match = trimmed.match(/^d(\d+)$/);
+			suggestions.push({ command: trimmed, description: `duplicate task ${match[1]}` });
+		} else {
+			suggestions.push({ command: 'd1, d2, d3...', description: 'duplicate task' });
+		}
+	} else if (trimmed === 'sat') {
+		suggestions.push({ command: 'sat', description: 'show all tasks' });
+	} else if (trimmed === 'ec') {
+		suggestions.push({ command: 'ec', description: 'edit current task' });
+	} else {
+		// Find matching commands for other cases
+		for (const cmd of allCommands) {
+			if (cmd.command.startsWith(trimmed)) {
+				if (cmd.pattern.test(trimmed)) {
+					// Exact match - show specific description
+					if (trimmed.match(/^s(\d+)$/)) {
+						const match = trimmed.match(/^s(\d+)$/);
+						suggestions.push({ command: trimmed, description: `switch to task ${match[1]}` });
+					} else if (trimmed.match(/^e(\d+)$/)) {
+						const match = trimmed.match(/^e(\d+)$/);
+						suggestions.push({ command: trimmed, description: `edit task ${match[1]}` });
+					} else if (trimmed.match(/^c(\d+)$/)) {
+						const match = trimmed.match(/^c(\d+)$/);
+						suggestions.push({ command: trimmed, description: `complete task ${match[1]}` });
+					} else if (trimmed.match(/^d(\d+)$/)) {
+						const match = trimmed.match(/^d(\d+)$/);
+						suggestions.push({ command: trimmed, description: `duplicate task ${match[1]}` });
+					} else if (trimmed.match(/^d{2,}(\d+)$/)) {
+						const match = trimmed.match(/^d{2,}(\d+)$/);
+						suggestions.push({ command: trimmed, description: `delete task ${match[1]}` });
+					} else if (trimmed === 'sat') {
+						suggestions.push({ command: trimmed, description: 'show all tasks' });
+					}
+				} else {
+					// Partial match - collect command names only
+					if (cmd.command === 's') {
+						suggestions.push({ command: 's1, s2, s3...', description: 'switch to task' });
+					} else if (cmd.command === 'e') {
+						suggestions.push({ command: 'e1, e2, e3...', description: 'edit task' });
+					} else if (cmd.command === 'c') {
+						suggestions.push({ command: 'c1, c2, c3...', description: 'complete task' });
+					} else if (cmd.command === 'd') {
+						suggestions.push({ command: 'd1, d2, d3...', description: 'duplicate task' });
+					} else if (cmd.command === 'ddd') {
+						suggestions.push({ command: 'ddd1, ddd2, ddd3...', description: 'delete task' });
+					} else if (cmd.command === 'sat') {
+						suggestions.push({ command: 'sat', description: 'show all tasks' });
+					}
+				}
+			}
+		}
+	}
+	
+	// If no matches found, check if it's invalid
+	if (suggestions.length === 0) {
+		suggestions.push({ command: trimmed, description: 'invalid command' });
+	}
+	
+	return suggestions;
+};
+
+const updateCommandHelp = (input) => {
+	const commandHelp = document.querySelector('.commandHelp');
+	if (!commandHelp) return;
+	
+	const suggestions = getCommandSuggestions(input);
+	
+	// Clear existing content
+	commandHelp.innerHTML = '';
+	
+	// Add suggestions
+	suggestions.forEach(suggestion => {
+		const helpItem = document.createElement('div');
+		helpItem.classList.add('helpItem');
+		
+		if (suggestion.description === 'invalid command') {
+			helpItem.style.color = '#f44336';
+			helpItem.style.fontWeight = 'bold';
+		}
+		
+		helpItem.textContent = `${suggestion.command} - ${suggestion.description}`;
+		commandHelp.appendChild(helpItem);
+	});
+	
+	// Show help box
+	commandHelp.style.display = 'block';
+};
+
 const handleTaskChangeSearch = () => {
 	searchContainer.style.display = "flex";
-	searchInput.focus()
+	searchInput.focus();
+	searchInput.placeholder = "s1, e2, c3, d4, ddd5, ec, sat, sw0d...";
 
+	const commandHelp = document.querySelector('.commandHelp');
+	
+	// Show initial help
+	updateCommandHelp('');
+	
 	const searchInputListener = (e) => {
 		if (e.key !== "Enter") return;
 
 		searchInput.removeEventListener("keydown", searchInputListener);
+		searchInput.removeEventListener("input", inputListener);
 
-		const index = parseInt(searchInput.value);
-		if (isNaN(index)) {
+		const command = parseCommand(searchInput.value);
+		const result = executeCommand(command);
+		
+		// Show feedback (you can enhance this with better UI feedback)
+		console.log(result.message);
+		
+		// Show temporary feedback
+		if (result.success) {
+			searchInput.style.backgroundColor = '#4CAF50';
+			searchInput.style.color = 'white';
+		} else {
+			searchInput.style.backgroundColor = '#f44336';
+			searchInput.style.color = 'white';
+		}
+		
+		// Clear and hide after a short delay
+		setTimeout(() => {
 			searchInput.blur();
 			searchInput.value = "";
-			searchContainer.style.display = "none"
-		}
-
-		const taskKeys = Object.keys(tasks);
-		if (index > 0 && index <= taskKeys.length) {
-			for (let k of taskKeys) {
-				if (k === taskKeys[index - 1])
-					continue;
-				tasks[k].removeFocus();
-			}
-			tasks[taskKeys[index - 1]].addFocus();
-		}
-
-		searchInput.blur();
-		searchInput.value = "";
-		searchContainer.style.display = "none"
+			searchInput.placeholder = "s1, e2, c3, d4, ddd5, ec, sat, sw0d...";
+			searchInput.style.backgroundColor = '';
+			searchInput.style.color = '';
+			searchContainer.style.display = "none";
+		}, 300);
+	}
+	
+	const inputListener = (e) => {
+		// Update help based on current input
+		updateCommandHelp(e.target.value);
 	}
 
 	searchInput.addEventListener("keydown", searchInputListener);
-
+	searchInput.addEventListener("input", inputListener);
 }
 
 ipc.on("task_switch_trigger", (e, data) => {

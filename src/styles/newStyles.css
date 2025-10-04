@@ -203,6 +203,7 @@ body {
 	height: 100%;
 	display: flex;
 	width: var(--size-main-content-width);
+	justify-content: center;
 }
 
 .taskContainer,
@@ -216,8 +217,6 @@ body {
 .taskContainer {
 	overflow: hidden;
 	padding-left: var(--spacing-container-padding-left);
-	width: 100%;
-	justify-content: center;
 }
 
 .timerAndActions {
@@ -429,16 +428,17 @@ body:hover .noActiveTaskWarning {
     z-index: var(--z-index-search);
     position: absolute;
     display: none;
-    justify-content: end;
-    align-items: center;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: flex-end;
     width: 100%;
     height: 90%;
     margin: auto;
+    padding: 10px;
 }
 
 .searchInput {
 	background-color: var(--color-input-bg);
-	color: var(--color-text-primary);
 	border: var(--border-width) solid var(--color-input-border);
 	outline: var(--color-input-outline);
 	height: var(--size-input-height);
@@ -446,6 +446,39 @@ body:hover .noActiveTaskWarning {
 	padding: var(--spacing-input-padding);
     margin-right: var(--spacing-search-margin-right);
 	font-family: 'Nunito', sans-serif;
-    width: 40px;
+    width: 200px;
     border-radius: var(--size-border-radius-medium);
+}
+
+.commandHelp {
+	background-color: var(--color-input-bg);
+	color: var(--color-text-primary);
+	border: var(--border-width) solid var(--color-input-border);
+    border-radius: var(--size-border-radius-medium);
+    padding: var(--spacing-input-padding);
+    margin-right: var(--spacing-search-margin-right);
+    margin-top: 5px;
+    width: 200px;
+    min-height: var(--size-input-height);
+    max-height: 120px;
+    font-size: 12px;
+    font-family: 'Nunito', sans-serif;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    overflow-y: auto;
+    /* Hide scrollbar */
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
+
+.commandHelp::-webkit-scrollbar {
+    display: none; /* WebKit browsers (Chrome, Safari, Edge) */
+}
+
+.helpItem {
+    margin-bottom: 5px;
+    padding: 2px 0;
+}
+
+.helpItem:last-child {
+    margin-bottom: 0;
 }
