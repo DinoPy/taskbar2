@@ -31,7 +31,11 @@ const createUi = (obj) => {
 
     const removeTd = document.createElement("td");
     removeTd.classList.add("action-item");
-    removeTd.textContent = "Remove";
+    const removeIcon = document.createElement("img");
+    removeIcon.src = "../images/close.svg";
+    removeIcon.alt = "Remove";
+    removeIcon.title = "Remove command";
+    removeTd.appendChild(removeIcon);
     removeTd.addEventListener("click", (e) => {
         ipc.send("command_removed", commands[obj.key])
         tr.remove()

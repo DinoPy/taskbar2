@@ -117,6 +117,7 @@ body {
 .taskContainer {
 	overflow: hidden;
 	padding-left: var(--spacing-container-padding-left);
+	padding-right: var(--spacing-container-padding-left);
 }
 
 .timerAndActions {
@@ -183,21 +184,9 @@ body {
 	}
 }
 
-@keyframes borderWave {
-	0% {
-		border-image: conic-gradient(from 0deg, var(--color-accent-primary) 0deg, var(--color-accent-primary) 60deg, transparent 60deg, transparent 360deg) 1;
-	}
-	25% {
-		border-image: conic-gradient(from 90deg, var(--color-accent-primary) 0deg, var(--color-accent-primary) 60deg, transparent 60deg, transparent 360deg) 1;
-	}
-	50% {
-		border-image: conic-gradient(from 180deg, var(--color-accent-primary) 0deg, var(--color-accent-primary) 60deg, transparent 60deg, transparent 360deg) 1;
-	}
-	75% {
-		border-image: conic-gradient(from 270deg, var(--color-accent-primary) 0deg, var(--color-accent-primary) 60deg, transparent 60deg, transparent 360deg) 1;
-	}
-	100% {
-		border-image: conic-gradient(from 360deg, var(--color-accent-primary) 0deg, var(--color-accent-primary) 60deg, transparent 60deg, transparent 360deg) 1;
+@keyframes borderWaveSpin {
+	to { 
+		--angle: 360deg; 
 	}
 }
 
@@ -253,14 +242,31 @@ body {
 
 .task.activeTask {
 	background-color: var(--color-task-active-bg);
-	border: var(--border-width-active) solid var(--color-task-active-border);
+	border: none; /* Remove the old darker border */
 	animation: 
-		bounce var(--animation-bounce-duration) ease-in-out infinite,
-		borderWave 2s linear infinite;
+		bounce var(--animation-bounce-duration) ease-in-out infinite;
 	transform-origin: center;
 	font-weight: bold;
 	color: var(--color-text-white);
 	position: relative;
+}
+
+/* SVG Liquid Wave Border - Static border that doesn't bounce */
+.task.activeTask::before {
+	content: "";
+	position: absolute;
+	top: -2px;
+	left: -2px;
+	right: -2px;
+	bottom: -2px;
+	border-radius: var(--border-radius-lg);
+	/* SVG Liquid Wave Border - Colors match our OKLCH system */
+	background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 360 120' preserveAspectRatio='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cdefs%3E%3Cfilter id='soften' x='-20%25' y='-20%25' width='140%25' height='140%25'%3E%3CfeGaussianBlur stdDeviation='0.6' result='blur'/%3E%3CfeMerge%3E%3CfeMergeNode in='blur'/%3E%3CfeMergeNode in='SourceGraphic'/%3E%3C/feMerge%3E%3C/filter%3E%3Cfilter id='liquid' x='-20%25' y='-20%25' width='140%25' height='140%25'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.6 0.9' numOctaves='1' seed='4' result='noise'%3E%3Canimate attributeName='baseFrequency' dur='8s' values='0.55 0.85; 0.65 0.95; 0.55 0.85' repeatCount='indefinite'/%3E%3Canimate attributeName='seed' dur='9s' values='2;5;9;2' repeatCount='indefinite'/%3E%3C/feTurbulence%3E%3CfeDisplacementMap in='SourceGraphic' in2='noise' scale='2' xChannelSelector='R' yChannelSelector='G'/%3E%3C/filter%3E%3C/defs%3E%3Crect x='2' y='2' width='356' height='116' rx='20' fill='none' stroke='%23ff6b35' stroke-width='6'/%3E%3Cg filter='url(%23liquid)'%3E%3Crect x='2' y='2' width='356' height='116' rx='20' fill='none' stroke='%23ffc57b' stroke-width='6' stroke-linecap='round' opacity='0.9' stroke-dasharray='26 170' stroke-dashoffset='0' filter='url(%23soften)'%3E%3Canimate attributeName='stroke-dashoffset' from='0' to='-196' dur='3.2s' repeatCount='indefinite'/%3E%3C/rect%3E%3Crect x='2' y='2' width='356' height='116' rx='20' fill='none' stroke='%23ffc57b' stroke-width='6' stroke-linecap='round' opacity='0.6' stroke-dasharray='14 64' stroke-dashoffset='0' filter='url(%23soften)'%3E%3Canimate attributeName='stroke-dashoffset' from='0' to='-78' dur='1.9s' repeatCount='indefinite'/%3E%3C/rect%3E%3Crect x='2' y='2' width='356' height='116' rx='20' fill='none' stroke='%23ffc57b' stroke-width='3' stroke-linecap='round' opacity='0.35' stroke-dasharray='6 22' stroke-dashoffset='0' filter='url(%23soften)'%3E%3Canimate attributeName='stroke-dashoffset' from='0' to='-28' dur='2.6s' repeatCount='indefinite'/%3E%3C/rect%3E%3C/g%3E%3C/svg%3E");
+	background-size: cover;
+	background-repeat: no-repeat;
+	z-index: -1;
+	/* Don't inherit the bounce animation */
+	animation: none;
 }
 
 .activeTaskTimer {
@@ -402,7 +408,7 @@ body:hover .noActiveTaskWarning {
 	background-color: var(--color-input-bg);
 	border: var(--border-width) solid var(--color-input-border);
 	outline: var(--color-input-outline);
-	height: var(--size-input-height);
+	height: var(--size-search-input-height);
 	border-radius: var(--border-radius-sm);
 	padding: var(--spacing-input-padding);
     margin-right: var(--spacing-search-margin-right);
@@ -416,11 +422,11 @@ body:hover .noActiveTaskWarning {
 	color: var(--color-text-primary);
 	border: var(--border-width) solid var(--color-input-border);
 	border-radius: var(--border-radius-md);
-    padding: var(--spacing-input-padding);
+    padding: 0px 16px;
     margin-right: var(--spacing-search-margin-right);
     margin-top: 5px;
     width: 200px;
-    min-height: var(--size-input-height);
+    min-height: var(--size-search-input-height);
     max-height: 120px;
     font-size: 12px;
     font-family: 'Nunito', sans-serif;
@@ -445,43 +451,32 @@ body:hover .noActiveTaskWarning {
 }
 
 /* Urgency Level Styles - Border-based system */
-.task.urgency-low {
+.task.urgency-low:not(.activeTask) {
     border-left: var(--size-urgency-border-width) solid var(--color-urgency-low);
     transition: border-left-color var(--animation-transition) ease-in-out;
 }
 
-.task.urgency-medium {
+.task.urgency-medium:not(.activeTask) {
     border-left: var(--size-urgency-border-width) solid var(--color-urgency-medium);
     transition: border-left-color var(--animation-transition) ease-in-out;
 }
 
-.task.urgency-medium-high {
+.task.urgency-medium-high:not(.activeTask) {
     border-left: var(--size-urgency-border-width) solid var(--color-urgency-medium-high);
     transition: border-left-color var(--animation-transition) ease-in-out;
 }
 
-.task.urgency-high {
+.task.urgency-high:not(.activeTask) {
     border-left: var(--size-urgency-border-width) solid var(--color-urgency-high);
     transition: border-left-color var(--animation-transition) ease-in-out;
 }
 
-.task.urgency-critical {
+.task.urgency-critical:not(.activeTask) {
     border-left: var(--size-urgency-border-width) solid var(--color-urgency-critical);
     box-shadow: 0 0 10px rgba(244, 67, 54, 0.3); /* Subtle glow */
     transition: border-left-color var(--animation-transition) ease-in-out, box-shadow var(--animation-transition) ease-in-out;
 }
 
-/* Ensure active tasks maintain their styling priority over urgency */
-.activeTask.urgency-low,
-.activeTask.urgency-medium,
-.activeTask.urgency-medium-high,
-.activeTask.urgency-high,
-.activeTask.urgency-critical {
-    border-left: var(--size-urgency-border-width) solid var(--color-task-active-border);
-    box-shadow: none; /* Remove urgency glow for active tasks */
-    animation: 
-        bounce var(--animation-bounce-duration) ease-in-out infinite; /* Restore active task animations */
-}
 
 /* Corner indicator for urgency levels - Rectangular with rounded corners */
 .task::after {

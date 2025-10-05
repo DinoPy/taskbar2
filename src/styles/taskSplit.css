@@ -34,6 +34,9 @@ body {
 	font-weight: bold;
 	margin: 0 0 10px 0;
 	color: var(--color-text-primary);
+	word-wrap: break-word;
+	overflow-wrap: break-word;
+	hyphens: auto;
 }
 
 .task-description {
@@ -99,22 +102,34 @@ body {
 	overflow: hidden;
 }
 
+/* Table Styles - Same as completed tasks */
 table {
 	width: 100%;
-	border-collapse: collapse;
+	border-collapse: separate;
+	border-spacing: 0;
+	border: var(--border-width) solid var(--color-input-border);
+	background-color: var(--color-input-bg);
+	border-radius: var(--border-radius-lg);
+	overflow: hidden;
 }
 
 thead {
-	background-color: var(--color-primary-border);
+	position: sticky;
+	top: 0;
+	z-index: 5;
+	background-color: var(--color-input-bg);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 th {
-	padding: 12px 8px;
+	padding: 8px 6px;
 	text-align: left;
 	font-weight: bold;
-	font-size: var(--font-size-small);
-	color: var(--color-text-primary);
-	border-bottom: var(--border-width) solid var(--color-input-border);
+	font-size: 1rem;
+	color: var(--color-text-secondary);
+	text-transform: uppercase;
+	border-bottom: 1px solid var(--color-input-border);
+	border-right: 1px solid var(--color-input-border);
 }
 
 th:nth-child(1) {
@@ -130,28 +145,38 @@ th:nth-child(3) {
 }
 
 th:last-child {
+	border-right: none;
 	width: 10%;
 	text-align: center;
 }
 
-tbody tr {
-	border-bottom: var(--border-width) solid var(--color-input-border);
-}
-
-tbody tr:last-child {
-	border-bottom: none;
-}
-
-tbody tr:hover {
-	background-color: var(--color-hover-subtle);
-}
-
 td {
-	padding: 8px;
+	padding: 4px 6px;
+	background-color: var(--color-input-bg);
+	border-bottom: 1px solid var(--color-input-border);
+	border-right: 1px solid var(--color-input-border);
+	transition: background-color 0.2s;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	max-width: 0;
 	vertical-align: middle;
 }
 
-/* Input Styles */
+td:last-child {
+	border-right: none;
+	text-align: center;
+}
+
+tbody tr:hover td {
+	background-color: var(--color-bg-secondary);
+}
+
+tbody tr:last-child td {
+	border-bottom: none;
+}
+
+/* Input Styles - Same as completed tasks */
 input[type="text"], 
 input[type="time"], 
 textarea {
@@ -159,12 +184,16 @@ textarea {
 	height: var(--size-input-height);
 	background-color: var(--color-input-bg);
 	border: var(--border-width) solid var(--color-input-border);
-	border-radius: var(--border-radius-sm);
-	padding: var(--spacing-input-padding);
+	border-radius: 3px;
+	padding: .5em;
 	font-family: 'Nunito', sans-serif;
 	font-size: var(--font-size-body);
 	color: var(--color-text-primary);
+	color-scheme: dark;
 	transition: border-color var(--animation-transition);
+	box-sizing: border-box;
+	vertical-align: middle;
+	margin: 0;
 }
 
 input[type="text"]:focus, 
@@ -175,13 +204,8 @@ textarea:focus {
 }
 
 textarea {
-	height: auto;
-	min-height: var(--size-input-height);
+	height: var(--size-input-height);
 	resize: vertical;
-}
-
-input[type="time"] {
-	width: 120px;
 }
 
 /* Button Styles */
@@ -210,23 +234,23 @@ input[type="time"] {
 }
 
 .add-btn {
-	background-color: var(--color-status-success);
+	background-color: var(--color-button-primary);
 	color: var(--color-text-white);
-	border-color: var(--color-status-success);
+	border-color: var(--color-button-primary);
 }
 
 .add-btn:hover {
-	background-color: #1e7e34;
+	background-color: var(--color-button-primary-hover);
 }
 
 .submitBtn {
-	background-color: var(--color-status-success);
+	background-color: var(--color-button-primary);
 	color: var(--color-text-white);
-	border-color: var(--color-status-success);
+	border-color: var(--color-button-primary);
 }
 
 .submitBtn:hover {
-	background-color: #1e7e34;
+	background-color: var(--color-button-primary-hover);
 }
 
 .submitBtn:disabled {
@@ -267,11 +291,11 @@ input[type="time"] {
 	margin-top: var(--spacing-section-gap);
 }
 
-/* Close Button */
+/* Close Button - Move closer to corner */
 .closeIcon {
 	position: absolute;
-	top: 15px;
-	right: 15px;
+	top: 6px;
+	right: 6px;
 	width: 24px;
 	height: 24px;
 	cursor: pointer;

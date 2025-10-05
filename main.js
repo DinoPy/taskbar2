@@ -173,6 +173,7 @@ app
 			kenbanWindow?.webContents.openDevTools();
 			helpWindow?.webContents.openDevTools();
 			customCommandsWindow?.webContents.openDevTools();
+			taskSplitWindow?.webContents.openDevTools();
 		});
 		globalShortcut.register("CommandOrControl+Shift+e", () => {
 			win.webContents.send("request-current-task-data-for-edit")
@@ -650,10 +651,10 @@ function createCompletedTasksPopUp() {
 		const cursorPosition = screen.getCursorScreenPoint();
 		const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
 		completedTasksWindow = new BrowserWindow({
-			x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 1000 / 2),
+			x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 1200 / 2),
 			y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.15),
-			width: 1000,
-			height: 650,
+			width: 1400,
+			height: 750,
 			minimizable: false,
 			resizable: false,
 			modal: true,
@@ -783,8 +784,8 @@ function createTaskSplitWindow(props) {
 	taskSplitWindow = new BrowserWindow({
 		x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 700 / 2),
 		y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.1),
-		width: 700,
-		minHeight: 500,
+		width: 800,
+		minHeight: 600,
 		minimizable: false,
 		resizable: true,
 		modal: true,
@@ -1002,6 +1003,14 @@ ipc.on("task-split-submission", (_, data) => {
 	sendEvent("task_split", data);
 	if (taskSplitWindow) taskSplitWindow.close();
 	taskSplitWindow = null;
+	
+	// Refresh completed tasks list if it's open
+	if (completedTasksWindow) {
+		console.log("triggering refresh for tasks after split");
+		setTimeout(() => {
+			sendEvent("get_completed_tasks", from_completed_data);
+		}, 250);
+	}
 });
 
 ipc.on("toggle-always-on-top", () => {
@@ -1022,6 +1031,14 @@ ipc.on("duplicate_completed_task", (_, data) => {
 	sendEvent("task_duplicate", {
 		task_id: data.id
 	});
+	
+	// Refresh completed tasks list if it's open
+	if (completedTasksWindow) {
+		console.log("triggering refresh for tasks after duplicate");
+		setTimeout(() => {
+			sendEvent("get_completed_tasks", from_completed_data);
+		}, 250);
+	}
 });
 
 // Handle split completed task
@@ -1044,6 +1061,14 @@ ipc.on("delete_completed_task", (_, data) => {
 	sendEvent("task_delete", {
 		id: data.id
 	});
+	
+	// Refresh completed tasks list if it's open
+	if (completedTasksWindow) {
+		console.log("triggering refresh for tasks after delete");
+		setTimeout(() => {
+			sendEvent("get_completed_tasks", from_completed_data);
+		}, 250);
+	}
 });
 
 

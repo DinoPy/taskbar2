@@ -40,6 +40,7 @@
 	--color-border-primary: oklch(var(--lightness-medium) var(--chroma-medium) var(--hue-primary));
 	--color-border-secondary: oklch(var(--lightness-dark) var(--chroma-high) var(--hue-primary));
 	--color-border-focus: oklch(var(--lightness-darker) var(--chroma-high) var(--hue-accent));
+	--color-border-table: oklch(0.97 0.01 79.9 / 0.7);
 	
 	/* Generated Text Colors */
 	--color-text-primary: oklch(var(--lightness-darkest) var(--chroma-medium) var(--hue-primary));
@@ -147,6 +148,7 @@
 	--size-button-height: 40px;
 	--size-button-width: 34px;
 	--size-input-height: 36px;
+	--size-search-input-height: 24px;
 	--size-table-row-height: 50px;
 	--size-timer-height: 70%;
 	--size-countdown-height: 80%;
@@ -230,7 +232,7 @@
 	/* Animation Durations */
 	--animation-bounce-duration: 1s;
 	--animation-neon-duration: 2s;
-	--animation-border-spin-duration: 3s;
+	--animation-border-spin-duration: 2.5s;
 	--animation-transition: 0.3s;
 	--animation-background-transition: 250ms;
 	

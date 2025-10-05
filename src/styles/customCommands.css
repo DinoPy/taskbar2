@@ -7,19 +7,28 @@ html {
 
 body {
 	margin: 0;
-	height: 100%;
+	height: 100vh;
 	font-family: 'Nunito', sans-serif;
-    padding: 1rem 1rem;
+	background-color: var(--color-primary);
+	color: var(--color-text-primary);
+	line-height: var(--line-height-normal);
+	padding: var(--spacing-container-padding);
 }
 
 input {
     width: 70%;
+    height: var(--size-input-height);
     padding: .5em;
     margin: 0 10px;
     background-color: var(--color-input-bg);
     border-radius: 3px;
-    border: none;
+    border: var(--border-width) solid var(--color-input-border);
+    color: var(--color-text-primary);
     color-scheme: dark;
+    font-family: 'Nunito', sans-serif;
+    font-size: var(--font-size-body);
+    box-sizing: border-box;
+    vertical-align: middle;
 }
 
 button {
@@ -29,23 +38,36 @@ button {
 	background-color: var(--color-button-primary);
     padding: 0.3em 1em;
     margin: 0;
-    height: 30px;
+    height: var(--size-input-height);
     border-radius: 5px;
+    font-family: 'Nunito', sans-serif;
+    font-size: var(--font-size-body);
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+button:hover {
+    background-color: var(--color-button-primary-hover);
+    transform: scale(1.05);
 }
 
 table {
     width: 100%;
-    border-collapse: collapse;
-    display:table;
-    border-spacing: 2px;
-    border-color: var(--color-primary-border);
-    border-width: 1px;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: var(--border-width) solid var(--color-input-border);
+    background-color: var(--color-input-bg);
+    border-radius: var(--border-radius-lg);
+    overflow: hidden;
+    margin-top: var(--spacing-section-gap);
 }
 
 thead {
-    display: table-header-group;
-    vertical-align: middle;
-    border-color: inherit;
+	position: sticky;
+	top: 0;
+	z-index: 5;
+	background-color: var(--color-input-bg);
+	box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
 
@@ -56,27 +78,89 @@ tr {
 }
 
 th {
-    color: var(--color-text-secondary);
-    font-size: 1rem;
-    line-height: 1.27;
-    padding: 16px 12px;
-    text-transform: uppercase;
+    padding: 8px 6px;
     text-align: left;
+    font-weight: bold;
+    font-size: 1rem;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--color-input-border);
+    border-right: 1px solid var(--color-input-border);
+}
+
+th:last-child {
+	border-right: none;
 }
 
 td {
-    padding-left: 14px;
+	padding: 4px 6px;
+	background-color: var(--color-input-bg);
+	border-bottom: 1px solid var(--color-input-border);
+	border-right: 1px solid var(--color-input-border);
+	transition: background-color 0.2s;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	max-width: 0;
+	vertical-align: middle;
+}
+
+td:last-child {
+	border-right: none;
+	text-align: center;
+}
+
+tbody tr:hover td {
+	background-color: var(--color-bg-secondary);
+}
+
+tbody tr:last-child td {
+	border-bottom: none;
 }
 
 .action-item {
-    width: 60px;
+    width: 100%;
     cursor: pointer;
-    text-align: right;
+    text-align: center;
+    padding: 4px;
+    border-radius: var(--border-radius-sm);
+    transition: background-color 0.2s;
+}
+
+.action-item:hover {
+    background-color: var(--color-hover-subtle);
+}
+
+.action-item img {
+    width: 16px;
+    height: 16px;
+    vertical-align: middle;
+}
+
+/* Table column sizing */
+th:first-child, td:first-child {
+    width: 15%;
+    min-width: 60px;
+}
+
+th:nth-child(2), td:nth-child(2) {
+    width: 70%;
+}
+
+th:last-child, td:last-child {
+    width: 15%;
+    min-width: 60px;
 }
 
 .inputs-container {
     display: flex;
     gap: 1rem;
+    align-items: center;
+    margin-bottom: var(--spacing-md);
+    background-color: var(--color-input-bg);
+    border: var(--border-width) solid var(--color-input-border);
+    border-radius: var(--border-radius-lg);
+    padding: var(--spacing-container-padding);
 }
 
 .error-message {

@@ -274,8 +274,6 @@ addSplitBtn.addEventListener('click', addSplit);
 
 submitBtn.addEventListener('click', handleSubmit);
 
-cancelBtn.addEventListener('click', handleCancel);
-
 closeBtn.addEventListener('click', handleCancel);
 
 // Keyboard shortcuts
