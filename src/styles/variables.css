@@ -1,72 +1,140 @@
 /* CSS Custom Properties - Design System */
 :root {
-	/* Colors - Base Theme */
-	--color-primary: lch(86 24.64 78.64);
-	--color-primary-border: lch(75 20 78.64);
-	--color-text-primary: #4a4a4a;
-	--color-text-secondary: rgb(74, 74, 74);
-	--color-text-white: #ffffff;
-	--color-text-warning: #e67e22;
+    box-sizing: content-box;
+	/* ===========================================
+	   SYSTEMATIC OKLCH COLOR SYSTEM
+	   =========================================== */
 	
-	/* Task Colors */
-	--color-task-bg: lch(88 18 78.64);
-	--color-task-border: lch(75 20 78.64);
-	--color-task-active-bg: lch(72.69% 74.85 71.15);
-	--color-task-active-border: #ff0000;
+	/* Base Color Parameters */
+	--hue-primary: 80;                    /* Green hue */
+	--hue-secondary: 100;                 /* Yellow-green hue */
+	--hue-accent: 20;                     /* Orange-red hue */
+	--hue-accent-light: 30;               /* Orange hue */
+	--hue-accent-dark: 15;                /* Red-orange hue */
+	
+	/* Lightness Scale */
+	--lightness-darkest: 0.25;            /* Very dark */
+	--lightness-darker: 0.35;             /* Dark */
+	--lightness-dark: 0.45;               /* Medium-dark */
+	--lightness-medium: 0.55;             /* Medium */
+	--lightness-light: 0.75;               /* Light */
+	--lightness-lighter: 0.90;            /* Very light */
+	--lightness-lightest: 0.95;           /* Almost white */
+	
+	/* Chroma Scale */
+	--chroma-high: 0.15;                  /* High saturation */
+	--chroma-medium: 0.10;                /* Medium saturation */
+	--chroma-low: 0.05;                   /* Low saturation */
+	--chroma-minimal: 0.02;               /* Minimal saturation */
+	--chroma-intense: 0.20;               /* Very high saturation */
+	
+	/* Generated Background Colors */
+	--color-bg-root: oklch(var(--lightness-darkest) var(--chroma-medium) var(--hue-primary));
+	--color-bg-primary: oklch(var(--lightness-lighter) var(--chroma-low) var(--hue-primary));
+	--color-bg-secondary: oklch(var(--lightness-light) var(--chroma-medium) var(--hue-primary));
+	--color-bg-tertiary: oklch(var(--lightness-medium) var(--chroma-medium) var(--hue-primary));
+	--color-bg-elevated: oklch(var(--lightness-lightest) var(--chroma-minimal) var(--hue-primary));
+	--color-bg-hover: oklch(var(--lightness-dark) var(--chroma-high) var(--hue-primary));
+	
+	/* Generated Border Colors */
+	--color-border-primary: oklch(var(--lightness-medium) var(--chroma-medium) var(--hue-primary));
+	--color-border-secondary: oklch(var(--lightness-dark) var(--chroma-high) var(--hue-primary));
+	--color-border-focus: oklch(var(--lightness-darker) var(--chroma-high) var(--hue-accent));
+	
+	/* Generated Text Colors */
+	--color-text-primary: oklch(var(--lightness-darkest) var(--chroma-medium) var(--hue-primary));
+	--color-text-secondary: oklch(var(--lightness-darker) var(--chroma-medium) var(--hue-primary));
+	--color-text-tertiary: oklch(var(--lightness-dark) var(--chroma-high) var(--hue-primary));
+	--color-text-white: oklch(var(--lightness-lightest) var(--chroma-minimal) var(--hue-primary));
+	--color-text-warning: oklch(var(--lightness-darker) var(--chroma-high) var(--hue-accent));
+	
+	/* Generated Accent Colors */
+	--color-accent-primary: oklch(var(--lightness-medium) var(--chroma-intense) var(--hue-accent));
+	--color-accent-hover: oklch(var(--lightness-dark) var(--chroma-intense) var(--hue-accent));
+	--color-accent-active: oklch(var(--lightness-darker) var(--chroma-intense) var(--hue-accent));
+	--color-accent-light: oklch(var(--lightness-light) var(--chroma-intense) var(--hue-accent-light));
+	--color-accent-subtle: oklch(var(--lightness-lighter) var(--chroma-medium) var(--hue-accent-light));
+	--color-accent-dark: oklch(var(--lightness-darkest) var(--chroma-intense) var(--hue-accent-dark));
+	
+	/* Component Colors */
+	--color-task-bg: var(--color-bg-elevated);        /* Very light orange - regular tasks */
+	--color-task-border: var(--color-border-primary);
+	--color-task-active-bg: var(--color-accent-primary);  /* Dark orange - accent/active task */
+	--color-task-active-border: var(--color-accent-hover);
 	
 	/* Input Colors */
-	--color-input-bg: lch(90 15 78.64);
-	--color-input-border: lch(80 20 78.64);
-	--color-input-outline: lch(70 30 78.64);
+	--color-input-bg: var(--color-bg-elevated);
+	--color-input-border: var(--color-border-primary);
+	--color-input-outline: var(--color-border-focus);
 	
 	/* Button Colors */
-	--color-button-primary: #ff8c42;        /* Bright orange for buttons */
-	--color-button-primary-hover: #ff7a2b;  /* Darker orange on hover */
-	--color-button-primary-active: #e66a1a;  /* Even darker when pressed */
-	--color-button-hover: lch(80 20 78.64);
-	--color-button-active: lch(70 30 78.64);
-	--color-button-warning-bg: lch(60 35 78.64);
+	--color-button-primary: var(--color-accent-primary);
+	--color-button-primary-hover: var(--color-accent-hover);
+	--color-button-primary-active: var(--color-accent-active);
+	--color-button-secondary: var(--color-bg-tertiary);
+	--color-button-secondary-hover: var(--color-border-secondary);
 	
-	/* Subtle Hover Colors */
-	--color-hover-subtle: lch(90 15 78.64);  /* Very light orange for subtle hover */
+	/* Hover Colors */
+	--color-hover-subtle: var(--color-bg-hover);
 	
-	/* Status Colors */
-	--color-status-error: #e74c3c;
-	--color-status-success: #27ae60;
-	--color-status-warning: #e67e22;
-	--color-status-danger: #c74242;
+	/* Status Colors - Orange Theme */
+	--color-status-error: #dc2626;         /* Red-orange - errors */
+	--color-status-success: #16a34a;       /* Green - success (contrast) */
+	--color-status-warning: #ea580c;       /* Dark orange - warnings */
+	--color-status-info: #f97316;         /* Bright orange - info */
 	
-	/* Urgency Border Colors */
-	--color-urgency-border-low: #4CAF50; /* Green */
-	--color-urgency-border-medium: #FFC107; /* Amber */
-	--color-urgency-border-medium-high: #FF9800; /* Orange */
-	--color-urgency-border-high: #FF5722; /* Deep Orange */
-	--color-urgency-border-critical: #F44336; /* Red */
+	/* Backward Compatibility - Legacy Variables */
+	--color-primary: var(--color-bg-primary);
+	--color-primary-border: var(--color-border-primary);
 	
-	/* Urgency Corner Indicator Colors */
-	--color-urgency-corner-low: #4CAF50; /* Green */
-	--color-urgency-corner-medium: #FFC107; /* Amber */
-	--color-urgency-corner-medium-high: #FF9800; /* Orange */
-	--color-urgency-corner-high: #FF5722; /* Deep Orange */
-	--color-urgency-corner-critical: #F44336; /* Red */
+	/* Root Background Variable */
+	--color-bg-base: var(--color-bg-root);
 	
-	/* Urgency Sizes */
-	--size-urgency-border-width: 4px;
-	--size-urgency-corner-size: 12px;
-	--size-urgency-corner-min-width: 24px; /* Minimum width */
-	--size-urgency-corner-padding: 0 2px; /* Horizontal and vertical padding */
-	--size-urgency-corner-bottom: 0px; 
-	--size-urgency-corner-right: 12px;
-	--size-urgency-corner-border-radius: 10px; /* Rounded corners */
+	/* Urgency Colors */
+	--color-urgency-low: #4CAF50;
+	--color-urgency-medium: #FFC107;
+	--color-urgency-medium-high: #FF9800;
+	--color-urgency-high: #FF5722;
+	--color-urgency-critical: #F44336;
 	
-	/* Neon Border Colors */
+	/* Neon Colors */
 	--color-neon-red: #ff0000;
 	--color-neon-orange-red: #ff4500;
 	--color-neon-dark-orange: #ff8c00;
 	--color-neon-orange: #ffa500;
 	--color-neon-yellow: #ffff00;
 	
-	/* Sizes - Layout */
+	/* ===========================================
+	   SPACING
+	   =========================================== */
+	
+	/* Base Spacing Scale */
+	--spacing-xs: 4px;
+	--spacing-sm: 8px;
+	--spacing-md: 16px;
+	--spacing-lg: 24px;
+	--spacing-xl: 32px;
+	
+	/* Component Spacing */
+	--spacing-task-padding: var(--spacing-xs) 6px;
+	--spacing-task-gap: var(--spacing-xs);
+	--spacing-container-gap: 10px;
+	--spacing-container-padding: var(--spacing-lg);
+	--spacing-container-padding-left: 15px;
+	--spacing-section-gap: var(--spacing-lg);
+	--spacing-input-padding: var(--spacing-sm) var(--spacing-md);
+	--spacing-button-padding: 10px var(--spacing-lg);
+	--spacing-timer-padding: 0 10px;
+	--spacing-button-margin: 0 3px;
+	--spacing-input-margin-left: 5px;
+	--spacing-user-padding: 5px 0 5px 10px;
+	--spacing-search-margin-right: 280px;
+	
+	/* ===========================================
+	   SIZES
+	   =========================================== */
+	
+	/* Layout Sizes */
 	--size-taskbar-height: 60px;
 	--size-task-height: 86%;
 	--size-task-width: 200px;
@@ -75,83 +143,48 @@
 	--size-timer-min-width: 255px;
 	--size-main-content-width: calc(100% - 255px);
 	
-	/* Sizes - Spacing */
-	--spacing-task-padding: 4px 6px;
-	--spacing-task-gap: 4px;
-	--spacing-container-gap: 10px;
-	--spacing-container-padding: 20px;
-	--spacing-container-padding-left: 15px;
-	--spacing-section-gap: 20px;
-	--spacing-input-padding: 8px 12px;
-	--spacing-button-padding: 10px 20px;
-	--spacing-timer-padding: 0 10px;
-	--spacing-button-margin: 0 3px;
-	--spacing-input-margin-left: 5px;
-	--spacing-input-padding: 2px 5px;
-	--spacing-user-padding: 5px 0 5px 10px;
-	--spacing-search-margin-right: 280px;
-	
-	/* Sizes - Typography */
-	--font-size-category: 10px;
-	--font-size-timer: 10px;
-	--font-size-due-date: 10px;
-	--font-size-index: 10px;
-	--font-size-title: 15px;
-	--font-size-subtitle: 16px;
-	--font-size-body: 14px;
-	--font-size-small: 12px;
-	--font-size-warning: 24px;
-	
-	/* Sizes - Elements */
+	/* Component Sizes */
 	--size-button-height: 40px;
 	--size-button-width: 34px;
 	--size-input-height: 36px;
 	--size-table-row-height: 50px;
 	--size-timer-height: 70%;
 	--size-countdown-height: 80%;
-	--title-line-clamp: 3;
 	--size-title-max-height: calc(var(--title-line-clamp) * var(--line-height-title));
-	--size-border-radius: 8px;
-	--size-border-radius-small: 1px;
-	--size-border-radius-medium: 5px;
-	--size-border-radius-button: 100%;
 	
-	/* Sizes - Borders */
-	--border-width: 1px;
-	--border-width-active: 3px;
+	/* Urgency Sizes */
+	--size-urgency-border-width: 4px;
+	--size-urgency-corner-size: var(--spacing-md);
+	--size-urgency-corner-min-width: var(--spacing-lg);
+	--size-urgency-corner-padding: 0 2px;
+	--size-urgency-corner-bottom: 0px;
+	--size-urgency-corner-right: var(--spacing-md);
+	--size-urgency-corner-border-radius: 10px;
 	
-	/* Line Heights */
-	--line-height-tight: 0.8;
-	--line-height-normal: 1.4;
-	--line-height-title: 0.85;
-	
-	/* Animations */
-	--animation-bounce-duration: 1s;
-	--animation-neon-duration: 2s;
-	--animation-transition: 0.3s;
-	--animation-background-transition: 250ms;
-	
-	/* Z-Index */
-	--z-index-search: 10;
-	
-	/* Spacing */
-	--spacing-xs: 4px;
-	--spacing-sm: 8px;
-	--spacing-md: 16px;
-	--spacing-lg: 24px;
-	--spacing-xl: 32px;
-	
-	/* Border Radius */
-	--border-radius-sm: 4px;
-	--border-radius-md: 8px;
-	--border-radius-lg: 12px;
+	/* ===========================================
+	   TYPOGRAPHY
+	   =========================================== */
 	
 	/* Font Sizes */
-	--font-size-xs: 12px;
-	--font-size-sm: 14px;
-	--font-size-md: 16px;
-	--font-size-lg: 18px;
-	--font-size-xl: 20px;
+	--font-size-xs: 10px;
+	--font-size-sm: 12px;
+	--font-size-md: 14px;
+	--font-size-lg: 15px;
+	--font-size-xl: 16px;
+	--font-size-2xl: 18px;
+	--font-size-3xl: 20px;
+	--font-size-4xl: 24px;
+	
+	/* Component Font Sizes */
+	--font-size-category: var(--font-size-xs);
+	--font-size-timer: var(--font-size-xs);
+	--font-size-due-date: var(--font-size-xs);
+	--font-size-index: var(--font-size-xs);
+	--font-size-title: var(--font-size-lg);
+	--font-size-subtitle: var(--font-size-xl);
+	--font-size-body: var(--font-size-md);
+	--font-size-small: var(--font-size-sm);
+	--font-size-warning: var(--font-size-4xl);
 	
 	/* Font Weights */
 	--font-weight-normal: 400;
@@ -159,13 +192,56 @@
 	--font-weight-semibold: 600;
 	--font-weight-bold: 700;
 	
-	/* Shadows */
+	/* Line Heights */
+	--line-height-tight: 0.8;
+	--line-height-normal: 1.4;
+	--line-height-title: 0.85;
+	
+	/* Typography Utilities */
+	--title-line-clamp: 3;
+	
+	/* ===========================================
+	   BORDERS
+	   =========================================== */
+	
+	/* Border Widths */
+	--border-width: 1px;
+	--border-width-active: 3px;
+	
+	/* Border Radius */
+	--border-radius-sm: 1px;
+	--border-radius-md: 5px;
+	--border-radius-lg: 8px;
+	--border-radius-xl: 10px;
+	--border-radius-button: 100%;
+	
+	/* ===========================================
+	   SHADOWS
+	   =========================================== */
+	
 	--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
 	--shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
 	--shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+	
+	/* ===========================================
+	   ANIMATIONS & TRANSITIONS
+	   =========================================== */
+	
+	/* Animation Durations */
+	--animation-bounce-duration: 1s;
+	--animation-neon-duration: 2s;
+	--animation-border-spin-duration: 3s;
+	--animation-transition: 0.3s;
+	--animation-background-transition: 250ms;
 	
 	/* Transitions */
 	--transition-fast: 0.15s ease;
 	--transition-normal: 0.3s ease;
 	--transition-slow: 0.5s ease;
+	
+	/* ===========================================
+	   Z-INDEX
+	   =========================================== */
+	
+	--z-index-search: 10;
 }

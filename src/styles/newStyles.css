@@ -33,7 +33,7 @@ body {
 	border: var(--border-width) solid var(--color-task-border);
 	height: var(--size-task-height);
 	padding: var(--spacing-task-padding);
-	border-radius: var(--size-border-radius);
+	border-radius: var(--border-radius-lg);
 
 	display: flex;
 	flex-direction: column;
@@ -183,6 +183,24 @@ body {
 	}
 }
 
+@keyframes borderWave {
+	0% {
+		border-image: conic-gradient(from 0deg, var(--color-accent-primary) 0deg, var(--color-accent-primary) 60deg, transparent 60deg, transparent 360deg) 1;
+	}
+	25% {
+		border-image: conic-gradient(from 90deg, var(--color-accent-primary) 0deg, var(--color-accent-primary) 60deg, transparent 60deg, transparent 360deg) 1;
+	}
+	50% {
+		border-image: conic-gradient(from 180deg, var(--color-accent-primary) 0deg, var(--color-accent-primary) 60deg, transparent 60deg, transparent 360deg) 1;
+	}
+	75% {
+		border-image: conic-gradient(from 270deg, var(--color-accent-primary) 0deg, var(--color-accent-primary) 60deg, transparent 60deg, transparent 360deg) 1;
+	}
+	100% {
+		border-image: conic-gradient(from 360deg, var(--color-accent-primary) 0deg, var(--color-accent-primary) 60deg, transparent 60deg, transparent 360deg) 1;
+	}
+}
+
 @keyframes pulse {
 	0% {
 		opacity: 0.8;
@@ -238,10 +256,11 @@ body {
 	border: var(--border-width-active) solid var(--color-task-active-border);
 	animation: 
 		bounce var(--animation-bounce-duration) ease-in-out infinite,
-		neonBorder var(--animation-neon-duration) ease-in-out infinite;
+		borderWave 2s linear infinite;
 	transform-origin: center;
 	font-weight: bold;
 	color: var(--color-text-white);
+	position: relative;
 }
 
 .activeTaskTimer {
@@ -284,7 +303,7 @@ body {
 	border: var(--border-width) solid var(--color-input-border);
 	outline: var(--color-input-outline);
 	height: var(--size-input-height);
-	border-radius: var(--size-border-radius-small);
+	border-radius: var(--border-radius-sm);
 	padding: var(--spacing-input-padding);
 	margin-left: var(--spacing-input-margin-left);
 	font-family: 'Nunito', sans-serif;
@@ -321,7 +340,7 @@ body {
 	background-color: inherit;
 	fill: var(--color-text-primary);
 	color: var(--color-text-primary);
-	border-radius: var(--size-border-radius-button);
+	border-radius: var(--border-radius-button);
 	height: var(--size-button-height);
 	width: var(--size-button-width);
 	border: none;
@@ -384,19 +403,19 @@ body:hover .noActiveTaskWarning {
 	border: var(--border-width) solid var(--color-input-border);
 	outline: var(--color-input-outline);
 	height: var(--size-input-height);
-	border-radius: var(--size-border-radius-small);
+	border-radius: var(--border-radius-sm);
 	padding: var(--spacing-input-padding);
     margin-right: var(--spacing-search-margin-right);
 	font-family: 'Nunito', sans-serif;
     width: 200px;
-    border-radius: var(--size-border-radius-medium);
+	border-radius: var(--border-radius-md);
 }
 
 .commandHelp {
 	background-color: var(--color-input-bg);
 	color: var(--color-text-primary);
 	border: var(--border-width) solid var(--color-input-border);
-    border-radius: var(--size-border-radius-medium);
+	border-radius: var(--border-radius-md);
     padding: var(--spacing-input-padding);
     margin-right: var(--spacing-search-margin-right);
     margin-top: 5px;
@@ -427,27 +446,27 @@ body:hover .noActiveTaskWarning {
 
 /* Urgency Level Styles - Border-based system */
 .task.urgency-low {
-    border-left: var(--size-urgency-border-width) solid var(--color-urgency-border-low);
+    border-left: var(--size-urgency-border-width) solid var(--color-urgency-low);
     transition: border-left-color var(--animation-transition) ease-in-out;
 }
 
 .task.urgency-medium {
-    border-left: var(--size-urgency-border-width) solid var(--color-urgency-border-medium);
+    border-left: var(--size-urgency-border-width) solid var(--color-urgency-medium);
     transition: border-left-color var(--animation-transition) ease-in-out;
 }
 
 .task.urgency-medium-high {
-    border-left: var(--size-urgency-border-width) solid var(--color-urgency-border-medium-high);
+    border-left: var(--size-urgency-border-width) solid var(--color-urgency-medium-high);
     transition: border-left-color var(--animation-transition) ease-in-out;
 }
 
 .task.urgency-high {
-    border-left: var(--size-urgency-border-width) solid var(--color-urgency-border-high);
+    border-left: var(--size-urgency-border-width) solid var(--color-urgency-high);
     transition: border-left-color var(--animation-transition) ease-in-out;
 }
 
 .task.urgency-critical {
-    border-left: var(--size-urgency-border-width) solid var(--color-urgency-border-critical);
+    border-left: var(--size-urgency-border-width) solid var(--color-urgency-critical);
     box-shadow: 0 0 10px rgba(244, 67, 54, 0.3); /* Subtle glow */
     transition: border-left-color var(--animation-transition) ease-in-out, box-shadow var(--animation-transition) ease-in-out;
 }
@@ -461,8 +480,7 @@ body:hover .noActiveTaskWarning {
     border-left: var(--size-urgency-border-width) solid var(--color-task-active-border);
     box-shadow: none; /* Remove urgency glow for active tasks */
     animation: 
-        bounce var(--animation-bounce-duration) ease-in-out infinite,
-        neonBorder var(--animation-neon-duration) ease-in-out infinite; /* Restore active task animations */
+        bounce var(--animation-bounce-duration) ease-in-out infinite; /* Restore active task animations */
 }
 
 /* Corner indicator for urgency levels - Rectangular with rounded corners */
@@ -489,23 +507,23 @@ body:hover .noActiveTaskWarning {
 }
 
 .task.urgency-low::after {
-    background-color: var(--color-urgency-corner-low);
+    background-color: var(--color-urgency-low);
 }
 
 .task.urgency-medium::after {
-    background-color: var(--color-urgency-corner-medium);
+    background-color: var(--color-urgency-medium);
 }
 
 .task.urgency-medium-high::after {
-    background-color: var(--color-urgency-corner-medium-high);
+    background-color: var(--color-urgency-medium-high);
 }
 
 .task.urgency-high::after {
-    background-color: var(--color-urgency-corner-high);
+    background-color: var(--color-urgency-high);
 }
 
 .task.urgency-critical::after {
-    background-color: var(--color-urgency-corner-critical);
+    background-color: var(--color-urgency-critical);
     animation: pulse 1s infinite;
 }
 

@@ -24,7 +24,7 @@ body {
 .task-header {
 	background-color: var(--color-input-bg);
 	border: var(--border-width) solid var(--color-input-border);
-	border-radius: var(--size-border-radius);
+	border-radius: var(--border-radius-lg);
 	padding: var(--spacing-container-padding);
 	margin-bottom: var(--spacing-section-gap);
 }
@@ -95,7 +95,7 @@ body {
 .table-container {
 	background-color: var(--color-input-bg);
 	border: var(--border-width) solid var(--color-input-border);
-	border-radius: var(--size-border-radius);
+	border-radius: var(--border-radius-lg);
 	overflow: hidden;
 }
 
@@ -159,7 +159,7 @@ textarea {
 	height: var(--size-input-height);
 	background-color: var(--color-input-bg);
 	border: var(--border-width) solid var(--color-input-border);
-	border-radius: var(--size-border-radius-small);
+	border-radius: var(--border-radius-sm);
 	padding: var(--spacing-input-padding);
 	font-family: 'Nunito', sans-serif;
 	font-size: var(--font-size-body);
@@ -188,7 +188,7 @@ input[type="time"] {
 .btn {
 	background-color: var(--color-button-primary);
 	border: var(--border-width) solid var(--color-input-border);
-	border-radius: var(--size-border-radius-medium);
+	border-radius: var(--border-radius-md);
 	padding: var(--spacing-button-padding);
 	font-family: 'Nunito', sans-serif;
 	font-size: var(--font-size-body);
