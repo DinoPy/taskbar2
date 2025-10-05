@@ -28,20 +28,24 @@ textarea,
 select {
 	margin: 5px 0;
 	background-color: var(--color-input-bg);
-	color: var(--color-text-secondary);
-	border: none;
-	outline: var(--color-input-outline);
+	color: var(--color-text-primary);
+	border: var(--border-width) solid var(--color-input-border);
 	border-radius: 5px;
 	padding: 5px 10px;
 	font-family: 'Nunito', sans-serif;
+	font-size: var(--font-size-body);
 	width: 100%;
 	resize: none;
+	box-sizing: border-box;
+	vertical-align: middle;
+	height: var(--size-input-height);
 }
 
 select:focus,
 input:focus,
 textarea:focus {
-    outline: auto;
+    outline: none;
+    border-color: var(--color-input-outline);
 }
 
 .tags-input {
@@ -76,11 +80,21 @@ textarea:focus {
 }
 
 .tags-item {
-    border-radius: 5px;
-    padding: 3px 7px;
-    background-color: var(--color-task-bg);
-    font-size: 0.9em;
-    cursor:pointer;
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-xs) var(--spacing-sm);
+    background-color: var(--color-primary);
+    border: var(--border-width) solid var(--color-input-border);
+    font-size: var(--font-size-sm);
+    font-weight: var(--font-weight-medium);
+    cursor: pointer;
+    transition: var(--transition-normal);
+    color: var(--color-text-primary);
+}
+
+.tags-item:hover {
+    background-color: var(--color-hover-subtle);
+    transform: scale(1.05);
+	color: white;
 }
 
 .btn.tags-button {

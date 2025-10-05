@@ -214,7 +214,6 @@ input:focus-visible, select:focus-visible {
 }
 
 .tags-input {
-    width: 70%;
     padding: .5em;
     margin: 0 10px;
     background-color: var(--color-input-bg);
@@ -255,6 +254,7 @@ input:focus-visible, select:focus-visible {
 .tags-item:hover {
     background-color: var(--color-hover-subtle);
     transform: scale(1.05);
+    color: white;
 }
 
 button {
