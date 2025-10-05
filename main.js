@@ -1016,6 +1016,36 @@ ipc.on("close-completed-list-window", () => {
 	completedTasksWindow = null;
 });
 
+// Handle duplicate completed task
+ipc.on("duplicate_completed_task", (_, data) => {
+	console.log(`Duplicating completed task ${data.id}`);
+	sendEvent("task_duplicate", {
+		task_id: data.id
+	});
+});
+
+// Handle split completed task
+ipc.on("split_completed_task", (_, data) => {
+	console.log(`Opening split window for completed task ${data.id}`);
+	taskSplitWindow?.close();
+	createTaskSplitWindow({
+		id: data.id,
+		title: data.title,
+		description: data.description,
+		category: data.category,
+		tags: data.tags,
+		duration: data.duration
+	});
+});
+
+// Handle delete completed task
+ipc.on("delete_completed_task", (_, data) => {
+	console.log(`Deleting completed task ${data.id}`);
+	sendEvent("task_delete", {
+		id: data.id
+	});
+});
+
 
 
 

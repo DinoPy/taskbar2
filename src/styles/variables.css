@@ -1,0 +1,171 @@
+/* CSS Custom Properties - Design System */
+:root {
+	/* Colors - Base Theme */
+	--color-primary: lch(86 24.64 78.64);
+	--color-primary-border: lch(75 20 78.64);
+	--color-text-primary: #4a4a4a;
+	--color-text-secondary: rgb(74, 74, 74);
+	--color-text-white: #ffffff;
+	--color-text-warning: #e67e22;
+	
+	/* Task Colors */
+	--color-task-bg: lch(88 18 78.64);
+	--color-task-border: lch(75 20 78.64);
+	--color-task-active-bg: lch(72.69% 74.85 71.15);
+	--color-task-active-border: #ff0000;
+	
+	/* Input Colors */
+	--color-input-bg: lch(90 15 78.64);
+	--color-input-border: lch(80 20 78.64);
+	--color-input-outline: lch(70 30 78.64);
+	
+	/* Button Colors */
+	--color-button-primary: #ff8c42;        /* Bright orange for buttons */
+	--color-button-primary-hover: #ff7a2b;  /* Darker orange on hover */
+	--color-button-primary-active: #e66a1a;  /* Even darker when pressed */
+	--color-button-hover: lch(80 20 78.64);
+	--color-button-active: lch(70 30 78.64);
+	--color-button-warning-bg: lch(60 35 78.64);
+	
+	/* Subtle Hover Colors */
+	--color-hover-subtle: lch(90 15 78.64);  /* Very light orange for subtle hover */
+	
+	/* Status Colors */
+	--color-status-error: #e74c3c;
+	--color-status-success: #27ae60;
+	--color-status-warning: #e67e22;
+	--color-status-danger: #c74242;
+	
+	/* Urgency Border Colors */
+	--color-urgency-border-low: #4CAF50; /* Green */
+	--color-urgency-border-medium: #FFC107; /* Amber */
+	--color-urgency-border-medium-high: #FF9800; /* Orange */
+	--color-urgency-border-high: #FF5722; /* Deep Orange */
+	--color-urgency-border-critical: #F44336; /* Red */
+	
+	/* Urgency Corner Indicator Colors */
+	--color-urgency-corner-low: #4CAF50; /* Green */
+	--color-urgency-corner-medium: #FFC107; /* Amber */
+	--color-urgency-corner-medium-high: #FF9800; /* Orange */
+	--color-urgency-corner-high: #FF5722; /* Deep Orange */
+	--color-urgency-corner-critical: #F44336; /* Red */
+	
+	/* Urgency Sizes */
+	--size-urgency-border-width: 4px;
+	--size-urgency-corner-size: 12px;
+	--size-urgency-corner-min-width: 24px; /* Minimum width */
+	--size-urgency-corner-padding: 0 2px; /* Horizontal and vertical padding */
+	--size-urgency-corner-bottom: 0px; 
+	--size-urgency-corner-right: 12px;
+	--size-urgency-corner-border-radius: 10px; /* Rounded corners */
+	
+	/* Neon Border Colors */
+	--color-neon-red: #ff0000;
+	--color-neon-orange-red: #ff4500;
+	--color-neon-dark-orange: #ff8c00;
+	--color-neon-orange: #ffa500;
+	--color-neon-yellow: #ffff00;
+	
+	/* Sizes - Layout */
+	--size-taskbar-height: 60px;
+	--size-task-height: 86%;
+	--size-task-width: 200px;
+	--size-task-min-width: 60px;
+	--size-timer-width: 255px;
+	--size-timer-min-width: 255px;
+	--size-main-content-width: calc(100% - 255px);
+	
+	/* Sizes - Spacing */
+	--spacing-task-padding: 4px 6px;
+	--spacing-task-gap: 4px;
+	--spacing-container-gap: 10px;
+	--spacing-container-padding: 20px;
+	--spacing-container-padding-left: 15px;
+	--spacing-section-gap: 20px;
+	--spacing-input-padding: 8px 12px;
+	--spacing-button-padding: 10px 20px;
+	--spacing-timer-padding: 0 10px;
+	--spacing-button-margin: 0 3px;
+	--spacing-input-margin-left: 5px;
+	--spacing-input-padding: 2px 5px;
+	--spacing-user-padding: 5px 0 5px 10px;
+	--spacing-search-margin-right: 280px;
+	
+	/* Sizes - Typography */
+	--font-size-category: 10px;
+	--font-size-timer: 10px;
+	--font-size-due-date: 10px;
+	--font-size-index: 10px;
+	--font-size-title: 15px;
+	--font-size-subtitle: 16px;
+	--font-size-body: 14px;
+	--font-size-small: 12px;
+	--font-size-warning: 24px;
+	
+	/* Sizes - Elements */
+	--size-button-height: 40px;
+	--size-button-width: 34px;
+	--size-input-height: 36px;
+	--size-table-row-height: 50px;
+	--size-timer-height: 70%;
+	--size-countdown-height: 80%;
+	--title-line-clamp: 3;
+	--size-title-max-height: calc(var(--title-line-clamp) * var(--line-height-title));
+	--size-border-radius: 8px;
+	--size-border-radius-small: 1px;
+	--size-border-radius-medium: 5px;
+	--size-border-radius-button: 100%;
+	
+	/* Sizes - Borders */
+	--border-width: 1px;
+	--border-width-active: 3px;
+	
+	/* Line Heights */
+	--line-height-tight: 0.8;
+	--line-height-normal: 1.4;
+	--line-height-title: 0.85;
+	
+	/* Animations */
+	--animation-bounce-duration: 1s;
+	--animation-neon-duration: 2s;
+	--animation-transition: 0.3s;
+	--animation-background-transition: 250ms;
+	
+	/* Z-Index */
+	--z-index-search: 10;
+	
+	/* Spacing */
+	--spacing-xs: 4px;
+	--spacing-sm: 8px;
+	--spacing-md: 16px;
+	--spacing-lg: 24px;
+	--spacing-xl: 32px;
+	
+	/* Border Radius */
+	--border-radius-sm: 4px;
+	--border-radius-md: 8px;
+	--border-radius-lg: 12px;
+	
+	/* Font Sizes */
+	--font-size-xs: 12px;
+	--font-size-sm: 14px;
+	--font-size-md: 16px;
+	--font-size-lg: 18px;
+	--font-size-xl: 20px;
+	
+	/* Font Weights */
+	--font-weight-normal: 400;
+	--font-weight-medium: 500;
+	--font-weight-semibold: 600;
+	--font-weight-bold: 700;
+	
+	/* Shadows */
+	--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+	--shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
+	--shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+	
+	/* Transitions */
+	--transition-fast: 0.15s ease;
+	--transition-normal: 0.3s ease;
+	--transition-slow: 0.5s ease;
+}

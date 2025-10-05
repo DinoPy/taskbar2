@@ -1,64 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400&display=swap');
-
-/* CSS Custom Properties - Consistent with main app */
-:root {
-	/* Colors - Base Theme */
-	--color-primary: lch(86 24.64 78.64);
-	--color-primary-border: lch(75 20 78.64);
-	--color-text-primary: #4a4a4a;
-	--color-text-secondary: rgb(74, 74, 74);
-	--color-text-white: #ffffff;
-	--color-text-warning: #e67e22;
-	
-	/* Input Colors */
-	--color-input-bg: lch(90 15 78.64);
-	--color-input-border: lch(80 20 78.64);
-	--color-input-outline: lch(70 30 78.64);
-	
-	/* Button Colors */
-	--color-button-hover: lch(80 20 78.64);
-	--color-button-active: lch(70 30 78.64);
-	--color-button-warning-bg: lch(60 35 78.64);
-	
-	/* Status Colors */
-	--color-status-error: #e74c3c;
-	--color-status-success: #27ae60;
-	--color-status-warning: #e67e22;
-	--color-status-danger: #c74242;
-	
-	/* Sizes - Layout */
-	--size-border-radius: 8px;
-	--size-border-radius-small: 1px;
-	--size-border-radius-medium: 5px;
-	--size-border-radius-button: 100%;
-	
-	/* Sizes - Spacing */
-	--spacing-container-padding: 20px;
-	--spacing-section-gap: 20px;
-	--spacing-input-padding: 8px 12px;
-	--spacing-button-padding: 10px 20px;
-	
-	/* Sizes - Typography */
-	--font-size-title: 18px;
-	--font-size-subtitle: 16px;
-	--font-size-body: 14px;
-	--font-size-small: 12px;
-	
-	/* Sizes - Elements */
-	--size-button-height: 40px;
-	--size-input-height: 36px;
-	--size-table-row-height: 50px;
-	
-	/* Sizes - Borders */
-	--border-width: 1px;
-	
-	/* Line Heights */
-	--line-height-normal: 1.4;
-	--line-height-tight: 1.2;
-	
-	/* Animations */
-	--animation-transition: 0.3s;
-}
+@import url('./variables.css');
 
 * {
 	box-sizing: border-box;
@@ -202,7 +143,7 @@ tbody tr:last-child {
 }
 
 tbody tr:hover {
-	background-color: var(--color-button-hover);
+	background-color: var(--color-hover-subtle);
 }
 
 td {
@@ -216,7 +157,7 @@ input[type="time"],
 textarea {
 	width: 100%;
 	height: var(--size-input-height);
-	background-color: var(--color-primary);
+	background-color: var(--color-input-bg);
 	border: var(--border-width) solid var(--color-input-border);
 	border-radius: var(--size-border-radius-small);
 	padding: var(--spacing-input-padding);
@@ -245,13 +186,13 @@ input[type="time"] {
 
 /* Button Styles */
 .btn {
-	background-color: var(--color-primary);
+	background-color: var(--color-button-primary);
 	border: var(--border-width) solid var(--color-input-border);
 	border-radius: var(--size-border-radius-medium);
 	padding: var(--spacing-button-padding);
 	font-family: 'Nunito', sans-serif;
 	font-size: var(--font-size-body);
-	color: var(--color-text-primary);
+	color: var(--color-text-white);
 	cursor: pointer;
 	transition: all var(--animation-transition);
 	height: var(--size-button-height);
@@ -261,11 +202,11 @@ input[type="time"] {
 }
 
 .btn:hover {
-	background-color: var(--color-button-hover);
+	background-color: var(--color-button-primary-hover);
 }
 
 .btn:active {
-	background-color: var(--color-button-active);
+	background-color: var(--color-button-primary-active);
 }
 
 .add-btn {

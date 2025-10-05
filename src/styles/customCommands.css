@@ -1,6 +1,8 @@
+@import url('./variables.css');
+
 html {
-	color: #949aa7;
-	background-color: #1b1d23;
+	color: var(--color-text-secondary);
+	background-color: var(--color-primary);
 }
 
 body {
@@ -14,7 +16,7 @@ input {
     width: 70%;
     padding: .5em;
     margin: 0 10px;
-    background-color: #292c35;
+    background-color: var(--color-input-bg);
     border-radius: 3px;
     border: none;
     color-scheme: dark;
@@ -22,9 +24,9 @@ input {
 
 button {
     width: 20%;
-	color: #252525;
+	color: var(--color-text-white);
 	border: none;
-	background-color: #0566cf;
+	background-color: var(--color-button-primary);
     padding: 0.3em 1em;
     margin: 0;
     height: 30px;
@@ -36,7 +38,7 @@ table {
     border-collapse: collapse;
     display:table;
     border-spacing: 2px;
-    border-color: gray;
+    border-color: var(--color-primary-border);
     border-width: 1px;
 }
 
@@ -54,7 +56,7 @@ tr {
 }
 
 th {
-    color: #99a5b6;
+    color: var(--color-text-secondary);
     font-size: 1rem;
     line-height: 1.27;
     padding: 16px 12px;
@@ -78,6 +80,6 @@ td {
 }
 
 .error-message {
-    color: #bd4b4b;
+    color: var(--color-status-error);
 }
 

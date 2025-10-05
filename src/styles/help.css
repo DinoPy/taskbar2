@@ -1,6 +1,8 @@
+@import url('./variables.css');
+
 html {
-	color: #949aa7;
-	background-color: #1b1d23;
+	color: var(--color-text-secondary);
+	background-color: var(--color-primary);
 }
 
 body {

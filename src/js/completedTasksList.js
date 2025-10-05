@@ -45,9 +45,10 @@ const createTableElement = () => {
 	completedAtHead.textContent = 'Completed At';
 
 
-	const editActionHead = document.createElement('th');
+	const actionsHead = document.createElement('th');
+	actionsHead.textContent = 'actions';
 
-	tableHeadRow.append(idHead, titleHead, tagsHead, categoryHead, durationHead, completedAtHead, editActionHead);
+	tableHeadRow.append(idHead, titleHead, tagsHead, categoryHead, durationHead, completedAtHead, actionsHead);
 	tableHeader.append(tableHeadRow);
 	TABLEEL.append(tableHeader);
 
@@ -93,7 +94,7 @@ const createTaskListElements = (data, tableBody) => {
 		dateHeaderRow.classList.add('date-header-row');
 		
 		const dateHeaderCell = document.createElement('td');
-		dateHeaderCell.colSpan = 7; // Span all columns
+		dateHeaderCell.colSpan = 7; // Span all columns (id, title, tags, category, duration, completed_at, actions)
 		
 		// Calculate daily stats
 		const taskCount = dateGroup.tasks.length;
@@ -144,10 +145,20 @@ const createTaskListElements = (data, tableBody) => {
 					});
 				}
 
-				const editActionField = document.createElement('td');
-				editActionField.classList.add("edit-action-button");
-				editActionField.textContent = "Edit";
-				editActionField.addEventListener("click", (e) => {
+				const actionsField = document.createElement('td');
+				actionsField.classList.add("actions-container");
+				
+				// Create action buttons container
+				const actionsContainer = document.createElement('div');
+				actionsContainer.classList.add('action-buttons-row');
+				
+				// Edit button
+				const editBtn = document.createElement('button');
+				editBtn.classList.add('action-btn', 'edit-btn');
+				editBtn.title = 'Edit task';
+				editBtn.innerHTML = '✏️';
+				editBtn.addEventListener("click", (e) => {
+					e.stopPropagation();
 					ipc.send("toggle_given_task_edit", {
 						id: t.id,
 						title: t.title,
@@ -155,10 +166,62 @@ const createTaskListElements = (data, tableBody) => {
 						category: t.category,
 						tags: t.tags,
 					})
-				})
+				});
+				
+				// Duplicate button
+				const duplicateBtn = document.createElement('button');
+				duplicateBtn.classList.add('action-btn', 'duplicate-btn');
+				duplicateBtn.title = 'Duplicate task';
+				duplicateBtn.innerHTML = '📋';
+				duplicateBtn.addEventListener("click", (e) => {
+					e.stopPropagation();
+					ipc.send("duplicate_completed_task", {
+						id: t.id,
+						title: t.title,
+						description: t.descripiton,
+						category: t.category,
+						tags: t.tags,
+						duration: t.duration
+					});
+				});
+				
+				// Split button
+				const splitBtn = document.createElement('button');
+				splitBtn.classList.add('action-btn', 'split-btn');
+				splitBtn.title = 'Split task';
+				splitBtn.innerHTML = '✂️';
+				splitBtn.addEventListener("click", (e) => {
+					e.stopPropagation();
+					ipc.send("split_completed_task", {
+						id: t.id,
+						title: t.title,
+						description: t.descripiton,
+						category: t.category,
+						tags: t.tags,
+						duration: t.duration
+					});
+				});
+				
+				// Separator
+				const separator = document.createElement('span');
+				separator.classList.add('action-separator');
+				separator.innerHTML = '|';
+				
+				// Delete button
+				const deleteBtn = document.createElement('button');
+				deleteBtn.classList.add('action-btn', 'delete-btn');
+				deleteBtn.title = 'Delete task';
+				deleteBtn.innerHTML = '🗑️';
+				deleteBtn.addEventListener("click", (e) => {
+					e.stopPropagation();
+					showDeleteConfirmation(t);
+				});
+				
+				actionsContainer.append(editBtn, duplicateBtn, splitBtn, separator, deleteBtn);
+				actionsField.append(actionsContainer);
 
 				tableRow.title = t.title;
-				tableRow.append(indexField, titleField, tagsField, categoryField, durationField, completedAtField, editActionField);
+				tableRow.append(indexField, titleField, tagsField, categoryField, durationField, completedAtField, actionsField);
 				
 				// Add spacing class to last task row of each date group (except the last date group)
 				const isLastTaskOfGroup = taskIndex === sortedTasks.length - 1;
@@ -376,4 +439,14 @@ ipc.on('completed-tasks-list', (_, data) => {
 document.getElementById('closeBtn').addEventListener('click', () => {
 	ipc.send('close-completed-list-window');
 })
+
+// Delete confirmation function
+const showDeleteConfirmation = (task) => {
+	const confirmed = confirm(`Are you sure you want to delete the task "${task.title}"?\n\nThis action cannot be undone.`);
+	if (confirmed) {
+		ipc.send("delete_completed_task", {
+			id: task.id
+		});
+	}
+}
 

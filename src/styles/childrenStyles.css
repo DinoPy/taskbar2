@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400&display=swap');
+@import url('./variables.css');
 * {
 	box-sizing: border-box;
 	user-select: none;
@@ -13,7 +14,7 @@ body {
 	height: fit-content;
 	font-family: 'Nunito', sans-serif;
 
-	color: #949aa7;
+	color: var(--color-text-secondary);
 	background-color: transparent;
 	overflow: hidden;
 
@@ -26,10 +27,10 @@ input,
 textarea,
 select {
 	margin: 5px 0;
-	background-color: #292c35;
-	color: #949aa7;
+	background-color: var(--color-input-bg);
+	color: var(--color-text-secondary);
 	border: none;
-	outline: #949aa7;
+	outline: var(--color-input-outline);
 	border-radius: 5px;
 	padding: 5px 10px;
 	font-family: 'Nunito', sans-serif;
@@ -71,22 +72,22 @@ textarea:focus {
 
 .time-input-container span {
     font-size: 0.9em;
-    color: #949aa7;
+    color: var(--color-text-secondary);
 }
 
 .tags-item {
     border-radius: 5px;
     padding: 3px 7px;
-    background-color: #2c3644;
+    background-color: var(--color-task-bg);
     font-size: 0.9em;
     cursor:pointer;
 }
 
 .btn.tags-button {
     width: 20%;
-	color: #252525;
+	color: var(--color-text-var(--color-text-white));
 	border: none;
-	background-color: #0566cf;
+	background-color: var(--color-button-primary);
     padding: 0.3em 1em;
     margin: 0;
     height: 30px;
@@ -94,10 +95,10 @@ textarea:focus {
 
 main {
 	padding: 10px 15px;
-	background-color: #1b1d23;
+	background-color: var(--color-primary);
 	height: 100%;
 	width: 100%;
-	border: 1px solid #343b38;
+	border: var(--border-width) solid var(--color-primary-border);
 	border-radius: 10px;
 
 	display: flex;
@@ -114,8 +115,8 @@ main {
 	top: 5px;
 	right: 5px;
 	background-color: inherit;
-	fill: #949aa7;
-	color: #949aa7;
+	fill: var(--color-text-secondary);
+	color: var(--color-text-secondary);
 	border-radius: 100%;
 	height: 34px;
 	width: 34px;
@@ -127,11 +128,11 @@ main {
 }
 
 .button:hover {
-	background-color: #343b38;
+	background-color: var(--color-primary-border);
 }
 
 .button:active {
-	background-color: #4f9eee6c;
+	background-color: var(--color-button-primary-hover);
 }
 
 .modalOptionsContainer {
@@ -151,31 +152,31 @@ main {
 }
 
 .submitBtn {
-	color: #252525;
+	color: var(--color-text-var(--color-text-white));
 	border: none;
-	background-color: #0566cf;
+	background-color: var(--color-button-primary);
 }
 
 .submitBtn:hover {
-	background-color: hsl(211, 68%, 46%);
+	background-color: var(--color-button-primary-hover);
 }
 
 .submitBtn:active {
-	background-color: #4088d5;
+	background-color: var(--color-button-primary-active);
 }
 
 .cancelBtn {
 	background-color: transparent;
-	border: 1px solid gray;
-	color: white;
+	border: 1px solid var(--color-primary-border);
+	color: var(--color-text-white);
 }
 
 .cancelBtn:hover {
-	background-color: #949aa7;
+	background-color: var(--color-text-secondary);
 }
 
 .newCategoryDialog {
-	background-color: #1b1d23;
+	background-color: var(--color-primary);
 	border-radius: 5px;
-	border: 1px solid #343b38;
+	border: var(--border-width) solid var(--color-primary-border);
 }
