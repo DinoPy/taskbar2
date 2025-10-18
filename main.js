@@ -15,6 +15,11 @@ import { createHelpWindow as createHelpBrowserWindow } from "./src/main/windows/
 import { createCustomCommandsWindow as createCustomCommandsBrowserWindow } from "./src/main/windows/customCommandsWindow.js";
 import { createTaskSplitWindow as createTaskSplitBrowserWindow } from "./src/main/windows/taskSplitWindow.js";
 import { createKeyWindow as createKeyBrowserWindow } from "./src/main/windows/keyWindow.js";
+import {
+	showMainContextMenu,
+	showTaskContextMenu,
+	showLoginContextMenu,
+} from "./src/main/menus/index.js";
 
 const logDir = path.dirname(config.logFilePath);
 if (!fs.existsSync(logDir)) {
@@ -37,8 +42,6 @@ import {
 	screen,
 	globalShortcut,
 	powerMonitor,
-	Menu,
-	MenuItem,
 } from "electron";
 
 // Increase max listeners for WebContents to prevent memory leak warnings
@@ -209,6 +212,37 @@ const toggleAlwaysOnTop = () => {
 	console.log(`Always on top: ${!isAlwaysOnTop}`);
 };
 
+const showMainMenu = () =>
+	showMainContextMenu({
+		win,
+		appState,
+		createCompletedTasksPopUp,
+		createCustomCommandsWindow,
+		createHelpWindow,
+		toggleAlwaysOnTop,
+	});
+
+const showTaskMenu = (task) =>
+	showTaskContextMenu({
+		win,
+		appState,
+		task,
+		tasksController,
+		openEditWindowForTask,
+		getTaskWindow,
+		createTaskSplitWindow,
+	});
+
+const showLoginMenu = () =>
+	showLoginContextMenu({
+		win,
+		userInfo,
+		socketClient,
+		fs,
+		config,
+		doAuthentication,
+	});
+
 registerIpcHandlers({
 	ipc,
 	appState,
@@ -246,9 +280,9 @@ const createTaskbarWindowInstance = () => {
 		currentlySelectedScreenIndex: appState.currentlySelectedScreenIndex,
 		getIsTimerRunning,
 		onCloseApp: handleCloseAppRequest,
-		onShowTaskContextMenu: createTaskContextMenu,
-		onShowGeneralContextMenu: createContextMenu,
-		onShowLoginContextMenu: createLoginContextMenu,
+		onShowTaskContextMenu: showTaskMenu,
+		onShowGeneralContextMenu: showMainMenu,
+		onShowLoginContextMenu: showLoginMenu,
 	});
 	return win;
 };
@@ -401,210 +435,15 @@ powerMonitor.on("resume", () => {
 // });
 
 
-function createContextMenu() {
-	const menu = new Menu();
-
-	const submenus = screen.getAllDisplays().map((d, i) => {
-		return {
-			label: `Screen ${i} - Top`,
-			click: () => {
-				appState.currentlySelectedScreenIndex = i;
-				appState.currentlySelectedScreenSide = "top";
-				win.setBounds({
-					x: d.bounds.x,
-					y: d.bounds.y,
-					height: appState.taskbarHeight,
-					width: d.bounds.width,
-				});
-			},
-		};
-	});
-
-	submenus.push(
-		...screen.getAllDisplays().map((d, i) => {
-			return {
-				label: `Screen ${i} - Bottom`,
-				click: () => {
-					appState.currentlySelectedScreenIndex = i;
-					appState.currentlySelectedScreenSide = "bottom";
-					win.setBounds({
-						x: d.bounds.x,
-						y: d.bounds.y + d.bounds.height - appState.taskbarHeight,
-						height: appState.taskbarHeight,
-						width: d.bounds.width,
-					});
-				},
-			};
-		})
-	);
-
-	menu.append(
-		new MenuItem({
-			label: "Select screen",
-			submenu: submenus,
-		})
-	);
-
-	menu.append(
-		new MenuItem({
-			label: "Toggle timer",
-			toolTip: `Timer is currently ${appState.isTimerRunning ? "running" : "deactivated"
-				}`,
-			type: "checkbox",
-			checked: appState.isTimerRunning,
-			click: () => {
-				appState.isTimerRunning = !appState.isTimerRunning;
-				win.webContents.send("toggle-countdown-timer", {
-					isTimerRunning: appState.isTimerRunning,
-				});
-			},
-		})
-	);
-
-	menu.append(new MenuItem({
-		label: "Completed tasks",
-		toolTip: "Show tasks that were completed so far",
-		click: () => createCompletedTasksPopUp()
-	}))
-
-	menu.append(new MenuItem({
-		label: "Toggle always on top",
-		toolTip: "When toggled the window will stay on top of all other tasks",
-		type: "checkbox",
-		checked: win.isAlwaysOnTop(),
-		click: () => win.setAlwaysOnTop(!win.isAlwaysOnTop())
-	}))
-
-	menu.append(new MenuItem({
-		label: "Custom Commands",
-		toolTip: "Open settings window for custom commands",
-		click: () => createCustomCommandsWindow()
-	}))
-
-	menu.append(new MenuItem({
-		label: "Help",
-		toolTip: "Opens the help window",
-		click: () => createHelpWindow()
-	}))
-
-	menu.append(new MenuItem({
-		label: "Show all tasks",
-		toolTip: "Toggle between showing all tasks or only tasks that are due soon",
-		type: "checkbox",
-		checked: appState.showAllTasks,
-		click: () => {
-			appState.showAllTasks = !appState.showAllTasks;
-			win.webContents.send("toggle-show-all-tasks", {
-				showAllTasks: appState.showAllTasks
-			});
-		},
-	}))
-
-	menu.popup(win, 0, 0);
-}
-
-function createTaskContextMenu(args) {
-	const ctxMenu = new Menu();
-
-	ctxMenu.append(
-		new MenuItem({
-			label: "Edit",
-			click: () => {
-				createEditWindow({ ...args, categories: appState.categories });
-			},
-		})
-	);
-
-	ctxMenu.append(
-		new MenuItem({
-			label: "Delete",
-			click: () => {
-				const editWindow = getTaskWindow();
-				if (editWindow && appState.openTaskProps?.id === args.id) editWindow.close();
-				tasksController.deleteTask(args);
-			},
-		})
-	);
-
-	ctxMenu.append(
-		new MenuItem({
-			label: "Complete",
-			click: () => {
-				const editWindow = getTaskWindow();
-				if (editWindow && appState.openTaskProps?.id === args.id) editWindow.close();
-				tasksController.completeTask(args);
-			},
-		})
-
-	);
-
-	ctxMenu.append(
-		new MenuItem({
-			label: "Duplicate",
-			click: () => {
-				tasksController.duplicateTask(args);
-			},
-		})
-	);
-
-	ctxMenu.append(
-	new MenuItem({
-		label: "Split",
-		click: () => {
-			createTaskSplitWindow(args);
-		},
-	})
-	);
-	ctxMenu.append(
-		new MenuItem({
-			label: "Category",
-			submenu: appState.categories.map(
-				(cat) =>
-					new MenuItem({
-						label: cat,
-						type: "radio",
-						checked: cat === args.category ? true : false,
-						click: () => {
-							win.webContents.send("update-task-category", {
-								id: args.id,
-								newCategory: cat,
-							});
-						},
-					})
-			),
-		})
-	);
-	// loop through the list starting from the tail and loop towards the middle
-	ctxMenu.popup(win, 0, 0);
-}
 
 
-function createLoginContextMenu(args) {
-	const ctxMenu = new Menu();
-	const isLoggedIn = userInfo.hasOwnProperty("id");
 
-	ctxMenu.append(
-		new MenuItem({
-			label: isLoggedIn ? "Sign Out" : "Sign In",
-			click: () => {
-				if (isLoggedIn) {
-					socketClient.close();
-					Object.keys(userInfo).forEach(key => delete userInfo[key]);
-					fs.unlink(config.tokensFilePath, (e) => {
-						if (e && e.code !== "ENOENT") {
-							console.log(e);
-						}
-					});
-					win.webContents.send("user-logged-out", userInfo);
-				} else {
-					doAuthentication();
-				}
-			},
-		})
-	);
 
-	ctxMenu.popup(win, 0, 0);
-}
+
+
+
+
+
 
 function createKenbanWindow() {
 	return windowManager.openKenbanWindow();
