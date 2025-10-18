@@ -205,10 +205,16 @@ ipc.on("new_task_from_relative", (e, data) => {
 
 
 ipc.on("related_task_toggled", (e, data) => {
-	if (data.is_active)
+	console.log("Related task toggled", data);
+	if (data.is_active) {
+		// Update toggledFocusAt with the timestamp from the mobile app if valid
+		if (data.toggled_at && data.toggled_at.Valid) {
+			tasks[data.id].toggledFocusAt = data.toggled_at.Int64;
+		}
 		tasks[data.id].addFocus(true);
-	else
+	} else {
 		tasks[data.id].removeFocus(true);
+	}
 })
 
 ipc.on("related_task_deleted", (e, data) => {
@@ -322,13 +328,10 @@ ipc.on('toggle-show-all-tasks', (e, data) => {
 
 // Function to check if a task should be visible based on due date
 function shouldShowTask(task) {
-	console.log('shouldShowTask for task:', task.id, 'due_at:', task.due_at, 'showAllTasks:', showAllTasks);
-	
 	if (showAllTasks) return true;
 	
 	// If no due date is set or it's the default invalid date, always show the task
 	if (!task.due_at || task.due_at === "0001-01-01T00:00:00Z" || task.due_at === "0001-01-01T00:00:00.000Z") {
-		console.log('Task has no valid due date, showing');
 		return true;
 	}
 	
@@ -348,7 +351,6 @@ function shouldShowTask(task) {
 	
 	// Show task if current time is after the show time
 	const shouldShow = currentTime >= showTime;
-	console.log('Task due date check - currentTime:', currentTime, 'showTime:', showTime, 'shouldShow:', shouldShow);
 	return shouldShow;
 }
 
@@ -383,6 +385,58 @@ setInterval(() => {
 		}
 	}
 }, 60000); // 60 seconds
+
+// Timer to check for due date notifications every minute
+setInterval(() => {
+	checkDueDateNotifications();
+}, 60000); // 1 minute (60000 ms)
+
+// Function to check and send due date notifications
+function checkDueDateNotifications() {
+	const currentTime = new Date();
+	
+	for (let id in tasks) {
+		const task = tasks[id];
+		
+		// Skip if task has no due date or is invalid
+		if (!task.due_at || task.due_at === "0001-01-01T00:00:00Z" || task.due_at === "0001-01-01T00:00:00.000Z") {
+			continue;
+		}
+		
+		const dueDate = new Date(task.due_at);
+		
+		// Skip if due date is invalid
+		if (isNaN(dueDate.getTime())) {
+			continue;
+		}
+		
+		const timeRemaining = dueDate.getTime() - currentTime.getTime();
+		const minutesRemaining = Math.floor(timeRemaining / (1000 * 60));
+		const hoursRemaining = Math.floor(minutesRemaining / 60);
+		
+		// Send notification if:
+		// 1. Task is due within 6 hours and not overdue
+		// 2. Minutes remaining is exactly divisible by 60 (hour mark)
+		// 3. We haven't already sent a notification for this hour
+		if (hoursRemaining >= 0 && hoursRemaining <= 6 && minutesRemaining % 60 === 0) {
+			// Check if we've already sent a notification for this hour
+			const notificationKey = `${id}_${hoursRemaining}`;
+			if (!task.lastNotificationHour || task.lastNotificationHour !== hoursRemaining) {
+				const dueTime = dueDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+				const notificationBody = `${task.title} - Due in ${hoursRemaining} hour${hoursRemaining !== 1 ? 's' : ''} at ${dueTime}`;
+				
+				// Send notification via IPC to main process
+				ipc.send("due_date_notification", {
+					title: "Task Due Soon",
+					body: notificationBody
+				});
+				
+				// Track that we've sent notification for this hour
+				task.lastNotificationHour = hoursRemaining;
+			}
+		}
+	}
+}
 
 // -------------- CMD HELPERS ---------------------- //
 

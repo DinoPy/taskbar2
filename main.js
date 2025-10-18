@@ -5,10 +5,10 @@ import path from "path";
 const logFile = fs.createWriteStream(path.join(os.homedir(), "app.log"), { flags: 'a' });
 const logStdout = process.stdout;
 
-console.log = function(...args) {
-logFile.write(new Date().toISOString() + ' ' + args.join(' ') + '\n');
-logStdout.write(new Date().toISOString() + ' ' + args.join(' ') + '\n');
-};
+// console.log = function(...args) {
+// logFile.write(new Date().toISOString() + ' ' + args.join(' ') + '\n');
+// logStdout.write(new Date().toISOString() + ' ' + args.join(' ') + '\n');
+// };
 
 console.error = console.log; // Redirect errors as well
 
@@ -23,6 +23,12 @@ import {
 	Menu,
 	MenuItem,
 } from "electron";
+
+// Increase max listeners for WebContents to prevent memory leak warnings
+// This is a temporary fix while we ensure proper cleanup
+app.whenReady().then(() => {
+	BrowserWindow.prototype.webContents.setMaxListeners(20);
+});
 import electronLocalshortcut from "electron-localshortcut";
 import { socketConnect, sendEvent } from "./ws.js";
 import { oauth2Client, login, authUrl, getAuthTokens, userInfo } from "./googleapis.js";
@@ -107,6 +113,16 @@ const createWindow = () => {
 		}).show();
 	});
 
+	ipc.on("due_date_notification", (_, data) => {
+		new Notification({
+			title: data.title,
+			body: data.body,
+			silent: false, // Silent as requested
+			icon: "src/images/dino.ico",
+			timeoutType: "never",
+		}).show();
+	});
+
 	ipc.on("show-task-context-menu", (_, args) => {
 		createTaskContextMenu(args);
 	});
@@ -120,7 +136,7 @@ const createWindow = () => {
 	})
 
 	// once the page is loaded we send some variables sourcing from settings
-	win.webContents.on("did-finish-load", () => {
+	win.webContents.once("did-finish-load", () => {
 		win.webContents.send("data-from-main", {
 			isTimerRunning: isTimerRunning,
 		});
@@ -260,7 +276,7 @@ const doAuthentication = () => {
 	const authWindow = new BrowserWindow({ width: 800, height: 600 });
 	authWindow.loadURL(authUrl);
 
-	authWindow.webContents.on("did-fail-load",
+	authWindow.webContents.once("did-fail-load",
 		async (event, errorCode, errorDescription, validatedUrl) => {
 			const url = new URL(validatedUrl);
 			const code = url.searchParams.get("code");
@@ -595,7 +611,7 @@ function createEditWindow(props) {
 	taskWindow.setBackgroundColor = "#1b1d23";
 	taskWindow.loadFile("src/html/child.html");
 
-	taskWindow.webContents.on("dom-ready", async () => {
+	taskWindow.webContents.once("dom-ready", async () => {
 		const height = await taskWindow.webContents.executeJavaScript(
 			"document.body.offsetHeight"
 		);
@@ -606,7 +622,7 @@ function createEditWindow(props) {
 
 	// when the window is loaded we send the data from the parent props received via the context menu
 	// and populate the page with the intended values.
-	taskWindow.webContents.on("did-finish-load", () => {
+	taskWindow.webContents.once("did-finish-load", () => {
 		taskWindow.webContents.send("data-from-parent", props);
 		openTaskProps = props;
 	});
@@ -674,12 +690,12 @@ function createCompletedTasksPopUp() {
 		completedTasksWindow.loadFile("./src/html/completedTasks.html");
 
 
-		completedTasksWindow.webContents.on("did-finish-load", () => {
+		completedTasksWindow.webContents.once("did-finish-load", () => {
 			sendEvent("get_completed_tasks", from_completed_data);
 		})
 
 
-		completedTasksWindow.webContents.on("dom-ready", async () => {
+		completedTasksWindow.webContents.once("dom-ready", async () => {
 			completedTasksWindow.show();
 			// completedTasksWindow.webContents.openDevTools();
 		});
@@ -758,7 +774,7 @@ function createCustomCommandsWindow() {
 		customCommandsWindow.setBackgroundColor = "#1b1d23";
 		customCommandsWindow.loadFile("./src/html/customCommands.html");
 
-		customCommandsWindow.webContents.on("did-finish-load", () => {
+		customCommandsWindow.webContents.once("did-finish-load", () => {
 			const keyAndCommands = {};
 			for (let c in commands_and_windows) {
 				keyAndCommands[c] = {};
@@ -804,7 +820,7 @@ function createTaskSplitWindow(props) {
 	taskSplitWindow.setBackgroundColor = "#1b1d23";
 	taskSplitWindow.loadFile("src/html/taskSplit.html");
 
-	taskSplitWindow.webContents.on("dom-ready", async () => {
+	taskSplitWindow.webContents.once("dom-ready", async () => {
 		const height = await taskSplitWindow.webContents.executeJavaScript(
 			"document.body.offsetHeight"
 		);
@@ -815,7 +831,7 @@ function createTaskSplitWindow(props) {
 
 	// when the window is loaded we send the data from the parent props received via the context menu
 	// and populate the page with the intended values.
-	taskSplitWindow.webContents.on("did-finish-load", () => {
+	taskSplitWindow.webContents.once("did-finish-load", () => {
 		taskSplitWindow.webContents.send("data-from-parent", props);
 	});
 

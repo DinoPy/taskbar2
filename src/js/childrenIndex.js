@@ -242,11 +242,9 @@ titleInput.addEventListener('change', (e) => {
 	const titleLength = e.target.value.length;
 	if (titleLength < 3) {
 		titleInput.placeholder = 'Minimum length of 1 characters';
-		titleInput.style.backgroundColor = '#f78b92';
 		titleInput.style.border = '1px solid red';
 	} else {
 		titleInput.placeholder = 'Title';
-		titleInput.style.backgroundColor = '#292c35';
 		titleInput.style.border = 'none';
 	}
 });

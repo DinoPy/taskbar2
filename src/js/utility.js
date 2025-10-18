@@ -321,18 +321,17 @@ export class Task {
 
     // TODO: add toggled at from relative
         startTimer (existentTime) {
-            console.log(existentTime);
+            console.log("existentTime", existentTime);
+            // update when the task was focused first
+            this.toggledFocusAt = existentTime || new Date().getTime();
+            
             // settings up the interval
-
             this.taskTimerInterval = setInterval(()=> {
                 let timePassed = Math.floor(
                     (this.duration + +new Date() - this.toggledFocusAt) / 1000
                 );
                 this.children.timerEl.textContent = formatCountdownText(timePassed);
             }, 1000);
-
-            // update when the task was focused
-            this.toggledFocusAt = existentTime || new Date().getTime();
         };
 
         stopTimer () {
