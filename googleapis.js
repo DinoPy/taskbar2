@@ -1,7 +1,7 @@
 import { google } from "googleapis";
 import fs from "fs";
-import os from "os";
 import path from "path";
+import { config } from "./src/main/config.js";
 const userInfo = {};
 
 const getSecretGoogleCreds = () => {
@@ -24,6 +24,14 @@ const getSecretGoogleCreds = () => {
 
 const GOOGLE_REDIRECT_URI = "http://localhost:3123";
 const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } = getSecretGoogleCreds();
+const tokensFilePath = config.tokensFilePath;
+
+const ensureTokensDir = () => {
+	const dir = path.dirname(tokensFilePath);
+	if (!fs.existsSync(dir)) {
+		fs.mkdirSync(dir, { recursive: true });
+	}
+};
 
 const oauth2Client = new google.auth.OAuth2(
     GOOGLE_CLIENT_ID,
@@ -44,8 +52,9 @@ console.log("auth url: ", authUrl);
 
 const login = async () => {
     try {
+        ensureTokensDir();
         const savedTokens = JSON.parse(
-            fs.readFileSync(path.join(os.homedir(), ".tokens.json")));
+            fs.readFileSync(tokensFilePath, "utf-8"));
         if (savedTokens) {
             oauth2Client.setCredentials(savedTokens);
             await getUserDetails();
@@ -80,7 +89,8 @@ async function getAuthTokens(code) {
         // Exchange the authorization code for tokens
         const { tokens } = await oauth2Client.getToken(code);
         oauth2Client.setCredentials(tokens);
-        fs.writeFileSync(path.join(os.homedir(), ".tokens.json"), JSON.stringify(tokens));
+        ensureTokensDir();
+        fs.writeFileSync(tokensFilePath, JSON.stringify(tokens));
         await getUserDetails();
     } catch (error) {
         console.log("error occured");

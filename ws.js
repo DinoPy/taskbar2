@@ -1,4 +1,5 @@
 import WebSocket from "ws";
+import { config } from "./src/main/config.js";
 import {
 	handleSocketConnect,
 	handleSocketDisconnect,
@@ -18,14 +19,13 @@ import {
 
 let reconnectInterval = 3000;
 
-let stage = "development";
 let user = {};
 
-const prodUrl = "https://pythonws.dinodev.dev/ws/taskbar"
-const devUrl = "ws://localhost:8080/ws/taskbar"
+const getSocketUrl = () => config.getWsUrl();
 
 function socketConnect(userInfo) {
-	socket.instance = new WebSocket(stage == "development" ? devUrl : prodUrl);
+	const socketUrl = getSocketUrl();
+	socket.instance = new WebSocket(socketUrl);
 
 	socket.instance.onopen = () => {
 		socket.manuallyClosed = false;
@@ -109,4 +109,3 @@ function sendEvent(eventName, data) {
 }
 
 export { socketConnect, sendEvent };
-

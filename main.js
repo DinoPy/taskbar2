@@ -1,9 +1,22 @@
 import "dotenv/config";
 import fs from "fs";
-import os from "os";
 import path from "path";
 
-const logFile = fs.createWriteStream(path.join(os.homedir(), "app.log"), { flags: 'a' });
+import { config } from "./src/main/config.js";
+import { createTaskbarWindow } from "./src/main/windows/taskbarWindow.js";
+import { createKenbanWindow as createKenbanBrowserWindow } from "./src/main/windows/kenbanWindow.js";
+import { createEditWindow as createEditBrowserWindow } from "./src/main/windows/editWindow.js";
+import { createCompletedTasksWindow as createCompletedTasksBrowserWindow } from "./src/main/windows/completedTasksWindow.js";
+import { createHelpWindow as createHelpBrowserWindow } from "./src/main/windows/helpWindow.js";
+import { createCustomCommandsWindow as createCustomCommandsBrowserWindow } from "./src/main/windows/customCommandsWindow.js";
+import { createTaskSplitWindow as createTaskSplitBrowserWindow } from "./src/main/windows/taskSplitWindow.js";
+import { createKeyWindow as createKeyBrowserWindow } from "./src/main/windows/keyWindow.js";
+
+const logDir = path.dirname(config.logFilePath);
+if (!fs.existsSync(logDir)) {
+	fs.mkdirSync(logDir, { recursive: true });
+}
+const logFile = fs.createWriteStream(config.logFilePath, { flags: "a" });
 const logStdout = process.stdout;
 
 // console.log = function(...args) {
@@ -20,7 +33,6 @@ import {
 	screen,
 	globalShortcut,
 	powerMonitor,
-	Notification,
 	Menu,
 	MenuItem,
 } from "electron";
@@ -30,7 +42,6 @@ import {
 app.whenReady().then(() => {
 	BrowserWindow.prototype.webContents.setMaxListeners(20);
 });
-import electronLocalshortcut from "electron-localshortcut";
 import { socketConnect, sendEvent } from "./ws.js";
 import { oauth2Client, login, authUrl, getAuthTokens, userInfo } from "./googleapis.js";
 
@@ -64,214 +75,129 @@ let openTaskProps = null;
 const reserved_keys = ["Space", "n", "j", "e", "k", "c", "s", "y", "z"];
 const commands_and_windows = {};
 
-const createWindow = () => {
-	const displays = screen.getAllDisplays()[currentlySelectedScreenIndex];
-	win = new BrowserWindow({
-		x: displays.workArea.x,
-		y: displays.workArea.y,
-		width: displays.workAreaSize.width,
-		width: displays.workAreaSize.width,
-		height: taskbarHeight,
-		minHeight: 40,
-		maxHeight: 80,
-		minWidth: 1280,
-		frame: false,
-		alwaysOnTop: true,
-		enableLargerThanScreen: false,
-		title: "Taskbar",
-		maximizable: false,
-		movable: false,
-		// resizable: true,
-		minimizable: false,
-		icon: "src/images/dino.ico",
-		webPreferences: {
-			webgl: true,
-			// preload: path.join(__dirname, "preload.js"),
-			nodeIntegration: true,
-			contextIsolation: false,
-			devTools: true,
-		},
-	});
+const getIsTimerRunning = () => isTimerRunning;
 
-	win.loadFile("src/index.html");
-	win.title = "Task bar";
-
-
-	ipc.on("close_app", (_, args) => {
-		taskWindow?.close();
-		completedTasksWindow?.close();
-		taskSplitWindow?.close();
-		win.close();
-	});
-
-	ipc.on("interval_end", (_, args) => {
-		new Notification({
-			title: "Interval Ended",
-			body: args,
-			silent: false,
-			icon: "src/images/dino.ico",
-			timeoutType: "never",
-		}).show();
-	});
-
-	ipc.on("due_date_notification", (_, data) => {
-		new Notification({
-			title: data.title,
-			body: data.body,
-			silent: false, // Silent as requested
-			icon: "src/images/dino.ico",
-			timeoutType: "never",
-		}).show();
-	});
-
-	ipc.on("show-task-context-menu", (_, args) => {
-		createTaskContextMenu(args);
-	});
-
-	ipc.on("show-general-context-menu", (_, args) => {
-		createContextMenu(args);
-	});
-
-	ipc.on("show-login-context-menu", (_, args) => {
-		createLoginContextMenu();
-	})
-
-	// once the page is loaded we send some variables sourcing from settings
-	win.webContents.once("did-finish-load", () => {
-		win.webContents.send("data-from-main", {
-			isTimerRunning: isTimerRunning,
-		});
-
-	});
-
-	win.on("focus", () => {
-		electronLocalshortcut.register(
-			win,
-			["CommandOrControl+R", "CommandOrControl+Shift+R", "F5"],
-			() => { }
-		);
-	});
-
-	win.on("blur", () => {
-		electronLocalshortcut.unregisterAll(win);
-	});
-
-
-	win.webContents.on("before-input-event", (event, input) => {
-		// Check if the Ctrl (or Command on Mac) key and R key are pressed simultaneously
-		if ((input.key === "r") && (input.ctrlOrCommand || input.meta)) {
-			event.preventDefault(); // Prevent the default reload action
-		}
-		if ((input.key === "w") && (input.ctrlOrCommand || input.meta)) {
-			event.preventDefault(); // Prevent the default quit action
-		}
-	});
+const handleCloseAppRequest = () => {
+	taskWindow?.close();
+	completedTasksWindow?.close();
+	taskSplitWindow?.close();
+	win?.close();
 };
 
-app
-	.whenReady()
-	.then(async () => {
-		// setting up global shortcuts.
-		// globalShortcut.register("CommandOrControl+R", (e) => {
-		// 	console.log(e);
-		// });
-		// globalShortcut.register("CommandOrControl+Shift+R", () => {});
-		globalShortcut.register("CommandOrControl+Shift+Space", () => {
-			win.show();
-			win.webContents.send("addTask");
-		});
-		globalShortcut.register("CommandOrControl+Shift+n", () => {
-			win.webContents.send("addEmergencyTask");
-		});
-		globalShortcut.register("CommandOrControl+Shift+j", () => {
-			win.webContents.openDevTools();
-			taskWindow?.webContents.openDevTools();
-			completedTasksWindow?.webContents.openDevTools();
-			kenbanWindow?.webContents.openDevTools();
-			helpWindow?.webContents.openDevTools();
-			customCommandsWindow?.webContents.openDevTools();
-			taskSplitWindow?.webContents.openDevTools();
-		});
-		globalShortcut.register("CommandOrControl+Shift+e", () => {
-			win.webContents.send("request-current-task-data-for-edit")
-		})
-		globalShortcut.register("CommandOrControl+Shift+k", () => {
-			createKenbanWindow();
-		})
-		globalShortcut.register("CommandOrControl+Shift+c", () => {
-			completedTasksWindow?.close();
-			createCompletedTasksPopUp();
-		})
-		globalShortcut.register("CommandOrControl+Shift+s", () => {
-			win.focus();
-			win.webContents.send("task_switch_trigger");
-		})
-		globalShortcut.register("CommandOrControl+Shift+y", () => {
-			win.webContents.send("complete_current_task");
-		})
-		globalShortcut.register("CommandOrControl+Shift+z", () => {
-			!customCommandsWindow && createCustomCommandsWindow()
-		})
+const createTaskbarWindowInstance = () => {
+	win = createTaskbarWindow({
+		ipcMain,
+		taskbarHeight,
+		currentlySelectedScreenIndex,
+		getIsTimerRunning,
+		onCloseApp: handleCloseAppRequest,
+		onShowTaskContextMenu: createTaskContextMenu,
+		onShowGeneralContextMenu: createContextMenu,
+		onShowLoginContextMenu: createLoginContextMenu,
+	});
+	return win;
+};
 
-	})
-	.then(async () => {
-		createWindow();
+app.whenReady().then(async () => {
+	createTaskbarWindowInstance();
 
-		try {
-			await login()
-			const token = await oauth2Client.getAccessToken()
+	// setting up global shortcuts.
+	// globalShortcut.register("CommandOrControl+R", (e) => {
+	// 	console.log(e);
+	// });
+	// globalShortcut.register("CommandOrControl+Shift+R", () => {});
+	globalShortcut.register("CommandOrControl+Shift+Space", () => {
+		win?.show();
+		win?.webContents.send("addTask");
+	});
+	globalShortcut.register("CommandOrControl+Shift+n", () => {
+		win?.webContents.send("addEmergencyTask");
+	});
+	globalShortcut.register("CommandOrControl+Shift+j", () => {
+		win?.webContents.openDevTools();
+		taskWindow?.webContents.openDevTools();
+		completedTasksWindow?.webContents.openDevTools();
+		kenbanWindow?.webContents.openDevTools();
+		helpWindow?.webContents.openDevTools();
+		customCommandsWindow?.webContents.openDevTools();
+		taskSplitWindow?.webContents.openDevTools();
+	});
+	globalShortcut.register("CommandOrControl+Shift+e", () => {
+		win?.webContents.send("request-current-task-data-for-edit");
+	});
+	globalShortcut.register("CommandOrControl+Shift+k", () => {
+		createKenbanWindow();
+	});
+	globalShortcut.register("CommandOrControl+Shift+c", () => {
+		completedTasksWindow?.close();
+		createCompletedTasksPopUp();
+	});
+	globalShortcut.register("CommandOrControl+Shift+s", () => {
+		win?.focus();
+		win?.webContents.send("task_switch_trigger");
+	});
+	globalShortcut.register("CommandOrControl+Shift+y", () => {
+		win?.webContents.send("complete_current_task");
+	});
+	globalShortcut.register("CommandOrControl+Shift+z", () => {
+		!customCommandsWindow && createCustomCommandsWindow();
+	});
 
-			if (userInfo.hasOwnProperty("id")) {
-				win.webContents.send("user-logged-in", userInfo);
-				socketConnect(userInfo);
-			}
+	try {
+		await login();
+		const token = await oauth2Client.getAccessToken();
 
-			console.log("token: ", JSON.stringify(token));
-		} catch (e) {
-			doAuthentication();
+		if (userInfo.hasOwnProperty("id")) {
+			win?.webContents.send("user-logged-in", userInfo);
+			socketConnect(userInfo);
 		}
 
-		console.log("from main.js", +new Date());
-		screen.on("display-added", (event, newDisplay) => {
-			console.log("Display added");
-			const displays = screen.getAllDisplays();
-			while (currentlySelectedScreenIndex > displays.length - 1) {
-				currentlySelectedScreenIndex -= 1;
-			}
+		console.log("token: ", JSON.stringify(token));
+	} catch (e) {
+		doAuthentication();
+	}
 
-			const y = currentlySelectedScreenSide === "bottom" ?
-				displays[currentlySelectedScreenIndex].bounds.y + displays[currentlySelectedScreenIndex].bounds.height - taskbarHeight :
-				displays[currentlySelectedScreenIndex].bounds.y;
+	console.log("from main.js", +new Date());
+	screen.on("display-added", (event, newDisplay) => {
+		console.log("Display added");
+		const displays = screen.getAllDisplays();
+		while (currentlySelectedScreenIndex > displays.length - 1) {
+			currentlySelectedScreenIndex -= 1;
+		}
 
-			win.setBounds({
-				x: displays[currentlySelectedScreenIndex].bounds.x,
-				y,
-				height: taskbarHeight,
-				width: displays[currentlySelectedScreenIndex].bounds.width,
-			})
-		});
+		const y = currentlySelectedScreenSide === "bottom"
+			? displays[currentlySelectedScreenIndex].bounds.y + displays[currentlySelectedScreenIndex].bounds.height - taskbarHeight
+			: displays[currentlySelectedScreenIndex].bounds.y;
 
-		// Listen for a display being removed
-		screen.on("display-removed", (event, oldDisplay) => {
-			console.log("Display removed");
-			const displays = screen.getAllDisplays();
-			const y = currentlySelectedScreenSide === "bottom" ?
-				displays[0].bounds.y + displays[0].bounds.height - taskbarHeight :
-				displays[0].bounds.y;
-
-			win.setBounds({
-				x: displays[0].bounds.x,
-				y,
-				height: taskbarHeight,
-				width: displays[0].bounds.width,
-			})
-		});
-
-		// Listen for changes to metrics (like resolution or orientation)
-		screen.on("display-metrics-changed", (event, changedDisplay, changedMetrics) => {
-			console.log("Display metrics changed");
+		win?.setBounds({
+			x: displays[currentlySelectedScreenIndex].bounds.x,
+			y,
+			height: taskbarHeight,
+			width: displays[currentlySelectedScreenIndex].bounds.width,
 		});
 	});
+
+	// Listen for a display being removed
+	screen.on("display-removed", (event, oldDisplay) => {
+		console.log("Display removed");
+		const displays = screen.getAllDisplays();
+		const y = currentlySelectedScreenSide === "bottom"
+			? displays[0].bounds.y + displays[0].bounds.height - taskbarHeight
+			: displays[0].bounds.y;
+
+		win?.setBounds({
+			x: displays[0].bounds.x,
+			y,
+			height: taskbarHeight,
+			width: displays[0].bounds.width,
+		});
+	});
+
+	// Listen for changes to metrics (like resolution or orientation)
+	screen.on("display-metrics-changed", (event, changedDisplay, changedMetrics) => {
+		console.log("Display metrics changed");
+	});
+});
 
 const doAuthentication = () => {
 	const authWindow = new BrowserWindow({ width: 800, height: 600 });
@@ -292,35 +218,15 @@ const doAuthentication = () => {
 			}
 		});
 }
-
-
 const createKeyWindow = (key, url) => {
-	const cursorPosition = screen.getCursorScreenPoint();
-	const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
-	commands_and_windows[key].window = new BrowserWindow({
-		x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width * 0.1),
-		y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.1),
-		height: Math.floor(activeDisplay.bounds.height * 0.8),
-		width: Math.floor(activeDisplay.bounds.width * 0.8),
-		minimizable: true,
-		resizable: true,
-		show: true,
-		frame: true,
-
-		webPreferences: {
-			webgl: true,
-			nodeIntegration: true,
-			contextIsolation: false,
-			devTools: true,
+	const win = createKeyBrowserWindow({
+		url,
+		onClose: () => {
+			commands_and_windows[key].window = null;
 		},
 	});
-	commands_and_windows[key].window.loadURL(url)
-
-	commands_and_windows[key].window.on("close", () => {
-		commands_and_windows[key].window = null;
-	});
-}
-
+	commands_and_windows[key].window = win;
+};
 
 process.on('uncaughtException', (err) => {
 	console.error('Unhandled Exception:', err);
@@ -540,8 +446,10 @@ function createLoginContextMenu(args) {
 					socket.instance.close();
 					socket.instance = null;
 					Object.keys(userInfo).forEach(key => delete userInfo[key]);
-					fs.unlink(path.join(os.homedir(), ".tokens.json"), (e) => {
-						console.log(e);
+					fs.unlink(config.tokensFilePath, (e) => {
+						if (e && e.code !== "ENOENT") {
+							console.log(e);
+						}
 					});
 					win.webContents.send("user-logged-out", userInfo);
 					socket.manuallyClosed = true;
@@ -555,87 +463,29 @@ function createLoginContextMenu(args) {
 	ctxMenu.popup(win, 0, 0);
 }
 
-function createKenbanWindow(props) {
-	// properties of the browser window.
-	const cursorPosition = screen.getCursorScreenPoint();
-	const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
-	kenbanWindow = new BrowserWindow({
-		x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width * 0.1),
-		y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.1),
-		height: Math.floor(activeDisplay.bounds.height * 0.8),
-		width: Math.floor(activeDisplay.bounds.width * 0.8),
-		minimizable: true,
-		resizable: true,
-		show: true,
-		frame: true,
-
-		webPreferences: {
-			webgl: true,
-			nodeIntegration: true,
-			contextIsolation: false,
-			devTools: true,
+function createKenbanWindow() {
+	if (kenbanWindow) return kenbanWindow;
+	kenbanWindow = createKenbanBrowserWindow({
+		onClose: () => {
+			kenbanWindow = null;
 		},
 	});
-
-	kenbanWindow.loadURL("https://dinodev-kenban.vercel.app")
-
-	kenbanWindow.on("close", () => {
-		kenbanWindow = null;
-	});
-
+	return kenbanWindow;
 }
 
 function createEditWindow(props) {
-	// properties of the browser window.
-	const cursorPosition = screen.getCursorScreenPoint();
-	const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
-	taskWindow = new BrowserWindow({
-		x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 400 / 2),
-		y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.2),
-		width: 400,
-		minHeight: 200,
-		minimizable: false,
-		resizable: false,
-		modal: true,
-		alwaysOnTop: true,
-		show: false,
-		frame: false,
-		transparent: true,
-
-		webPreferences: {
-			webgl: true,
-			nodeIntegration: true,
-			contextIsolation: false,
-			devTools: true,
+	taskWindow = createEditBrowserWindow({
+		props,
+		onDataPrepared: (data) => {
+			openTaskProps = data;
+		},
+		onReadyToShow: () => taskWindow.focus(),
+		onClose: () => {
+			taskWindow = null;
+			openTaskProps = null;
 		},
 	});
-	taskWindow.setBackgroundColor = "#1b1d23";
-	taskWindow.loadFile("src/html/child.html");
-
-	taskWindow.webContents.once("dom-ready", async () => {
-		const height = await taskWindow.webContents.executeJavaScript(
-			"document.body.offsetHeight"
-		);
-
-		taskWindow.setSize(400, height + 27);
-		taskWindow.show();
-	});
-
-	// when the window is loaded we send the data from the parent props received via the context menu
-	// and populate the page with the intended values.
-	taskWindow.webContents.once("did-finish-load", () => {
-		taskWindow.webContents.send("data-from-parent", props);
-		openTaskProps = props;
-	});
-
-	// shows the window when ready event is triggered.
-	taskWindow.on("ready-to-show", () => { taskWindow.focus() });
-
-	// removes from memory the value of the taskWindow that was closed.
-	taskWindow.on("close", () => {
-		taskWindow = null;
-		openTaskProps = null;
-	});
+	return taskWindow;
 }
 
 let from_completed = false;
@@ -665,46 +515,14 @@ ipc.on("edit-submission-event-from-edit-popup", (e, { categories, ...data }) => 
 function createCompletedTasksPopUp() {
 	from_completed_data = { start_date: null, end_date: null, tags: [], category: null, search_query: null }
 	try {
-		const cursorPosition = screen.getCursorScreenPoint();
-		const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
-		completedTasksWindow = new BrowserWindow({
-			x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 1200 / 2),
-			y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.15),
-			width: 1400,
-			height: 750,
-			minimizable: false,
-			resizable: false,
-			modal: true,
-			show: false,
-			frame: false,
-			alwaysOnTop: true,
-			transparent: true,
-
-			webPreferences: {
-				webgl: true,
-				nodeIntegration: true,
-				contextIsolation: false,
-				devTools: true,
+		completedTasksWindow = createCompletedTasksBrowserWindow({
+			onDidFinishLoad: () => {
+				sendEvent("get_completed_tasks", from_completed_data);
+			},
+			onClose: () => {
+				completedTasksWindow = null;
 			},
 		});
-		completedTasksWindow.setBackgroundColor = "#1b1d23";
-		completedTasksWindow.loadFile("./src/html/completedTasks.html");
-
-
-		completedTasksWindow.webContents.once("did-finish-load", () => {
-			sendEvent("get_completed_tasks", from_completed_data);
-		})
-
-
-		completedTasksWindow.webContents.once("dom-ready", async () => {
-			completedTasksWindow.show();
-			// completedTasksWindow.webContents.openDevTools();
-		});
-
-		// removes from memory the value of the taskWindow that was closed.
-		completedTasksWindow.on("close", () => {
-			completedTasksWindow = null;
-		})
 	}
 	catch (e) {
 		console.log(e)
@@ -718,131 +536,46 @@ ipc.on("completed_task_date_updated", (e, data) => {
 
 
 function createHelpWindow() {
-	const cursorPosition = screen.getCursorScreenPoint();
-	const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
+	if (helpWindow) return helpWindow;
 	try {
-		helpWindow = new BrowserWindow({
-			x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 800 / 2),
-			y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.2),
-			width: 800,
-			minHeight: 1000,
-			minimizable: false,
-			resizable: false,
-			modal: true,
-			frame: true,
-			alwaysOnTop: true,
-			webPreferences: {
-				webgl: true,
-				nodeIntegration: true,
-				contextIsolation: false,
-				devTools: true,
+		helpWindow = createHelpBrowserWindow({
+			onClose: () => {
+				helpWindow = null;
 			},
 		});
-		helpWindow.setBackgroundColor = "#1b1d23";
-		helpWindow.loadFile("./src/html/help.html");
 		console.log("creating help window");
 	} catch (e) {
 		console.error(e);
 	}
-
-	helpWindow.on("close", () => {
-		helpWindow = null;
-	})
+	return helpWindow;
 }
 
 
 function createCustomCommandsWindow() {
-	const cursorPosition = screen.getCursorScreenPoint();
-	const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
+	if (customCommandsWindow) return customCommandsWindow;
 	try {
-		customCommandsWindow = new BrowserWindow({
-			x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 800 / 2),
-			y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.2),
-			width: 800,
-			minHeight: 1000,
-			minimizable: false,
-			resizable: false,
-			modal: true,
-			frame: true,
-			alwaysOnTop: true,
-			webPreferences: {
-				webgl: true,
-				nodeIntegration: true,
-				contextIsolation: false,
-				devTools: true,
+		customCommandsWindow = createCustomCommandsBrowserWindow({
+			commands: commands_and_windows,
+			reservedKeys: reserved_keys,
+			onClose: () => {
+				customCommandsWindow = null;
 			},
-		});
-		customCommandsWindow.setBackgroundColor = "#1b1d23";
-		customCommandsWindow.loadFile("./src/html/customCommands.html");
-
-		customCommandsWindow.webContents.once("did-finish-load", () => {
-			const keyAndCommands = {};
-			for (let c in commands_and_windows) {
-				keyAndCommands[c] = {};
-				keyAndCommands[c]["key"] = commands_and_windows[c].key
-				keyAndCommands[c]["url"] = commands_and_windows[c].url
-			}
-			customCommandsWindow.webContents.send("data-from-parent",
-				{ commands: keyAndCommands, reserved_keys });
 		});
 	} catch (e) {
 		console.error(e);
 	}
-
-	customCommandsWindow.on("close", () => {
-		customCommandsWindow = null;
-	})
+	return customCommandsWindow;
 }
 
 function createTaskSplitWindow(props) {
-	// properties of the browser window.
-	const cursorPosition = screen.getCursorScreenPoint();
-	const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
-	taskSplitWindow = new BrowserWindow({
-		x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 700 / 2),
-		y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.1),
-		width: 800,
-		minHeight: 600,
-		minimizable: false,
-		resizable: true,
-		modal: true,
-		alwaysOnTop: true,
-		show: false,
-		frame: false,
-		transparent: true,
-
-		webPreferences: {
-			webgl: true,
-			nodeIntegration: true,
-			contextIsolation: false,
-			devTools: true,
+	taskSplitWindow = createTaskSplitBrowserWindow({
+		props,
+		onReadyToShow: () => taskSplitWindow.focus(),
+		onClose: () => {
+			taskSplitWindow = null;
 		},
 	});
-	taskSplitWindow.setBackgroundColor = "#1b1d23";
-	taskSplitWindow.loadFile("src/html/taskSplit.html");
-
-	taskSplitWindow.webContents.once("dom-ready", async () => {
-		const height = await taskSplitWindow.webContents.executeJavaScript(
-			"document.body.offsetHeight"
-		);
-
-		taskSplitWindow.setSize(700, Math.max(height + 27, 500));
-		taskSplitWindow.show();
-	});
-
-	// when the window is loaded we send the data from the parent props received via the context menu
-	// and populate the page with the intended values.
-	taskSplitWindow.webContents.once("did-finish-load", () => {
-		taskSplitWindow.webContents.send("data-from-parent", props);
-	});
-
-	// shows the window when ready event is triggered.
-	taskSplitWindow.on("ready-to-show", () => { taskSplitWindow.focus() });
-
-	// removes from memory the value of the taskSplitWindow that was closed.
-	taskSplitWindow.on("close", () => {
-		taskSplitWindow = null;
-	});
+	return taskSplitWindow;
 }
 
 ipc.on("new_command_added", (_, data) => {
