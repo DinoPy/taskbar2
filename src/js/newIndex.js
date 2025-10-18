@@ -1,4 +1,4 @@
-const { ipcRenderer } = require('electron');
+import { ipcRenderer } from 'electron';
 const ipc = ipcRenderer;
 import { Task, formatCurrentDate, formatCountdownText, taskIndexUpdater, calculateUrgencyLevel, calculateCountdownText } from './utility.js';
 import { parseString } from './helpers.js';

@@ -1,4 +1,4 @@
-const { ipcRenderer } = require('electron');
+import { ipcRenderer } from 'electron';
 const ipc = ipcRenderer;
 import { isSocketConnected, tasks_compl_or_del_while_nocon, tasks} from "./newIndex.js";
 

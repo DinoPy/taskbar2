@@ -1,4 +1,4 @@
-const { ipcRenderer } = require('electron/renderer');
+import { ipcRenderer } from 'electron';
 const ipc = ipcRenderer;
 
 const startDateInputEl = document.getElementById("startDate")
@@ -449,4 +449,3 @@ const showDeleteConfirmation = (task) => {
 		});
 	}
 }
-

@@ -1,5 +1,5 @@
-const {ipcRenderer} = require('electron/renderer');
-ipc = ipcRenderer;
+import { ipcRenderer } from 'electron';
+const ipc = ipcRenderer;
 
 const commandsContainer = document.querySelector(".commands-container");
 const inputsFormContainer = document.querySelector(".inputs-container");
