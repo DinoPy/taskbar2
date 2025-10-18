@@ -1,0 +1,214 @@
+export function createWindowManager({
+	createTaskbarWindow,
+	createEditWindow,
+	createCompletedTasksWindow,
+	createHelpWindow,
+	createCustomCommandsWindow,
+	createTaskSplitWindow,
+	createKenbanWindow,
+	createKeyWindow,
+}) {
+	const state = {
+		taskbar: null,
+		edit: null,
+		completed: null,
+		help: null,
+		customCommands: null,
+		taskSplit: null,
+		kenban: null,
+		commandWindows: new Map(),
+	};
+
+	const attachLifecycle = (win, key, onClose) => {
+		if (!win) return;
+		win.on("closed", () => {
+			if (key) {
+				state.commandWindows.delete(key);
+			}
+			onClose?.();
+		});
+	};
+
+	return {
+		createTaskbarWindow(options) {
+			if (state.taskbar && !state.taskbar.isDestroyed()) {
+				return state.taskbar;
+			}
+			state.taskbar = createTaskbarWindow(options);
+			state.taskbar.on("closed", () => {
+				state.taskbar = null;
+			});
+			return state.taskbar;
+		},
+
+		getTaskbarWindow() {
+			return state.taskbar;
+		},
+
+		getEditWindow() {
+			return state.edit;
+		},
+
+		openEditWindow({ props, onDataPrepared, onReadyToShow, onClose }) {
+			if (state.edit && !state.edit.isDestroyed()) {
+				state.edit.focus();
+				state.edit.webContents.send("data-from-parent", props);
+				return state.edit;
+			}
+			state.edit = createEditWindow({
+				props,
+				onDataPrepared,
+				onReadyToShow,
+				onClose: () => {
+					state.edit = null;
+					onClose?.();
+				},
+			});
+			return state.edit;
+		},
+
+		closeEditWindow() {
+			if (state.edit && !state.edit.isDestroyed()) {
+				state.edit.close();
+			}
+		},
+
+		openCompletedTasksWindow({ onDidFinishLoad, onClose }) {
+			if (state.completed && !state.completed.isDestroyed()) {
+				state.completed.focus();
+				return state.completed;
+			}
+			state.completed = createCompletedTasksWindow({
+				onDidFinishLoad,
+				onClose: () => {
+					state.completed = null;
+					onClose?.();
+				},
+			});
+			return state.completed;
+		},
+
+		closeCompletedTasksWindow() {
+			if (state.completed && !state.completed.isDestroyed()) {
+				state.completed.close();
+			}
+		},
+
+		getCompletedTasksWindow() {
+			return state.completed;
+		},
+
+		openHelpWindow() {
+			if (state.help && !state.help.isDestroyed()) {
+				state.help.focus();
+				return state.help;
+			}
+			state.help = createHelpWindow({
+				onClose: () => {
+					state.help = null;
+				},
+			});
+			return state.help;
+		},
+
+		getHelpWindow() {
+			return state.help;
+		},
+
+		openCustomCommandsWindow({ commands, reservedKeys, onClose }) {
+			if (state.customCommands && !state.customCommands.isDestroyed()) {
+				state.customCommands.focus();
+				state.customCommands.webContents.send("data-from-parent", {
+					commands,
+					reserved_keys: reservedKeys,
+				});
+				return state.customCommands;
+			}
+			state.customCommands = createCustomCommandsWindow({
+				commands,
+				reservedKeys,
+				onClose: () => {
+					state.customCommands = null;
+					onClose?.();
+				},
+			});
+			return state.customCommands;
+		},
+
+		closeCustomCommandsWindow() {
+			if (state.customCommands && !state.customCommands.isDestroyed()) {
+				state.customCommands.close();
+			}
+		},
+
+		getCustomCommandsWindow() {
+			return state.customCommands;
+		},
+
+		openTaskSplitWindow({ props, onClose }) {
+			if (state.taskSplit && !state.taskSplit.isDestroyed()) {
+				state.taskSplit.focus();
+				state.taskSplit.webContents.send("data-from-parent", props);
+				return state.taskSplit;
+			}
+			state.taskSplit = createTaskSplitWindow({
+				props,
+				onClose: () => {
+					state.taskSplit = null;
+					onClose?.();
+				},
+			});
+			return state.taskSplit;
+		},
+
+		closeTaskSplitWindow() {
+			if (state.taskSplit && !state.taskSplit.isDestroyed()) {
+				state.taskSplit.close();
+			}
+		},
+
+		getTaskSplitWindow() {
+			return state.taskSplit;
+		},
+
+		openKenbanWindow() {
+			if (state.kenban && !state.kenban.isDestroyed()) {
+				state.kenban.focus();
+				return state.kenban;
+			}
+			state.kenban = createKenbanWindow({
+				onClose: () => {
+					state.kenban = null;
+				},
+			});
+			return state.kenban;
+		},
+
+		getKenbanWindow() {
+			return state.kenban;
+		},
+
+		openCommandWindow({ key, url }) {
+			const existing = state.commandWindows.get(key);
+			if (existing && !existing.isDestroyed()) {
+				existing.focus();
+				return existing;
+			}
+			const win = createKeyWindow({
+				url,
+				onClose: () => {
+					state.commandWindows.delete(key);
+				},
+			});
+			state.commandWindows.set(key, win);
+			return win;
+		},
+
+		closeCommandWindow(key) {
+			const win = state.commandWindows.get(key);
+			if (win && !win.isDestroyed()) {
+				win.close();
+			}
+		},
+	};
+}

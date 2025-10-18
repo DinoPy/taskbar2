@@ -3,6 +3,9 @@ import fs from "fs";
 import path from "path";
 
 import { config } from "./src/main/config.js";
+import { createWindowManager } from "./src/main/controllers/windowManager.js";
+import { createCommandsController } from "./src/main/controllers/commandsController.js";
+import { createTasksController } from "./src/main/controllers/tasksController.js";
 import { createTaskbarWindow } from "./src/main/windows/taskbarWindow.js";
 import { createKenbanWindow as createKenbanBrowserWindow } from "./src/main/windows/kenbanWindow.js";
 import { createEditWindow as createEditBrowserWindow } from "./src/main/windows/editWindow.js";
@@ -48,28 +51,28 @@ import { oauth2Client, login, authUrl, getAuthTokens, userInfo } from "./googlea
 
 const ipc = ipcMain;
 
-let currentlySelectedScreenIndex = 0;
-let currentlySelectedScreenSide = "top";
+const appState = {
+	isTimerRunning: true,
+	categories: [],
+	showAllTasks: false,
+	taskbarHeight: 60,
+	currentlySelectedScreenIndex: 0,
+	currentlySelectedScreenSide: "top",
+	openTaskProps: null,
+	fromCompleted: false,
+	fromCompletedData: {
+		start_date: null,
+		end_date: null,
+		tags: [],
+		category: null,
+		search_query: null,
+	},
+};
 
 app.setName("Task yourself");
 app.setAppUserModelId(app.name);
 
-let isTimerRunning = true;
-let CATEGORIES = [];
-let showAllTasks = false;
-let taskbarHeight = 60;
-
-let win = null;
-let taskWindow = null;
-let completedTasksWindow = null;
-let kenbanWindow = null;
-let helpWindow = null;
-let customCommandsWindow = null;
-let taskSplitWindow = null;
-let openTaskProps = null;
-
-const reserved_keys = ["Space", "n", "j", "e", "k", "c", "s", "y", "z"];
-const commands_and_windows = {};
+const RESERVED_COMMAND_KEYS = ["Space", "n", "j", "e", "k", "c", "s", "y", "z"];
 
 const socketEventHandlers = {
 	ping: ({ send }) => send("pong", "alive and well"),
@@ -98,20 +101,58 @@ const socketClient = createSocketClient({
 const socketConnect = (userInfo) => socketClient.connect(userInfo);
 const sendEvent = (eventName, data) => socketClient.send(eventName, data);
 
-const getIsTimerRunning = () => isTimerRunning;
+const windowManager = createWindowManager({
+	createTaskbarWindow,
+	createEditWindow: createEditBrowserWindow,
+	createCompletedTasksWindow: createCompletedTasksBrowserWindow,
+	createHelpWindow: createHelpBrowserWindow,
+	createCustomCommandsWindow: createCustomCommandsBrowserWindow,
+	createTaskSplitWindow: createTaskSplitBrowserWindow,
+	createKenbanWindow: createKenbanBrowserWindow,
+	createKeyWindow: createKeyBrowserWindow,
+});
+
+const commandsController = createCommandsController({
+	globalShortcut,
+	windowManager,
+	reservedKeys: RESERVED_COMMAND_KEYS,
+});
+
+const tasksController = createTasksController({
+	appState,
+	windowManager,
+	sendEvent,
+	getTaskbarWindow: () => windowManager.getTaskbarWindow(),
+});
+
+let win = null;
+
+const getTaskWindow = () => windowManager.getEditWindow();
+
+const syncCustomCommandsWindow = () => {
+	const customWindow = windowManager.getCustomCommandsWindow();
+	if (customWindow) {
+		customWindow.webContents.send("data-from-parent", {
+			commands: commandsController.getCommandsSnapshot(),
+			reserved_keys: RESERVED_COMMAND_KEYS,
+		});
+	}
+};
+
+const getIsTimerRunning = () => appState.isTimerRunning;
 
 const handleCloseAppRequest = () => {
-	taskWindow?.close();
-	completedTasksWindow?.close();
-	taskSplitWindow?.close();
-	win?.close();
+	windowManager.closeEditWindow();
+	windowManager.closeCompletedTasksWindow();
+	windowManager.closeTaskSplitWindow();
+	windowManager.getTaskbarWindow()?.close();
 };
 
 const createTaskbarWindowInstance = () => {
-	win = createTaskbarWindow({
+	win = windowManager.createTaskbarWindow({
 		ipcMain,
-		taskbarHeight,
-		currentlySelectedScreenIndex,
+		taskbarHeight: appState.taskbarHeight,
+		currentlySelectedScreenIndex: appState.currentlySelectedScreenIndex,
 		getIsTimerRunning,
 		onCloseApp: handleCloseAppRequest,
 		onShowTaskContextMenu: createTaskContextMenu,
@@ -138,12 +179,12 @@ app.whenReady().then(async () => {
 	});
 	globalShortcut.register("CommandOrControl+Shift+j", () => {
 		win?.webContents.openDevTools();
-		taskWindow?.webContents.openDevTools();
-		completedTasksWindow?.webContents.openDevTools();
-		kenbanWindow?.webContents.openDevTools();
-		helpWindow?.webContents.openDevTools();
-		customCommandsWindow?.webContents.openDevTools();
-		taskSplitWindow?.webContents.openDevTools();
+		getTaskWindow()?.webContents.openDevTools();
+		windowManager.getCompletedTasksWindow()?.webContents.openDevTools();
+		windowManager.getKenbanWindow()?.webContents.openDevTools();
+		windowManager.getHelpWindow()?.webContents.openDevTools();
+		windowManager.getCustomCommandsWindow()?.webContents.openDevTools();
+		windowManager.getTaskSplitWindow()?.webContents.openDevTools();
 	});
 	globalShortcut.register("CommandOrControl+Shift+e", () => {
 		win?.webContents.send("request-current-task-data-for-edit");
@@ -152,7 +193,7 @@ app.whenReady().then(async () => {
 		createKenbanWindow();
 	});
 	globalShortcut.register("CommandOrControl+Shift+c", () => {
-		completedTasksWindow?.close();
+		windowManager.closeCompletedTasksWindow();
 		createCompletedTasksPopUp();
 	});
 	globalShortcut.register("CommandOrControl+Shift+s", () => {
@@ -163,7 +204,7 @@ app.whenReady().then(async () => {
 		win?.webContents.send("complete_current_task");
 	});
 	globalShortcut.register("CommandOrControl+Shift+z", () => {
-		!customCommandsWindow && createCustomCommandsWindow();
+		createCustomCommandsWindow();
 	});
 
 	try {
@@ -184,19 +225,19 @@ app.whenReady().then(async () => {
 	screen.on("display-added", (event, newDisplay) => {
 		console.log("Display added");
 		const displays = screen.getAllDisplays();
-		while (currentlySelectedScreenIndex > displays.length - 1) {
-			currentlySelectedScreenIndex -= 1;
+		while (appState.currentlySelectedScreenIndex > displays.length - 1) {
+			appState.currentlySelectedScreenIndex -= 1;
 		}
 
-		const y = currentlySelectedScreenSide === "bottom"
-			? displays[currentlySelectedScreenIndex].bounds.y + displays[currentlySelectedScreenIndex].bounds.height - taskbarHeight
-			: displays[currentlySelectedScreenIndex].bounds.y;
+		const y = appState.currentlySelectedScreenSide === "bottom"
+			? displays[appState.currentlySelectedScreenIndex].bounds.y + displays[appState.currentlySelectedScreenIndex].bounds.height - appState.taskbarHeight
+			: displays[appState.currentlySelectedScreenIndex].bounds.y;
 
 		win?.setBounds({
-			x: displays[currentlySelectedScreenIndex].bounds.x,
+			x: displays[appState.currentlySelectedScreenIndex].bounds.x,
 			y,
-			height: taskbarHeight,
-			width: displays[currentlySelectedScreenIndex].bounds.width,
+			height: appState.taskbarHeight,
+			width: displays[appState.currentlySelectedScreenIndex].bounds.width,
 		});
 	});
 
@@ -204,14 +245,14 @@ app.whenReady().then(async () => {
 	screen.on("display-removed", (event, oldDisplay) => {
 		console.log("Display removed");
 		const displays = screen.getAllDisplays();
-		const y = currentlySelectedScreenSide === "bottom"
-			? displays[0].bounds.y + displays[0].bounds.height - taskbarHeight
+		const y = appState.currentlySelectedScreenSide === "bottom"
+			? displays[0].bounds.y + displays[0].bounds.height - appState.taskbarHeight
 			: displays[0].bounds.y;
 
 		win?.setBounds({
 			x: displays[0].bounds.x,
 			y,
-			height: taskbarHeight,
+			height: appState.taskbarHeight,
 			width: displays[0].bounds.width,
 		});
 	});
@@ -241,16 +282,6 @@ const doAuthentication = () => {
 			}
 		});
 }
-const createKeyWindow = (key, url) => {
-	const win = createKeyBrowserWindow({
-		url,
-		onClose: () => {
-			commands_and_windows[key].window = null;
-		},
-	});
-	commands_and_windows[key].window = win;
-};
-
 process.on('uncaughtException', (err) => {
 	console.error('Unhandled Exception:', err);
 });
@@ -286,12 +317,12 @@ function createContextMenu() {
 		return {
 			label: `Screen ${i} - Top`,
 			click: () => {
-				currentlySelectedScreenIndex = i;
-				currentlySelectedScreenSide = "top";
+				appState.currentlySelectedScreenIndex = i;
+				appState.currentlySelectedScreenSide = "top";
 				win.setBounds({
 					x: d.bounds.x,
 					y: d.bounds.y,
-					height: taskbarHeight,
+					height: appState.taskbarHeight,
 					width: d.bounds.width,
 				});
 			},
@@ -303,12 +334,12 @@ function createContextMenu() {
 			return {
 				label: `Screen ${i} - Bottom`,
 				click: () => {
-					currentlySelectedScreenIndex = i;
-					currentlySelectedScreenSide = "bottom";
+					appState.currentlySelectedScreenIndex = i;
+					appState.currentlySelectedScreenSide = "bottom";
 					win.setBounds({
 						x: d.bounds.x,
-						y: d.bounds.y + d.bounds.height - taskbarHeight,
-						height: taskbarHeight,
+						y: d.bounds.y + d.bounds.height - appState.taskbarHeight,
+						height: appState.taskbarHeight,
 						width: d.bounds.width,
 					});
 				},
@@ -326,14 +357,14 @@ function createContextMenu() {
 	menu.append(
 		new MenuItem({
 			label: "Toggle timer",
-			toolTip: `Timer is currently ${isTimerRunning ? "running" : "deactivated"
+			toolTip: `Timer is currently ${appState.isTimerRunning ? "running" : "deactivated"
 				}`,
 			type: "checkbox",
-			checked: isTimerRunning,
+			checked: appState.isTimerRunning,
 			click: () => {
-				isTimerRunning = !isTimerRunning;
+				appState.isTimerRunning = !appState.isTimerRunning;
 				win.webContents.send("toggle-countdown-timer", {
-					isTimerRunning: isTimerRunning,
+					isTimerRunning: appState.isTimerRunning,
 				});
 			},
 		})
@@ -342,7 +373,7 @@ function createContextMenu() {
 	menu.append(new MenuItem({
 		label: "Completed tasks",
 		toolTip: "Show tasks that were completed so far",
-		click: () => !completedTasksWindow && createCompletedTasksPopUp()
+		click: () => createCompletedTasksPopUp()
 	}))
 
 	menu.append(new MenuItem({
@@ -356,24 +387,24 @@ function createContextMenu() {
 	menu.append(new MenuItem({
 		label: "Custom Commands",
 		toolTip: "Open settings window for custom commands",
-		click: () => !customCommandsWindow && createCustomCommandsWindow()
+		click: () => createCustomCommandsWindow()
 	}))
 
 	menu.append(new MenuItem({
 		label: "Help",
 		toolTip: "Opens the help window",
-		click: () => !helpWindow && createHelpWindow()
+		click: () => createHelpWindow()
 	}))
 
 	menu.append(new MenuItem({
 		label: "Show all tasks",
 		toolTip: "Toggle between showing all tasks or only tasks that are due soon",
 		type: "checkbox",
-		checked: showAllTasks,
+		checked: appState.showAllTasks,
 		click: () => {
-			showAllTasks = !showAllTasks;
+			appState.showAllTasks = !appState.showAllTasks;
 			win.webContents.send("toggle-show-all-tasks", {
-				showAllTasks: showAllTasks
+				showAllTasks: appState.showAllTasks
 			});
 		},
 	}))
@@ -388,8 +419,7 @@ function createTaskContextMenu(args) {
 		new MenuItem({
 			label: "Edit",
 			click: () => {
-				taskWindow?.close();
-				createEditWindow({ ...args, categories: CATEGORIES });
+				createEditWindow({ ...args, categories: appState.categories });
 			},
 		})
 	);
@@ -398,8 +428,9 @@ function createTaskContextMenu(args) {
 		new MenuItem({
 			label: "Delete",
 			click: () => {
-				if (taskWindow && openTaskProps.id === args.id) taskWindow.close();
-				deleteTask(args);
+				const editWindow = getTaskWindow();
+				if (editWindow && appState.openTaskProps?.id === args.id) editWindow.close();
+				tasksController.deleteTask(args);
 			},
 		})
 	);
@@ -408,8 +439,9 @@ function createTaskContextMenu(args) {
 		new MenuItem({
 			label: "Complete",
 			click: () => {
-				if (taskWindow && openTaskProps.id === args.id) taskWindow.close();
-				completeTask(args);
+				const editWindow = getTaskWindow();
+				if (editWindow && appState.openTaskProps?.id === args.id) editWindow.close();
+				tasksController.completeTask(args);
 			},
 		})
 
@@ -419,24 +451,23 @@ function createTaskContextMenu(args) {
 		new MenuItem({
 			label: "Duplicate",
 			click: () => {
-				duplicateTask(args);
+				tasksController.duplicateTask(args);
 			},
 		})
 	);
 
 	ctxMenu.append(
-		new MenuItem({
-			label: "Split",
-			click: () => {
-				taskSplitWindow?.close();
-				createTaskSplitWindow(args);
-			},
-		})
+	new MenuItem({
+		label: "Split",
+		click: () => {
+			createTaskSplitWindow(args);
+		},
+	})
 	);
 	ctxMenu.append(
 		new MenuItem({
 			label: "Category",
-			submenu: CATEGORIES.map(
+			submenu: appState.categories.map(
 				(cat) =>
 					new MenuItem({
 						label: cat,
@@ -485,65 +516,57 @@ function createLoginContextMenu(args) {
 }
 
 function createKenbanWindow() {
-	if (kenbanWindow) return kenbanWindow;
-	kenbanWindow = createKenbanBrowserWindow({
-		onClose: () => {
-			kenbanWindow = null;
-		},
-	});
-	return kenbanWindow;
+	return windowManager.openKenbanWindow();
 }
 
 function createEditWindow(props) {
-	taskWindow = createEditBrowserWindow({
+	return windowManager.openEditWindow({
 		props,
 		onDataPrepared: (data) => {
-			openTaskProps = data;
+			appState.openTaskProps = data;
 		},
-		onReadyToShow: () => taskWindow.focus(),
+		onReadyToShow: () => windowManager.getEditWindow()?.focus(),
 		onClose: () => {
-			taskWindow = null;
-			openTaskProps = null;
+			appState.openTaskProps = null;
 		},
 	});
-	return taskWindow;
 }
 
-let from_completed = false;
-let from_completed_data = { start_date: null, end_date: null, tags: [], category: null, search_query: null };
 // ensures the communication between the children windows and the main task window.
 ipc.on("edit-submission-event-from-edit-popup", (e, { categories, ...data }) => {
 	win.webContents.send("msg-redirected-to-parent", data);
 	// send an event to the server to update the categories of the user if they changed
-	if (JSON.stringify(categories) !== JSON.stringify(CATEGORIES)) {
+	if (JSON.stringify(categories) !== JSON.stringify(appState.categories)) {
 		sendEvent("user_updated_categories", categories);
 	}
-	CATEGORIES = categories;
+	appState.categories = categories;
 
-	if (taskWindow) taskWindow.close();
-	openTaskProps = null;
+	windowManager.closeEditWindow();
+	appState.openTaskProps = null;
 
-	if (from_completed && completedTasksWindow) {
+	if (appState.fromCompleted && windowManager.getCompletedTasksWindow()) {
 		console.log("triggering refresh for tasks")
 		setTimeout(() => {
-			sendEvent("get_completed_tasks", from_completed_data);
+			sendEvent("get_completed_tasks", appState.fromCompletedData);
 		}, 250)
-		from_completed = false;
+		appState.fromCompleted = false;
 	}
 
 });
 
 function createCompletedTasksPopUp() {
-	from_completed_data = { start_date: null, end_date: null, tags: [], category: null, search_query: null }
+	appState.fromCompleted = false;
+	appState.fromCompletedData = { start_date: null, end_date: null, tags: [], category: null, search_query: null }
 	try {
-		completedTasksWindow = createCompletedTasksBrowserWindow({
+		const alreadyOpen = !!windowManager.getCompletedTasksWindow();
+		windowManager.openCompletedTasksWindow({
 			onDidFinishLoad: () => {
-				sendEvent("get_completed_tasks", from_completed_data);
-			},
-			onClose: () => {
-				completedTasksWindow = null;
+				sendEvent("get_completed_tasks", appState.fromCompletedData);
 			},
 		});
+		if (alreadyOpen) {
+			sendEvent("get_completed_tasks", appState.fromCompletedData);
+		}
 	}
 	catch (e) {
 		console.log(e)
@@ -551,104 +574,55 @@ function createCompletedTasksPopUp() {
 }
 
 ipc.on("completed_task_date_updated", (e, data) => {
-	from_completed_data = data;
+	appState.fromCompletedData = data;
 	sendEvent("get_completed_tasks", data)
 })
 
 
 function createHelpWindow() {
-	if (helpWindow) return helpWindow;
 	try {
-		helpWindow = createHelpBrowserWindow({
-			onClose: () => {
-				helpWindow = null;
-			},
-		});
-		console.log("creating help window");
+		return windowManager.openHelpWindow();
 	} catch (e) {
 		console.error(e);
 	}
-	return helpWindow;
 }
 
 
 function createCustomCommandsWindow() {
-	if (customCommandsWindow) return customCommandsWindow;
 	try {
-		customCommandsWindow = createCustomCommandsBrowserWindow({
-			commands: commands_and_windows,
-			reservedKeys: reserved_keys,
-			onClose: () => {
-				customCommandsWindow = null;
-			},
+		const window = windowManager.openCustomCommandsWindow({
+			commands: commandsController.getCommandsSnapshot(),
+			reservedKeys: RESERVED_COMMAND_KEYS,
 		});
+		syncCustomCommandsWindow();
+		return window;
 	} catch (e) {
 		console.error(e);
 	}
-	return customCommandsWindow;
 }
 
 function createTaskSplitWindow(props) {
-	taskSplitWindow = createTaskSplitBrowserWindow({
+	return windowManager.openTaskSplitWindow({
 		props,
-		onReadyToShow: () => taskSplitWindow.focus(),
-		onClose: () => {
-			taskSplitWindow = null;
-		},
 	});
-	return taskSplitWindow;
 }
 
 ipc.on("new_command_added", (_, data) => {
-	console.log(JSON.stringify(data));
-	commands_and_windows[data.key] = {
-		window: null,
-		...data
+	if (!commandsController.addCommand(data)) {
+		return;
 	}
-
-	globalShortcut.register(`CommandOrControl+Shift+${data.key}`, () => {
-		createKeyWindow(data.key, data.url);
-	})
-
-	const keyAndCommands = {};
-	for (let c in commands_and_windows) {
-		keyAndCommands[c] = {};
-		keyAndCommands[c]["key"] = commands_and_windows[c].key
-		keyAndCommands[c]["url"] = commands_and_windows[c].url
-	}
-	sendEvent("new_command_added", JSON.stringify(keyAndCommands));
-})
+	const snapshot = commandsController.getCommandsSnapshot();
+	sendEvent("new_command_added", JSON.stringify(snapshot));
+	syncCustomCommandsWindow();
+});
 
 ipc.on("command_removed", (_, data) => {
-	commands_and_windows[data.key]?.window?.close();
-	globalShortcut.unregister(`CommandOrControl+Shift+${data.key}`)
-	delete commands_and_windows[data.key];
+	commandsController.removeCommand(data.key);
+	const snapshot = commandsController.getCommandsSnapshot();
+	sendEvent("command_removed", JSON.stringify(snapshot));
+	syncCustomCommandsWindow();
+});
 
-	const keyAndCommands = {};
-	for (let c in commands_and_windows) {
-		keyAndCommands[c] = {};
-		keyAndCommands[c]["key"] = commands_and_windows[c].key
-		keyAndCommands[c]["url"] = commands_and_windows[c].url
-	}
-	sendEvent("command_removed", JSON.stringify(keyAndCommands));
-})
-
-
-function deleteTask(props) {
-	win.webContents.send("deleteTask", props);
-	if (openTaskProps && props.id === openTaskProps.id) openTaskProps = null;
-}
-function completeTask(props) {
-	win.webContents.send("completeTask", props);
-	if (openTaskProps && props.id === openTaskProps.id) openTaskProps = null;
-}
-
-function duplicateTask(props) {
-	console.log(`Task ${props.id} is being duplicated`);
-	sendEvent("task_duplicate", {
-		task_id: props.id
-	});
-}
 
 ipc.on("task_complete", async (_, data) => {
 	try {
@@ -684,7 +658,7 @@ ipc.on("task_toggle", (_, data) => {
 ipc.on("task_edit", async (_, data) => {
 	console.log(`Task ${data.id} is being edited`);
 	sendEvent("task_edit", data);
-	from_completed = false;
+	appState.fromCompleted = false;
 })
 
 ipc.on("task_delete", (_, data) => {
@@ -694,46 +668,45 @@ ipc.on("task_delete", (_, data) => {
 
 ipc.on("toggle_current_task_edit", (_, data) => {
 	console.log(data)
-	taskWindow?.close();
-	createEditWindow({ ...data, categories: CATEGORIES });
-	taskWindow?.focus();
+	windowManager.closeEditWindow();
+	createEditWindow({ ...data, categories: appState.categories });
+	getTaskWindow()?.focus();
 
 })
 
 ipc.on("toggle_given_task_edit", (_, data) => {
-	from_completed = true;
-	taskWindow?.close();
-	createEditWindow({ ...data, categories: CATEGORIES });
-	taskWindow?.focus();
+	appState.fromCompleted = true;
+	windowManager.closeEditWindow();
+	createEditWindow({ ...data, categories: appState.categories });
+	getTaskWindow()?.focus();
 
 })
 
 ipc.on("duplicate-task", (_, data) => {
 	console.log(`Main: Duplicating task ${data.id}`);
-	duplicateTask({ id: data.id });
+	tasksController.duplicateTask({ id: data.id });
 });
 
 ipc.on("complete-task", (_, data) => {
 	console.log(`Main: Completing task ${data.id}`);
-	win.webContents.send("completeTask", { id: data.id });
+	tasksController.completeTask({ id: data.id });
 });
 
 ipc.on("delete-task", (_, data) => {
 	console.log(`Main: Deleting task ${data.id}`);
-	deleteTask({ id: data.id });
+	tasksController.deleteTask({ id: data.id });
 });
 
 ipc.on("open-task-split", (_, data) => {
 	console.log(`Main: Opening split window for task ${data.id}`);
-	taskSplitWindow?.close();
 	createTaskSplitWindow(data.taskData);
 });
 
 ipc.on("toggle-show-all-tasks", () => {
 	console.log("Toggling show all tasks");
-	showAllTasks = !showAllTasks;
+	appState.showAllTasks = !appState.showAllTasks;
 	win.webContents.send("toggle-show-all-tasks", {
-		showAllTasks: showAllTasks
+		showAllTasks: appState.showAllTasks
 	});
 });
 
@@ -742,18 +715,18 @@ ipc.on("switch-screen", (_, data) => {
 	const displays = screen.getAllDisplays();
 	
 	if (data.screenIndex >= 0 && data.screenIndex < displays.length) {
-		currentlySelectedScreenIndex = data.screenIndex;
-		currentlySelectedScreenSide = data.direction;
+		appState.currentlySelectedScreenIndex = data.screenIndex;
+		appState.currentlySelectedScreenSide = data.direction;
 		
 		const display = displays[data.screenIndex];
 		const y = data.direction === "down" ?
-			display.bounds.y + display.bounds.height - taskbarHeight :
+			display.bounds.y + display.bounds.height - appState.taskbarHeight :
 			display.bounds.y;
 			
 		win.setBounds({
 			x: display.bounds.x,
 			y: y,
-			height: taskbarHeight,
+			height: appState.taskbarHeight,
 			width: display.bounds.width,
 		});
 	}
@@ -762,25 +735,19 @@ ipc.on("switch-screen", (_, data) => {
 
 
 ipc.on("close-children-window", () => {
-	if (taskWindow) taskWindow.close();
-	if (taskSplitWindow) taskSplitWindow.close();
-	openTaskProps = null;
-	taskWindow = null;
-	taskSplitWindow = null;
+	windowManager.closeEditWindow();
+	windowManager.closeTaskSplitWindow();
+	appState.openTaskProps = null;
 });
 
 ipc.on("task-split-submission", (_, data) => {
 	console.log(`Task ${data.task_id} is being split`);
 	sendEvent("task_split", data);
-	if (taskSplitWindow) taskSplitWindow.close();
-	taskSplitWindow = null;
-	
+	windowManager.closeTaskSplitWindow();
+
 	// Refresh completed tasks list if it's open
-	if (completedTasksWindow) {
+	if (tasksController.refreshCompletedTasksIfOpen()) {
 		console.log("triggering refresh for tasks after split");
-		setTimeout(() => {
-			sendEvent("get_completed_tasks", from_completed_data);
-		}, 250);
 	}
 });
 
@@ -792,8 +759,7 @@ ipc.on("toggle-always-on-top", () => {
 });
 
 ipc.on("close-completed-list-window", () => {
-	if (completedTasksWindow) completedTasksWindow.close();
-	completedTasksWindow = null;
+	windowManager.closeCompletedTasksWindow();
 });
 
 // Handle duplicate completed task
@@ -802,20 +768,17 @@ ipc.on("duplicate_completed_task", (_, data) => {
 	sendEvent("task_duplicate", {
 		task_id: data.id
 	});
-	
+
 	// Refresh completed tasks list if it's open
-	if (completedTasksWindow) {
+	if (tasksController.refreshCompletedTasksIfOpen()) {
 		console.log("triggering refresh for tasks after duplicate");
-		setTimeout(() => {
-			sendEvent("get_completed_tasks", from_completed_data);
-		}, 250);
 	}
 });
 
 // Handle split completed task
 ipc.on("split_completed_task", (_, data) => {
 	console.log(`Opening split window for completed task ${data.id}`);
-	taskSplitWindow?.close();
+	windowManager.closeTaskSplitWindow();
 	createTaskSplitWindow({
 		id: data.id,
 		title: data.title,
@@ -832,13 +795,10 @@ ipc.on("delete_completed_task", (_, data) => {
 	sendEvent("task_delete", {
 		id: data.id
 	});
-	
+
 	// Refresh completed tasks list if it's open
-	if (completedTasksWindow) {
+	if (tasksController.refreshCompletedTasksIfOpen()) {
 		console.log("triggering refresh for tasks after delete");
-		setTimeout(() => {
-			sendEvent("get_completed_tasks", from_completed_data);
-		}, 250);
 	}
 });
 
@@ -869,36 +829,19 @@ function WSOnTaskRefresher(data) {
 }
 
 function WSOnRelatedAddedCommand(data) {
-	data = JSON.parse(data);
-	for (let key in data) {
-		if (commands_and_windows.hasOwnProperty(key))
-			continue;
-
-		commands_and_windows[key] = {
-			window: null,
-			...data[key]
-		}
-
-		globalShortcut.register(`CommandOrControl+Shift+${key}`, () => {
-			createKeyWindow(key, data[key].url);
-		})
-	}
+	const parsed = typeof data === "string" ? JSON.parse(data) : data;
+	commandsController.syncCommands(parsed);
+	syncCustomCommandsWindow();
 }
 
 function WSOnRelatedRemovedCommand(data) {
-	data = JSON.parse(data);
-	for (let key in commands_and_windows) {
-		if (data.hasOwnProperty(key))
-			continue;
-
-		globalShortcut.unregister(`CommandOrControl+Shift+${key}`);
-		commands_and_windows[key]?.window?.close();
-		delete commands_and_windows[key];
-	}
+	const parsed = typeof data === "string" ? JSON.parse(data) : data;
+	commandsController.removeMissingCommands(parsed);
+	syncCustomCommandsWindow();
 }
 
 function WSOnRelatedUpdatedCategories(data) {
-	CATEGORIES = data;
+	appState.categories = data;
 }
 
 function handleSocketConnect() {
@@ -919,40 +862,31 @@ function handleSocketDisconnect() {
 
 function setUpTasks(data) {
 	if (data.categories) {
-		CATEGORIES = data.categories.split(",");
+		appState.categories = data.categories.split(",");
 	}
 	if (win && win.webContents) {
 		setTimeout(() => { win.webContents.send("refresh_tasks", data.tasks) }, 1000)
 		setTimeout(handleSocketConnect, 1000)
 	}
 
-	const key_commands = JSON.parse(data.key_commands);
-	Object.keys(key_commands).forEach(command => {
-		if (reserved_keys.includes(command)) return;
-		commands_and_windows[command] = {
-			window: null,
-			key: command,
-			url: key_commands[command].url
-		}
-
-		globalShortcut.register(`CommandOrControl+Shift+${command}`, () => {
-			createKeyWindow(command, key_commands[command].url);
-		})
-	})
+	const keyCommands = JSON.parse(data.key_commands);
+	commandsController.replaceCommands(keyCommands);
+	syncCustomCommandsWindow();
 }
 
 function WSOnGetCompletedTasks(data) {
-	if (completedTasksWindow) {
-		completedTasksWindow.webContents.send("completed-tasks-list",
+	const completedWindow = windowManager.getCompletedTasksWindow();
+	if (completedWindow) {
+		completedWindow.webContents.send("completed-tasks-list",
 			{
 				tasks: data,
-				categories: CATEGORIES,
+				categories: appState.categories,
 			});
 	}
 }
 
 function WSOnRequestHardRefresh(data) {
-	CATEGORIES = data.categories.split(",");
+	appState.categories = data.categories.split(",");
 	if (win && win.webContents)
 		win.webContents.send("refresh_tasks", data.tasks);
 }
