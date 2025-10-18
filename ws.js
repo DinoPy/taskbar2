@@ -1,111 +1,169 @@
 import WebSocket from "ws";
 import { config } from "./src/main/config.js";
-import {
-	handleSocketConnect,
-	handleSocketDisconnect,
-	setUpTasks,
-	WSOnTaskRefresher,
-	WSOnNewTaskCreated,
-	WSOnRelatedTaskEdited,
-	WSOnRelatedTaskDeleted,
-	WSOnRelatedTaskToggled,
-	WSOnRelatedAddedCommand,
-	WSOnRelatedRemovedCommand,
-	WSOnRelatedUpdatedCategories,
-	WSOnGetCompletedTasks,
-	WSOnRequestHardRefresh,
-	socket
-} from "./main.js"
 
-let reconnectInterval = 3000;
+const DEFAULT_RECONNECT_DELAY = 3000;
+const MAX_RECONNECT_DELAY = 30000;
 
-let user = {};
+const defaultLogger = {
+	log: (...args) => console.log(...args),
+	error: (...args) => console.error(...args),
+};
 
-const getSocketUrl = () => config.getWsUrl();
+export function createSocketClient({
+	onConnected,
+	onDisconnected,
+	eventHandlers = {},
+	logger = defaultLogger,
+} = {}) {
+	let socket = null;
+	let manuallyClosed = false;
+	let reconnectDelay = DEFAULT_RECONNECT_DELAY;
+	let reconnectTimer = null;
+	let currentUser = null;
 
-function socketConnect(userInfo) {
-	const socketUrl = getSocketUrl();
-	socket.instance = new WebSocket(socketUrl);
-
-	socket.instance.onopen = () => {
-		socket.manuallyClosed = false;
-		console.log('Connected');
-		sendEvent("connect", {
-			email: userInfo.email,
-			first_name: userInfo.given_name,
-			last_name: userInfo.family_name,
-			google_uid: userInfo.id,
-		})
-	};
-
-	socket.instance.onmessage = (event) => {
-		const msg = JSON.parse(event.data);
-		if (msg.event != "ping")
-			console.log(msg.data);
-
-		switch (msg.event) {
-			case "ping":
-				sendEvent("pong", "alive and well");
-				break
-			case "connected":
-				const { tasks, ...data } = msg.data;
-				user = data;
-				setUpTasks(msg.data)
-				break
-			case "related_task_edited":
-				WSOnRelatedTaskEdited(msg.data);
-				break
-			case "related_task_deleted":
-				WSOnRelatedTaskDeleted(msg.data);
-				break
-			case "related_task_toggled":
-				WSOnRelatedTaskToggled(msg.data);
-				break
-			case "related_added_command":
-				WSOnRelatedAddedCommand(msg.data);
-				break
-			case "related_removed_command":
-				WSOnRelatedRemovedCommand(msg.data);
-				break
-			case "related_updated_categories":
-				WSOnRelatedUpdatedCategories(msg.data);
-				break
-			case "new_task_created":
-				WSOnNewTaskCreated(msg.data);
-				break
-			case "tasks_refresher":
-				WSOnTaskRefresher(msg.data);
-				break
-			case "get_completed_tasks":
-				WSOnGetCompletedTasks(msg.data);
-				break
-			case "request_hard_refresh":
-				WSOnRequestHardRefresh(msg.data);
-				break
-			default:
-				console.log("Unknown event received:\n", msg)
-		}
-
-	};
-
-	socket.instance.onclose = (e) => {
-		handleSocketDisconnect();
-		if (!socket.manuallyClosed) {
-			console.log('Socket closed, retrying in 3s...', e.reason);
-			setTimeout(() => socketConnect(userInfo), reconnectInterval); // auto-reconnect after 3s
+	const log = (...args) => {
+		try {
+			logger?.log?.(...args);
+		} catch {
+			console.log(...args);
 		}
 	};
 
-	socket.instance.onerror = (err) => {
-		console.error('Socket error:', err);
+	const logError = (...args) => {
+		try {
+			logger?.error?.(...args);
+		} catch {
+			console.error(...args);
+		}
 	};
 
+	const clearReconnectTimer = () => {
+		if (reconnectTimer) {
+			clearTimeout(reconnectTimer);
+			reconnectTimer = null;
+		}
+	};
 
-	return socket.instance
+	const cleanupSocket = () => {
+		if (!socket) return;
+		socket.removeAllListeners?.();
+		socket = null;
+	};
+
+	const scheduleReconnect = () => {
+		if (!currentUser) {
+			return;
+		}
+		clearReconnectTimer();
+		reconnectTimer = setTimeout(() => {
+			connect(currentUser);
+		}, reconnectDelay);
+		reconnectDelay = Math.min(reconnectDelay * 2, MAX_RECONNECT_DELAY);
+		log(`Socket reconnect scheduled in ${reconnectDelay}ms`);
+	};
+
+	const dispatchEvent = (eventName, data) => {
+		const handler = eventHandlers[eventName];
+		if (!handler) {
+			log(`Unknown event received: ${eventName}`);
+			return;
+		}
+
+		try {
+			handler({ data, event: eventName, send });
+		} catch (error) {
+			logError(`Error handling socket event "${eventName}"`, error);
+		}
+	};
+
+	const send = (eventName, data) => {
+		if (!socket || socket.readyState !== WebSocket.OPEN) {
+			log(`Skipping send; socket not open for event "${eventName}"`);
+			return false;
+		}
+
+		try {
+			socket.send(JSON.stringify({ event: eventName, data }));
+			return true;
+		} catch (error) {
+			logError("Failed to send socket message", error);
+			return false;
+		}
+	};
+
+	const connect = (userInfo) => {
+		currentUser = userInfo;
+		manuallyClosed = false;
+		clearReconnectTimer();
+
+		if (socket) {
+			manuallyClosed = true;
+			socket.close();
+			cleanupSocket();
+			manuallyClosed = false;
+		}
+
+		const socketUrl = config.getWsUrl();
+		socket = new WebSocket(socketUrl);
+
+		socket.onopen = () => {
+			reconnectDelay = DEFAULT_RECONNECT_DELAY;
+			onConnected?.();
+			send("connect", {
+				email: userInfo.email,
+				first_name: userInfo.given_name,
+				last_name: userInfo.family_name,
+				google_uid: userInfo.id,
+			});
+		};
+
+		socket.onmessage = (event) => {
+			try {
+				const message = JSON.parse(event.data);
+				if (message.event !== "ping") {
+					log(message.data);
+				}
+				dispatchEvent(message.event, message.data);
+			} catch (error) {
+				logError("Failed to parse socket message", error);
+			}
+		};
+
+		socket.onclose = (event) => {
+			cleanupSocket();
+			onDisconnected?.(event);
+			if (!manuallyClosed) {
+				scheduleReconnect();
+			}
+		};
+
+		socket.onerror = (error) => {
+			logError("Socket error:", error);
+		};
+
+		return socket;
+	};
+
+	const close = () => {
+		manuallyClosed = true;
+		clearReconnectTimer();
+		if (socket) {
+			socket.close();
+			cleanupSocket();
+		}
+	};
+
+	const markManuallyClosed = () => {
+		manuallyClosed = true;
+	};
+
+	const isManuallyClosed = () => manuallyClosed;
+
+	return {
+		connect,
+		send,
+		close,
+		markManuallyClosed,
+		isManuallyClosed,
+	};
 }
-
-function sendEvent(eventName, data) {
-	socket.instance.send(JSON.stringify({ event: eventName, data: data }));
-}
-
-export { socketConnect, sendEvent };

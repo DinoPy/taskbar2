@@ -42,15 +42,11 @@ import {
 app.whenReady().then(() => {
 	BrowserWindow.prototype.webContents.setMaxListeners(20);
 });
-import { socketConnect, sendEvent } from "./ws.js";
+import { createSocketClient } from "./ws.js";
 import { oauth2Client, login, authUrl, getAuthTokens, userInfo } from "./googleapis.js";
 
 
-export const ipc = ipcMain;
-export let socket = {
-	manuallyClosed: false,
-	instance: null
-};
+const ipc = ipcMain;
 
 let currentlySelectedScreenIndex = 0;
 let currentlySelectedScreenSide = "top";
@@ -74,6 +70,33 @@ let openTaskProps = null;
 
 const reserved_keys = ["Space", "n", "j", "e", "k", "c", "s", "y", "z"];
 const commands_and_windows = {};
+
+const socketEventHandlers = {
+	ping: ({ send }) => send("pong", "alive and well"),
+	connected: ({ data }) => {
+		setUpTasks(data);
+	},
+	related_task_edited: ({ data }) => WSOnRelatedTaskEdited(data),
+	related_task_deleted: ({ data }) => WSOnRelatedTaskDeleted(data),
+	related_task_toggled: ({ data }) => WSOnRelatedTaskToggled(data),
+	related_added_command: ({ data }) => WSOnRelatedAddedCommand(data),
+	related_removed_command: ({ data }) => WSOnRelatedRemovedCommand(data),
+	related_updated_categories: ({ data }) => WSOnRelatedUpdatedCategories(data),
+	new_task_created: ({ data }) => WSOnNewTaskCreated(data),
+	tasks_refresher: ({ data }) => WSOnTaskRefresher(data),
+	get_completed_tasks: ({ data }) => WSOnGetCompletedTasks(data),
+	request_hard_refresh: ({ data }) => WSOnRequestHardRefresh(data),
+};
+
+const socketClient = createSocketClient({
+	onConnected: handleSocketConnect,
+	onDisconnected: handleSocketDisconnect,
+	eventHandlers: socketEventHandlers,
+	logger: console,
+});
+
+const socketConnect = (userInfo) => socketClient.connect(userInfo);
+const sendEvent = (eventName, data) => socketClient.send(eventName, data);
 
 const getIsTimerRunning = () => isTimerRunning;
 
@@ -443,8 +466,7 @@ function createLoginContextMenu(args) {
 			label: isLoggedIn ? "Sign Out" : "Sign In",
 			click: () => {
 				if (isLoggedIn) {
-					socket.instance.close();
-					socket.instance = null;
+					socketClient.close();
 					Object.keys(userInfo).forEach(key => delete userInfo[key]);
 					fs.unlink(config.tokensFilePath, (e) => {
 						if (e && e.code !== "ENOENT") {
@@ -452,7 +474,6 @@ function createLoginContextMenu(args) {
 						}
 					});
 					win.webContents.send("user-logged-out", userInfo);
-					socket.manuallyClosed = true;
 				} else {
 					doAuthentication();
 				}
@@ -824,29 +845,30 @@ ipc.on("delete_completed_task", (_, data) => {
 
 
 
-const WSOnNewTaskCreated = (data) => {
+function WSOnNewTaskCreated(data) {
 	console.log("new task created", data);
 	win.webContents.send("new_task_from_relative", data);
 }
 
-const WSOnRelatedTaskToggled = (data) => {
+function WSOnRelatedTaskToggled(data) {
 	win.webContents.send("related_task_toggled", data);
 }
 
-const WSOnRelatedTaskDeleted = (data) => {
+function WSOnRelatedTaskDeleted(data) {
 	win.webContents.send("related_task_deleted", data);
 }
 
-const WSOnRelatedTaskEdited = (data) => {
+function WSOnRelatedTaskEdited(data) {
 	win.webContents.send("related_task_edited", data);
 }
 
-const WSOnTaskRefresher = (data) => {
-	if (win && win.webContents)
-		win.webContents.send("refresh_tasks", data.tasks)
+function WSOnTaskRefresher(data) {
+	if (win && win.webContents) {
+		win.webContents.send("refresh_tasks", data.tasks);
+	}
 }
 
-const WSOnRelatedAddedCommand = (data) => {
+function WSOnRelatedAddedCommand(data) {
 	data = JSON.parse(data);
 	for (let key in data) {
 		if (commands_and_windows.hasOwnProperty(key))
@@ -863,23 +885,23 @@ const WSOnRelatedAddedCommand = (data) => {
 	}
 }
 
-const WSOnRelatedRemovedCommand = (data) => {
+function WSOnRelatedRemovedCommand(data) {
 	data = JSON.parse(data);
 	for (let key in commands_and_windows) {
 		if (data.hasOwnProperty(key))
 			continue;
 
 		globalShortcut.unregister(`CommandOrControl+Shift+${key}`);
-		commands_and_windows[key]?.windows?.close();
+		commands_and_windows[key]?.window?.close();
 		delete commands_and_windows[key];
 	}
 }
 
-const WSOnRelatedUpdatedCategories = (data) => {
+function WSOnRelatedUpdatedCategories(data) {
 	CATEGORIES = data;
 }
 
-const handleSocketConnect = () => {
+function handleSocketConnect() {
 	if (win && win.webContents) {
 		win.webContents.send("socket-connected");
 	}
@@ -887,14 +909,15 @@ const handleSocketConnect = () => {
 		setTimeout(handleSocketConnect, 1000);
 }
 
-const handleSocketDisconnect = () => {
-	if (win && win.webContents)
+function handleSocketDisconnect() {
+	if (win && win.webContents) {
 		win.webContents.send("socket-disconnected");
-	else
+	} else {
 		setTimeout(handleSocketDisconnect, 1000);
+	}
 }
 
-const setUpTasks = (data) => {
+function setUpTasks(data) {
 	if (data.categories) {
 		CATEGORIES = data.categories.split(",");
 	}
@@ -918,7 +941,7 @@ const setUpTasks = (data) => {
 	})
 }
 
-const WSOnGetCompletedTasks = (data) => {
+function WSOnGetCompletedTasks(data) {
 	if (completedTasksWindow) {
 		completedTasksWindow.webContents.send("completed-tasks-list",
 			{
@@ -928,25 +951,8 @@ const WSOnGetCompletedTasks = (data) => {
 	}
 }
 
-const WSOnRequestHardRefresh = (data) => {
+function WSOnRequestHardRefresh(data) {
 	CATEGORIES = data.categories.split(",");
 	if (win && win.webContents)
 		win.webContents.send("refresh_tasks", data.tasks);
 }
-
-
-export {
-	handleSocketConnect,
-	handleSocketDisconnect,
-	setUpTasks,
-	WSOnTaskRefresher,
-	WSOnNewTaskCreated,
-	WSOnRelatedTaskEdited,
-	WSOnRelatedTaskDeleted,
-	WSOnRelatedTaskToggled,
-	WSOnRelatedAddedCommand,
-	WSOnRelatedRemovedCommand,
-	WSOnRelatedUpdatedCategories,
-	WSOnGetCompletedTasks,
-	WSOnRequestHardRefresh,
-};
