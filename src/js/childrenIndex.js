@@ -1,5 +1,5 @@
-import { ipcRenderer } from 'electron/renderer';
 import { parseString } from './helpers.js';
+const { ipcRenderer } = window.require('electron');
 const ipc = ipcRenderer;
 
 let ID;

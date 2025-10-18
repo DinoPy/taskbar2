@@ -1,4 +1,4 @@
-import { ipcRenderer } from 'electron/renderer';
+const { ipcRenderer } = window.require('electron');
 const ipc = ipcRenderer;
 
 let taskData = null;

@@ -1,7 +1,7 @@
-import { ipcRenderer } from 'electron/renderer';
-const ipc = ipcRenderer;
 import { Task, formatCurrentDate, formatCountdownText, taskIndexUpdater, calculateUrgencyLevel, calculateCountdownText } from './utility.js';
 import { parseString } from './helpers.js';
+const { ipcRenderer } = window.require('electron');
+const ipc = ipcRenderer;
 
 const closeBtn = document.getElementById('closeBtn');
 const countdownText = document.getElementById('countdown');

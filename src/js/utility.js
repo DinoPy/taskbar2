@@ -1,6 +1,6 @@
-import { ipcRenderer } from 'electron/renderer';
-const ipc = ipcRenderer;
 import { isSocketConnected, tasks_compl_or_del_while_nocon, tasks} from "./newIndex.js";
+const { ipcRenderer } = window.require('electron');
+const ipc = ipcRenderer;
 
 export function formatCountdownText(time) {
     let minutes = Math.floor((time / 60) % 60);
