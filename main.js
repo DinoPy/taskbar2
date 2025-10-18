@@ -20,6 +20,7 @@ import {
 	showTaskContextMenu,
 	showLoginContextMenu,
 } from "./src/main/menus/index.js";
+import { createSocketHandlers } from "./src/main/socket/handlers.js";
 
 const logDir = path.dirname(config.logFilePath);
 if (!fs.existsSync(logDir)) {
@@ -78,32 +79,9 @@ app.setAppUserModelId(app.name);
 
 const RESERVED_COMMAND_KEYS = ["Space", "n", "j", "e", "k", "c", "s", "y", "z"];
 
-const socketEventHandlers = {
-	ping: ({ send }) => send("pong", "alive and well"),
-	connected: ({ data }) => {
-		setUpTasks(data);
-	},
-	related_task_edited: ({ data }) => WSOnRelatedTaskEdited(data),
-	related_task_deleted: ({ data }) => WSOnRelatedTaskDeleted(data),
-	related_task_toggled: ({ data }) => WSOnRelatedTaskToggled(data),
-	related_added_command: ({ data }) => WSOnRelatedAddedCommand(data),
-	related_removed_command: ({ data }) => WSOnRelatedRemovedCommand(data),
-	related_updated_categories: ({ data }) => WSOnRelatedUpdatedCategories(data),
-	new_task_created: ({ data }) => WSOnNewTaskCreated(data),
-	tasks_refresher: ({ data }) => WSOnTaskRefresher(data),
-	get_completed_tasks: ({ data }) => WSOnGetCompletedTasks(data),
-	request_hard_refresh: ({ data }) => WSOnRequestHardRefresh(data),
-};
-
-const socketClient = createSocketClient({
-	onConnected: handleSocketConnect,
-	onDisconnected: handleSocketDisconnect,
-	eventHandlers: socketEventHandlers,
-	logger: console,
-});
-
-const socketConnect = (userInfo) => socketClient.connect(userInfo);
-const sendEvent = (eventName, data) => socketClient.send(eventName, data);
+let socketClient;
+let socketConnect;
+let sendEvent;
 
 const windowManager = createWindowManager({
 	createTaskbarWindow,
@@ -122,12 +100,7 @@ const commandsController = createCommandsController({
 	reservedKeys: RESERVED_COMMAND_KEYS,
 });
 
-const tasksController = createTasksController({
-	appState,
-	windowManager,
-	sendEvent,
-	getTaskbarWindow: () => windowManager.getTaskbarWindow(),
-});
+let tasksController;
 
 let win = null;
 
@@ -242,6 +215,36 @@ const showLoginMenu = () =>
 		config,
 		doAuthentication,
 	});
+
+const {
+	handleSocketConnect,
+	handleSocketDisconnect,
+	eventHandlers: socketEventHandlers,
+} = createSocketHandlers({
+	appState,
+	windowManager,
+	commandsController,
+	syncCustomCommandsWindow,
+	forwardToRenderer,
+	getTaskbarWindow: () => windowManager.getTaskbarWindow(),
+});
+
+socketClient = createSocketClient({
+	onConnected: handleSocketConnect,
+	onDisconnected: handleSocketDisconnect,
+	eventHandlers: socketEventHandlers,
+	logger: console,
+});
+
+socketConnect = (userInfo) => socketClient.connect(userInfo);
+sendEvent = (eventName, data) => socketClient.send(eventName, data);
+
+tasksController = createTasksController({
+	appState,
+	windowManager,
+	sendEvent,
+	getTaskbarWindow: () => windowManager.getTaskbarWindow(),
+});
 
 registerIpcHandlers({
 	ipc,
@@ -513,90 +516,3 @@ function createTaskSplitWindow(props) {
 
 
 
-
-
-function WSOnNewTaskCreated(data) {
-	console.log("new task created", data);
-	win.webContents.send("new_task_from_relative", data);
-}
-
-function WSOnRelatedTaskToggled(data) {
-	win.webContents.send("related_task_toggled", data);
-}
-
-function WSOnRelatedTaskDeleted(data) {
-	win.webContents.send("related_task_deleted", data);
-}
-
-function WSOnRelatedTaskEdited(data) {
-	win.webContents.send("related_task_edited", data);
-}
-
-function WSOnTaskRefresher(data) {
-	if (win && win.webContents) {
-		win.webContents.send("refresh_tasks", data.tasks);
-	}
-}
-
-function WSOnRelatedAddedCommand(data) {
-	const parsed = typeof data === "string" ? JSON.parse(data) : data;
-	commandsController.syncCommands(parsed);
-	syncCustomCommandsWindow();
-}
-
-function WSOnRelatedRemovedCommand(data) {
-	const parsed = typeof data === "string" ? JSON.parse(data) : data;
-	commandsController.removeMissingCommands(parsed);
-	syncCustomCommandsWindow();
-}
-
-function WSOnRelatedUpdatedCategories(data) {
-	appState.categories = data;
-}
-
-function handleSocketConnect() {
-	if (win && win.webContents) {
-		win.webContents.send("socket-connected");
-	}
-	else
-		setTimeout(handleSocketConnect, 1000);
-}
-
-function handleSocketDisconnect() {
-	if (win && win.webContents) {
-		win.webContents.send("socket-disconnected");
-	} else {
-		setTimeout(handleSocketDisconnect, 1000);
-	}
-}
-
-function setUpTasks(data) {
-	if (data.categories) {
-		appState.categories = data.categories.split(",");
-	}
-	if (win && win.webContents) {
-		setTimeout(() => { win.webContents.send("refresh_tasks", data.tasks) }, 1000)
-		setTimeout(handleSocketConnect, 1000)
-	}
-
-	const keyCommands = JSON.parse(data.key_commands);
-	commandsController.replaceCommands(keyCommands);
-	syncCustomCommandsWindow();
-}
-
-function WSOnGetCompletedTasks(data) {
-	const completedWindow = windowManager.getCompletedTasksWindow();
-	if (completedWindow) {
-		completedWindow.webContents.send("completed-tasks-list",
-			{
-				tasks: data,
-				categories: appState.categories,
-			});
-	}
-}
-
-function WSOnRequestHardRefresh(data) {
-	appState.categories = data.categories.split(",");
-	if (win && win.webContents)
-		win.webContents.send("refresh_tasks", data.tasks);
-}
