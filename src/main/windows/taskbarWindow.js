@@ -48,6 +48,8 @@ export const createTaskbarWindow = ({
         },
     });
 
+    const { webContents } = win;
+
     win.loadFile("src/index.html");
     win.title = "Task bar";
 
@@ -122,8 +124,8 @@ export const createTaskbarWindow = ({
     ipcMain.on("show-general-context-menu", handleShowGeneralContextMenu);
     ipcMain.on("show-login-context-menu", handleShowLoginContextMenu);
 
-    win.webContents.once("did-finish-load", handleDidFinishLoad);
-    win.webContents.on("before-input-event", handleBeforeInputEvent);
+    webContents.once("did-finish-load", handleDidFinishLoad);
+    webContents.on("before-input-event", handleBeforeInputEvent);
 
     win.on("focus", registerLocalShortcuts);
     win.on("blur", unregisterLocalShortcuts);
@@ -135,6 +137,9 @@ export const createTaskbarWindow = ({
         ipcMain.removeListener("show-task-context-menu", handleShowTaskContextMenu);
         ipcMain.removeListener("show-general-context-menu", handleShowGeneralContextMenu);
         ipcMain.removeListener("show-login-context-menu", handleShowLoginContextMenu);
+        if (!webContents.isDestroyed()) {
+            webContents.removeListener("before-input-event", handleBeforeInputEvent);
+        }
         unregisterLocalShortcuts();
     });
 
