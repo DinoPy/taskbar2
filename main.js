@@ -6,6 +6,7 @@ import { config } from "./src/main/config.js";
 import { createWindowManager } from "./src/main/controllers/windowManager.js";
 import { createCommandsController } from "./src/main/controllers/commandsController.js";
 import { createTasksController } from "./src/main/controllers/tasksController.js";
+import { registerIpcHandlers } from "./src/main/ipc/registerHandlers.js";
 import { createTaskbarWindow } from "./src/main/windows/taskbarWindow.js";
 import { createKenbanWindow as createKenbanBrowserWindow } from "./src/main/windows/kenbanWindow.js";
 import { createEditWindow as createEditBrowserWindow } from "./src/main/windows/editWindow.js";
@@ -138,6 +139,96 @@ const syncCustomCommandsWindow = () => {
 		});
 	}
 };
+
+const forwardToRenderer = (channel, payload) => {
+	const taskbarWindow = windowManager.getTaskbarWindow();
+	if (taskbarWindow && !taskbarWindow.isDestroyed()) {
+		taskbarWindow.webContents.send(channel, payload);
+	}
+};
+
+const scheduleCompletedTasksRefresh = () => {
+	setTimeout(() => {
+		sendEvent("get_completed_tasks", appState.fromCompletedData);
+	}, 250);
+};
+
+const openEditWindowForTask = (data) => {
+	createEditWindow({ ...data, categories: appState.categories });
+	windowManager.getEditWindow()?.focus();
+};
+
+const handleTaskComplete = async (data) => {
+	try {
+		console.log(`Task ${data.id} is completed`);
+		sendEvent("task_completed", {
+			id: data.id,
+			duration: data.duration,
+			completed_at: data.completed_at,
+			last_modified_at: +new Date(),
+		});
+	} catch (error) {
+		forwardToRenderer("post-task-error", JSON.stringify(error));
+	}
+};
+
+const handleTaskCreate = (data) => {
+	console.log(`Task ${data.id} is being created`);
+	sendEvent("task_create", data);
+};
+
+const handleTaskToggle = (data) => {
+	console.log(`Task ${data.uuid} is toggled ${data.is_active}`);
+	sendEvent("task_toggle", data);
+};
+
+const handleSwitchScreen = (data) => {
+	const displays = screen.getAllDisplays();
+
+	if (data.screenIndex >= 0 && data.screenIndex < displays.length) {
+		appState.currentlySelectedScreenIndex = data.screenIndex;
+		appState.currentlySelectedScreenSide = data.direction;
+
+		const display = displays[data.screenIndex];
+		const y = data.direction === "down"
+			? display.bounds.y + display.bounds.height - appState.taskbarHeight
+			: display.bounds.y;
+
+		win?.setBounds({
+			x: display.bounds.x,
+			y,
+			height: appState.taskbarHeight,
+			width: display.bounds.width,
+		});
+	}
+};
+
+const toggleAlwaysOnTop = () => {
+	const isAlwaysOnTop = win.isAlwaysOnTop();
+	win.setAlwaysOnTop(!isAlwaysOnTop);
+	console.log(`Always on top: ${!isAlwaysOnTop}`);
+};
+
+registerIpcHandlers({
+	ipc,
+	appState,
+	windowManager,
+	commandsController,
+	tasksController,
+	sendEvent,
+	createEditWindow,
+	createTaskSplitWindow,
+	syncCustomCommandsWindow,
+	forwardToRenderer,
+	scheduleCompletedTasksRefresh,
+	openEditWindowForTask,
+	handleTaskComplete,
+	handleTaskCreate,
+	handleTaskToggle,
+	handleSwitchScreen,
+	toggleAlwaysOnTop,
+	log: (...args) => console.log(...args),
+});
 
 const getIsTimerRunning = () => appState.isTimerRunning;
 
@@ -532,28 +623,6 @@ function createEditWindow(props) {
 	});
 }
 
-// ensures the communication between the children windows and the main task window.
-ipc.on("edit-submission-event-from-edit-popup", (e, { categories, ...data }) => {
-	win.webContents.send("msg-redirected-to-parent", data);
-	// send an event to the server to update the categories of the user if they changed
-	if (JSON.stringify(categories) !== JSON.stringify(appState.categories)) {
-		sendEvent("user_updated_categories", categories);
-	}
-	appState.categories = categories;
-
-	windowManager.closeEditWindow();
-	appState.openTaskProps = null;
-
-	if (appState.fromCompleted && windowManager.getCompletedTasksWindow()) {
-		console.log("triggering refresh for tasks")
-		setTimeout(() => {
-			sendEvent("get_completed_tasks", appState.fromCompletedData);
-		}, 250)
-		appState.fromCompleted = false;
-	}
-
-});
-
 function createCompletedTasksPopUp() {
 	appState.fromCompleted = false;
 	appState.fromCompletedData = { start_date: null, end_date: null, tags: [], category: null, search_query: null }
@@ -572,11 +641,6 @@ function createCompletedTasksPopUp() {
 		console.log(e)
 	}
 }
-
-ipc.on("completed_task_date_updated", (e, data) => {
-	appState.fromCompletedData = data;
-	sendEvent("get_completed_tasks", data)
-})
 
 
 function createHelpWindow() {
@@ -607,200 +671,7 @@ function createTaskSplitWindow(props) {
 	});
 }
 
-ipc.on("new_command_added", (_, data) => {
-	if (!commandsController.addCommand(data)) {
-		return;
-	}
-	const snapshot = commandsController.getCommandsSnapshot();
-	sendEvent("new_command_added", JSON.stringify(snapshot));
-	syncCustomCommandsWindow();
-});
 
-ipc.on("command_removed", (_, data) => {
-	commandsController.removeCommand(data.key);
-	const snapshot = commandsController.getCommandsSnapshot();
-	sendEvent("command_removed", JSON.stringify(snapshot));
-	syncCustomCommandsWindow();
-});
-
-
-ipc.on("task_complete", async (_, data) => {
-	try {
-		// TODO: Re enable posting to sheets.
-		// await postTaskToSheets(data);
-		console.log(`Task ${data.id} is completed`);
-		sendEvent("task_completed", {
-			id: data.id,
-			duration: data.duration,
-			completed_at: data.completed_at,
-			last_modified_at: +new Date()
-		})
-	} catch (error) {
-		win.webContents.send("post-task-error", JSON.stringify(error));
-	}
-});
-
-
-ipc.on("task_create", async (_, data) => {
-	console.log(data);
-	console.log(`Task ${data.id} is being created`)
-	sendEvent("task_create", data);
-	// TODO: Add event for task_create_response
-})
-
-ipc.on("task_toggle", (_, data) => {
-	console.log(`Task ${data.uuid} is toggled ${data.is_active}`);
-	console.log(data)
-	sendEvent("task_toggle", data);
-})
-
-
-ipc.on("task_edit", async (_, data) => {
-	console.log(`Task ${data.id} is being edited`);
-	sendEvent("task_edit", data);
-	appState.fromCompleted = false;
-})
-
-ipc.on("task_delete", (_, data) => {
-	console.log(`Task ${data.id} id deleted`);
-	sendEvent("task_delete", data);
-})
-
-ipc.on("toggle_current_task_edit", (_, data) => {
-	console.log(data)
-	windowManager.closeEditWindow();
-	createEditWindow({ ...data, categories: appState.categories });
-	getTaskWindow()?.focus();
-
-})
-
-ipc.on("toggle_given_task_edit", (_, data) => {
-	appState.fromCompleted = true;
-	windowManager.closeEditWindow();
-	createEditWindow({ ...data, categories: appState.categories });
-	getTaskWindow()?.focus();
-
-})
-
-ipc.on("duplicate-task", (_, data) => {
-	console.log(`Main: Duplicating task ${data.id}`);
-	tasksController.duplicateTask({ id: data.id });
-});
-
-ipc.on("complete-task", (_, data) => {
-	console.log(`Main: Completing task ${data.id}`);
-	tasksController.completeTask({ id: data.id });
-});
-
-ipc.on("delete-task", (_, data) => {
-	console.log(`Main: Deleting task ${data.id}`);
-	tasksController.deleteTask({ id: data.id });
-});
-
-ipc.on("open-task-split", (_, data) => {
-	console.log(`Main: Opening split window for task ${data.id}`);
-	createTaskSplitWindow(data.taskData);
-});
-
-ipc.on("toggle-show-all-tasks", () => {
-	console.log("Toggling show all tasks");
-	appState.showAllTasks = !appState.showAllTasks;
-	win.webContents.send("toggle-show-all-tasks", {
-		showAllTasks: appState.showAllTasks
-	});
-});
-
-ipc.on("switch-screen", (_, data) => {
-	console.log(`Switching to screen ${data.screenIndex} ${data.direction}`);
-	const displays = screen.getAllDisplays();
-	
-	if (data.screenIndex >= 0 && data.screenIndex < displays.length) {
-		appState.currentlySelectedScreenIndex = data.screenIndex;
-		appState.currentlySelectedScreenSide = data.direction;
-		
-		const display = displays[data.screenIndex];
-		const y = data.direction === "down" ?
-			display.bounds.y + display.bounds.height - appState.taskbarHeight :
-			display.bounds.y;
-			
-		win.setBounds({
-			x: display.bounds.x,
-			y: y,
-			height: appState.taskbarHeight,
-			width: display.bounds.width,
-		});
-	}
-});
-
-
-
-ipc.on("close-children-window", () => {
-	windowManager.closeEditWindow();
-	windowManager.closeTaskSplitWindow();
-	appState.openTaskProps = null;
-});
-
-ipc.on("task-split-submission", (_, data) => {
-	console.log(`Task ${data.task_id} is being split`);
-	sendEvent("task_split", data);
-	windowManager.closeTaskSplitWindow();
-
-	// Refresh completed tasks list if it's open
-	if (tasksController.refreshCompletedTasksIfOpen()) {
-		console.log("triggering refresh for tasks after split");
-	}
-});
-
-ipc.on("toggle-always-on-top", () => {
-	console.log("Toggling always on top");
-	const isAlwaysOnTop = win.isAlwaysOnTop();
-	win.setAlwaysOnTop(!isAlwaysOnTop);
-	console.log(`Always on top: ${!isAlwaysOnTop}`);
-});
-
-ipc.on("close-completed-list-window", () => {
-	windowManager.closeCompletedTasksWindow();
-});
-
-// Handle duplicate completed task
-ipc.on("duplicate_completed_task", (_, data) => {
-	console.log(`Duplicating completed task ${data.id}`);
-	sendEvent("task_duplicate", {
-		task_id: data.id
-	});
-
-	// Refresh completed tasks list if it's open
-	if (tasksController.refreshCompletedTasksIfOpen()) {
-		console.log("triggering refresh for tasks after duplicate");
-	}
-});
-
-// Handle split completed task
-ipc.on("split_completed_task", (_, data) => {
-	console.log(`Opening split window for completed task ${data.id}`);
-	windowManager.closeTaskSplitWindow();
-	createTaskSplitWindow({
-		id: data.id,
-		title: data.title,
-		description: data.description,
-		category: data.category,
-		tags: data.tags,
-		duration: data.duration
-	});
-});
-
-// Handle delete completed task
-ipc.on("delete_completed_task", (_, data) => {
-	console.log(`Deleting completed task ${data.id}`);
-	sendEvent("task_delete", {
-		id: data.id
-	});
-
-	// Refresh completed tasks list if it's open
-	if (tasksController.refreshCompletedTasksIfOpen()) {
-		console.log("triggering refresh for tasks after delete");
-	}
-});
 
 
 
