@@ -14,7 +14,7 @@ Move the due dates logic to server, we would like the server to be in control of
 [x] Maybe along with some of the existent commands I can add an input box that will take a letter and an index. The index will be the task's and the letter will be the shortcut of the command, such as d4 (delete task 4) or (e3) edit task 3. Maybe we can add something like ec (as edit current, the one that's active), maybe we can add something to sort like this such as sd (blocking the key s from being used in other commands) which will be sort by due date, maybe sda - sort duedate ascending and a bunch of other combinations. Maybe have shortcuts to show only a certain category such as sc or scwork (likely other shortcut letter)
 [] Maybe also add merge tasks? To merge br and hn tasks in one? even though we may not want that, we may rather prefer exclutding these tasks.
 
-[] Fix the listener issue - something was done but the error still occurs
+[x] Fix the listener issue - something was done but the error still occurs
 ```MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 closed listeners added to [WebContents]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit```
 [] fix the app not moving back to the prefered window on os resume.
 [] reconsider the order of the completed tasks list. We have the oldest down, and it starts from the begining of the day to the end, so we need to go to last day, read top to bottom, then move to the next day that's up and read top to bottom, its an unnatural movement.

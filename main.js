@@ -46,9 +46,8 @@ import {
 } from "electron";
 
 // Increase max listeners for WebContents to prevent memory leak warnings
-// This is a temporary fix while we ensure proper cleanup
-app.whenReady().then(() => {
-	BrowserWindow.prototype.webContents.setMaxListeners(20);
+app.on("browser-window-created", (_, window) => {
+	window.webContents.setMaxListeners(20);
 });
 import { createSocketClient } from "./ws.js";
 import { oauth2Client, login, authUrl, getAuthTokens, userInfo } from "./googleapis.js";
@@ -512,7 +511,6 @@ function createTaskSplitWindow(props) {
 		props,
 	});
 }
-
 
 
 
