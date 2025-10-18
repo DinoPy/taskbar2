@@ -2,9 +2,25 @@ import { google } from "googleapis";
 import fs from "fs";
 import os from "os";
 import path from "path";
-import {getSecretGoogleCreds} from "./googleapis_nothidden_credentials.js";
-
 const userInfo = {};
+
+const getSecretGoogleCreds = () => {
+    const {
+        GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_SECRET,
+    } = process.env;
+
+    if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {
+        throw new Error(
+            "Missing Google OAuth credentials. Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET in the environment."
+        );
+    }
+
+    return {
+        GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_SECRET,
+    };
+};
 
 const GOOGLE_REDIRECT_URI = "http://localhost:3123";
 const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET } = getSecretGoogleCreds();
@@ -74,4 +90,3 @@ async function getAuthTokens(code) {
 
 
 export { oauth2Client,login, authUrl, getAuthTokens, userInfo };
-
