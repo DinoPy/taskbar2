@@ -1,4 +1,4 @@
-import { ipcRenderer } from 'electron';
+import { ipcRenderer } from 'electron/renderer';
 const ipc = ipcRenderer;
 
 const startDateInputEl = document.getElementById("startDate")

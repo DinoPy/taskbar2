@@ -1,4 +1,4 @@
-import { ipcRenderer } from 'electron';
+import { ipcRenderer } from 'electron/renderer';
 const ipc = ipcRenderer;
 import { Task, formatCurrentDate, formatCountdownText, taskIndexUpdater, calculateUrgencyLevel, calculateCountdownText } from './utility.js';
 import { parseString } from './helpers.js';

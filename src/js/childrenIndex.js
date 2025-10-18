@@ -1,4 +1,4 @@
-import { ipcRenderer } from 'electron';
+import { ipcRenderer } from 'electron/renderer';
 import { parseString } from './helpers.js';
 const ipc = ipcRenderer;
 
