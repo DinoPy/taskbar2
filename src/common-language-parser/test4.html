@@ -1,0 +1,206 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Natural‑language reminders (Chrono + RRule) — V4 Demo</title>
+  <link rel="preconnect" href="https://unpkg.com"/>
+  <style>
+    :root {
+      --bg: #0b0e14; --card: #111623; --muted: #a0a6b0; --text: #e7ecf3;
+      --accent: #7aa2ff; --ok: #44d4a5; --warn: #ffb454; --err: #ff6363; --radius: 16px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 32px; font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, sans-serif; color: var(--text); background: linear-gradient(180deg, #0b0e14, #0e1322); }
+    h1 { font-size: 20px; margin: 0 0 12px; font-weight: 700; }
+    .wrap { max-width: 720px; margin: 0 auto; }
+    .card { background: var(--card); border: 1px solid #1b2233; border-radius: var(--radius); padding: 18px 18px 8px; box-shadow: 0 6px 24px rgba(0,0,0,.25); }
+    label { display:block; font-size: 13px; color: var(--muted); margin-bottom: 8px; }
+    .inputRow { position: relative; }
+    input[type="text"] { width: 100%; padding: 14px 16px; border-radius: 12px; border: 1px solid #2a3550; background: #0f1628; color: var(--text); outline: none; font-size: 16px; }
+    input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(122,162,255,.15); }
+    .dropdown { position: absolute; left: 0; right: 0; top: calc(100% + 6px); background: #0e1423; border: 1px solid #1b2233; border-radius: 12px; overflow: hidden; display: none; z-index: 50; }
+    .dropdown.show { display: block; }
+    .item { padding: 10px 14px; border-bottom: 1px solid #141b2b; }
+    .item:last-child { border-bottom: none; }
+    .item .k { color: var(--muted); font-size: 12px; text-transform: uppercase; letter-spacing: .06em; }
+    .item .v { display:block; margin-top: 2px; font-weight: 600; }
+    .badge { display:inline-block; padding: 2px 8px; font-size: 12px; border-radius: 999px; background: #18213a; color: var(--muted); margin-right: 6px; }
+    .badge.ok { color: #0d3328; background: #44d4a5; }
+    .badge.warn { background: #2a1e08; color: var(--warn); }
+    .small { font-size: 12px; color: var(--muted); }
+    .footer { margin-top: 16px; display:flex; gap: 12px; align-items:center; justify-content: space-between; color: var(--muted); }
+    code { background: #0b111f; padding: 2px 6px; border-radius: 6px; border: 1px solid #1b2233; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="card">
+      <h1>Natural‑language reminder parser — V4</h1>
+      <label for="nl">Try: <code>second Monday of each month</code>, <code>2nd Monday monthly</code>, <code>every second week of each month</code>, <code>biweekly on Monday at 9pm</code></label>
+      <div class="inputRow">
+        <input id="nl" type="text" placeholder="Type a natural reminder..." autocomplete="off" />
+        <div id="dropdown" class="dropdown" aria-live="polite"></div>
+      </div>
+      <div class="footer small">
+        <div>Timezone previewing in <strong>Europe/Bucharest</strong>.</div>
+        <div>Libraries: <a href="https://github.com/wanasit/chrono" target="_blank">Chrono</a> · <a href="https://github.com/jakubroztocil/rrule" target="_blank">RRule</a></div>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { 
+      chrono,
+      buildRRuleFromV4, 
+      parseChrono, 
+      ensureDefaultTime, 
+      isRecurring,
+      getNextWeekday,
+      ZONE,
+      DEFAULT_HOUR 
+    } from './src/parser-browser.js';
+    
+    window.chrono = chrono;
+    
+    // Make parser functions available globally for the HTML script
+    window.__reminder = Object.freeze({
+      ZONE,
+      DEFAULT_HOUR,
+      parseChrono,
+      ensureDefaultTime,
+      isRecurring,
+      buildRRuleFromV4,
+      getNextWeekday
+    });
+    
+    // Initialize the formatter after the module loads
+    if (typeof initializeFormatter === 'function') {
+      initializeFormatter();
+    }
+  </script>
+  <script>
+    const INPUT_DEBOUNCE = 150;
+
+    // Wait for the parser module to load before using ZONE
+    let fmtDateTime;
+    function initializeFormatter() {
+      if (window.__reminder) {
+        fmtDateTime = new Intl.DateTimeFormat('en-GB', {
+          timeZone: window.__reminder.ZONE,
+          weekday: 'short',
+          day: '2-digit',
+          month: 'short',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit'
+        });
+      }
+    }
+
+    const input = document.querySelector('#nl');
+    const dropdown = document.querySelector('#dropdown');
+
+    input.addEventListener('input', debounce(handleInput, INPUT_DEBOUNCE));
+    input.addEventListener('focus', () => {
+      if (dropdown.innerHTML.trim()) dropdown.classList.add('show');
+    });
+    document.addEventListener('click', (e) => {
+      if (!e.target.closest('.inputRow')) dropdown.classList.remove('show');
+    });
+
+    function debounce(fn, ms) {
+      let t;
+      return (...args) => {
+        clearTimeout(t);
+        t = setTimeout(() => fn(...args), ms);
+      };
+    }
+
+    function handleInput() {
+      const text = input.value.trim();
+      if (!text) {
+        dropdown.classList.remove('show');
+        dropdown.innerHTML = '';
+        return;
+      }
+
+      // Ensure formatter is initialized
+      if (!fmtDateTime) {
+        initializeFormatter();
+      }
+
+      // Ensure parser functions are available
+      if (!window.__reminder) {
+        dropdown.innerHTML = '<div class="item"><span class="k">Status</span><span class="v"><span class="badge warn">Loading parser...</span></span></div>';
+        dropdown.classList.add('show');
+        return;
+      }
+
+      const { parseChrono, ensureDefaultTime, isRecurring, buildRRuleFromV4, getNextWeekday } = window.__reminder;
+      
+      // Helper function for ensuring future dates
+      function ensureFutureDate(date, now) {
+        if (date <= now) {
+          const futureDate = new Date(date.getTime());
+          futureDate.setDate(futureDate.getDate() + 1);
+          return futureDate;
+        }
+        return date;
+      }
+      const now = new Date();
+      const chronoResult = parseChrono(text, now);
+      const recurring = isRecurring(text);
+
+      const items = [];
+      const debug = { input: text, instant: null, recurrence: null };
+
+      if (chronoResult && !recurring) {
+        ensureDefaultTime(chronoResult);
+        const dt = chronoResult.date();
+        
+        // Check if this is a simple weekday name (like "Monday")
+        const weekdayMatch = text.toLowerCase().match(/\b(monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b/);
+        if (weekdayMatch) {
+          const nextWeekday = getNextWeekday(weekdayMatch[1], now);
+          if (nextWeekday) {
+            nextWeekday.setHours(dt.getHours(), dt.getMinutes(), 0, 0);
+            items.push(
+              `<div class="item"><span class="k">Understood as</span><span class="v">${fmtDateTime.format(nextWeekday)} <span class="badge ok">instant</span></span></div>`
+            );
+            debug.instant = { iso: nextWeekday.toISOString() };
+          }
+        } else {
+          const futureDt = ensureFutureDate(dt, now);
+          items.push(
+            `<div class="item"><span class="k">Understood as</span><span class="v">${fmtDateTime.format(futureDt)} <span class="badge ok">instant</span></span></div>`
+          );
+          debug.instant = { iso: futureDt.toISOString() };
+        }
+      }
+
+      if (recurring) {
+        const recurrence = buildRRuleFromV4(text, now, chronoResult);
+        if (recurrence) {
+          const { rule, start, text: ruleText } = recurrence;
+          const next3 = rule.all((_, i) => i < 3);
+          const preview = next3.map((d) => fmtDateTime.format(d));
+          items.push(
+            `<div class="item"><span class="k">Recurrence</span><span class="v">${ruleText || rule.toText()}</span><div class="small">Starts: ${fmtDateTime.format(start)}</div><div class="small">Next: ${preview.join(' • ')}</div></div>`
+          );
+          debug.recurrence = { rule: rule.toString(), text: ruleText || rule.toText(), next: next3.map((d) => d.toISOString()) };
+        } else {
+          items.push(`<div class="item"><span class="k">Recurrence</span><span class="v"><span class="badge warn">couldn't infer rule</span></span></div>`);
+        }
+      }
+
+      console.clear();
+      console.log('parsed:', debug);
+      dropdown.innerHTML = items.join('');
+      dropdown.classList.add('show');
+    }
+
+  </script>
+</body>
+</html>

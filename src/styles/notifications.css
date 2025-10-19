@@ -1,0 +1,365 @@
+:root {
+	--notifications-max-height: 420px;
+	--notifications-width: 340px;
+}
+
+html,
+body {
+	margin: 0;
+	padding: 0;
+	background: var(--color-bg-root);
+	color: var(--color-text-white);
+	font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	font-size: 13px;
+	line-height: 1.4;
+	overflow-y: auto;
+}
+
+body::-webkit-scrollbar {
+	width: 6px;
+}
+
+body::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.2);
+	border-radius: 999px;
+}
+
+body::-webkit-scrollbar-thumb:hover {
+	background: rgba(255, 255, 255, 0.33);
+}
+
+.notifications-root {
+	width: var(--notifications-width);
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-md);
+	padding: var(--spacing-md);
+	box-sizing: border-box;
+	min-height: var(--notifications-max-height);
+}
+
+.notifications-header {
+	display: flex;
+	align-items: flex-start;
+	justify-content: space-between;
+	gap: var(--spacing-sm);
+}
+
+.notifications-header h2 {
+	margin: 0;
+	font-size: 16px;
+	font-weight: 600;
+	color: var(--color-text-white);
+}
+
+.notifications-subtitle {
+	margin: 2px 0 0;
+	font-size: 11px;
+	color: rgba(255, 255, 255, 0.6);
+}
+
+.text-btn {
+	background: transparent;
+	border: none;
+	color: var(--color-accent-light);
+	padding: 4px 8px;
+	cursor: pointer;
+	border-radius: 6px;
+	font-size: 12px;
+	transition: background 120ms ease, color 120ms ease;
+}
+
+.text-btn:hover {
+	background: rgba(255, 255, 255, 0.08);
+	color: var(--color-accent-primary);
+}
+
+.text-btn:active {
+	background: rgba(255, 255, 255, 0.16);
+}
+
+.notifications-section {
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-sm);
+}
+
+.section-title {
+	margin: 0;
+	font-size: 13px;
+	font-weight: 600;
+	color: rgba(255, 255, 255, 0.85);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+
+.notifications-list {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-xs);
+}
+
+.notifications-item {
+	display: grid;
+	grid-template-columns: 1fr auto;
+	background: rgba(255, 255, 255, 0.05);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-radius: 10px;
+	padding: var(--spacing-sm);
+	gap: var(--spacing-sm);
+}
+
+.notifications-item.unseen {
+	border-color: var(--color-accent-primary);
+	box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.35);
+}
+
+.notifications-item.snoozed {
+	border-color: var(--color-accent-primary);
+	box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.2);
+	background: rgba(249, 115, 22, 0.05);
+}
+
+.notification-title {
+	font-size: 13px;
+	font-weight: 600;
+	margin: 0;
+	color: var(--color-text-white);
+}
+
+.notification-body {
+	margin: 2px 0 6px;
+	font-size: 12px;
+	color: rgba(255, 255, 255, 0.78);
+	white-space: pre-wrap;
+}
+
+.notification-meta {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-xs);
+	font-size: 11px;
+	color: rgba(255, 255, 255, 0.45);
+	flex-wrap: wrap;
+}
+
+.pill {
+	display: inline-flex;
+	align-items: center;
+	padding: 2px 6px;
+	border-radius: 999px;
+	background: rgba(255, 255, 255, 0.08);
+	font-size: 10px;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.pill.snoozed {
+	background: rgba(249, 115, 22, 0.16);
+	color: rgba(249, 170, 80, 0.95);
+}
+
+.notification-actions {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	position: relative;
+	justify-self: flex-end;
+}
+
+.reminder-btn.active {
+	background: rgba(255, 255, 255, 0.16);
+	border-color: rgba(255, 255, 255, 0.35);
+}
+
+.hover-btn {
+	align-self: flex-start;
+	height: 28px;
+	border-radius: 6px;
+	padding: 0 var(--spacing-sm);
+	border: 1px solid rgba(255, 255, 255, 0.16);
+	background: rgba(255, 255, 255, 0.05);
+	color: rgba(255, 255, 255, 0.9);
+	font-size: 12px;
+	cursor: pointer;
+	display: grid;
+	place-items: center;
+	transition: background 120ms ease, border 120ms ease;
+}
+
+.hover-btn.icon-btn {
+	width: 28px;
+	padding: 0;
+}
+
+.hover-btn .icon {
+	width: 16px;
+	height: 16px;
+	display: block;
+}
+
+.reminder-menu {
+	position: absolute;
+	top: calc(100% + 6px);
+	right: 0;
+	background: rgba(26, 26, 26, 0.95);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	border-radius: 8px;
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+	min-width: 160px;
+	z-index: 20;
+	display: flex;
+	flex-direction: column;
+	padding: 4px;
+	max-height: 100px;
+	overflow-y: auto;
+}
+
+.reminder-menu::-webkit-scrollbar {
+	width: 6px;
+}
+
+.reminder-menu::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.2);
+	border-radius: 999px;
+}
+
+.reminder-menu::-webkit-scrollbar-thumb:hover {
+	background: rgba(255, 255, 255, 0.33);
+}
+
+.reminder-option {
+	background: transparent;
+	border: none;
+	color: rgba(255, 255, 255, 0.85);
+	text-align: left;
+	padding: 6px 10px;
+	border-radius: 6px;
+	font-size: 12px;
+	cursor: pointer;
+}
+
+.reminder-option:hover {
+	background: rgba(255, 255, 255, 0.12);
+	color: var(--color-accent-primary);
+}
+
+.reminder-option.custom {
+	font-weight: 600;
+}
+
+.reminder-custom {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 6px;
+	border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.reminder-custom label {
+	font-size: 11px;
+	color: rgba(255, 255, 255, 0.65);
+}
+
+.reminder-custom input[type="datetime-local"] {
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.16);
+	border-radius: 6px;
+	padding: 6px 8px;
+	color: rgba(255, 255, 255, 0.9);
+	font-size: 12px;
+}
+
+.reminder-custom button {
+	background: var(--color-accent-primary);
+	border: none;
+	border-radius: 6px;
+	color: #000;
+	font-size: 12px;
+	font-weight: 600;
+	padding: 6px 10px;
+	cursor: pointer;
+}
+
+.reminder-custom button:hover {
+	background: var(--color-accent-hover);
+}
+
+.hover-btn:hover {
+	background: rgba(255, 255, 255, 0.12);
+	border-color: rgba(255, 255, 255, 0.32);
+}
+
+.hover-btn:active {
+	background: rgba(255, 255, 255, 0.2);
+}
+
+.empty-state {
+	margin: 0;
+	padding: var(--spacing-sm);
+	text-align: center;
+	font-size: 12px;
+	color: rgba(255, 255, 255, 0.45);
+	display: none;
+}
+
+.empty-state.is-visible {
+	display: block;
+}
+
+.history-collapsible {
+	border-top: 1px solid rgba(255, 255, 255, 0.08);
+	padding-top: var(--spacing-sm);
+}
+
+.history-scroll {
+	max-height: 220px;
+	overflow-y: auto;
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-xs);
+	padding-right: 4px;
+}
+
+.history-scroll::-webkit-scrollbar {
+	width: 6px;
+}
+
+.history-scroll::-webkit-scrollbar-thumb {
+	background: rgba(255, 255, 255, 0.2);
+	border-radius: 999px;
+}
+
+.history-scroll::-webkit-scrollbar-thumb:hover {
+	background: rgba(255, 255, 255, 0.33);
+}
+
+.history-header {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--spacing-xs);
+}
+
+.toggle-history-btn.active {
+	color: var(--color-accent-primary);
+}
+
+.loading-indicator {
+	font-size: 11px;
+	color: rgba(255, 255, 255, 0.5);
+	text-align: center;
+	margin: var(--spacing-xs) 0 0;
+	display: none;
+}
+
+.loading-indicator.is-visible {
+	display: block;
+}
+
+.hidden {
+	display: none !important;
+}

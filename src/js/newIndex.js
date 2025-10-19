@@ -14,6 +14,9 @@ const userLoginIcon = document.querySelector(".user-icon");
 const userContainer = document.querySelector(".user");
 const searchContainer = document.querySelector(".searchContainer");
 const searchInput = document.querySelector(".searchInput");
+const notificationsBtn = document.getElementById('notificationsBtn');
+const notificationsBadge = document.getElementById('notificationsBadge');
+let notificationAudioContext = null;
 
 export const tasks = {};
 const completedTasks = [];
@@ -23,6 +26,61 @@ export let isSocketConnected = false;
 let isTimerRunning = true;
 let lastCategorySelected = 'none';
 let showAllTasks = false;
+
+function updateNotificationsBadge(count) {
+	if (!notificationsBadge || !notificationsBtn) return;
+	const total = Number.isFinite(count) ? count : parseInt(count, 10) || 0;
+	if (total > 0) {
+		const capped = total > 99 ? '99+' : String(total);
+		notificationsBadge.textContent = capped;
+		notificationsBadge.classList.remove('hidden');
+		notificationsBtn.classList.add('has-unread');
+	} else {
+		notificationsBadge.classList.add('hidden');
+		notificationsBtn.classList.remove('has-unread');
+	}
+}
+
+updateNotificationsBadge(0);
+
+async function ensureNotificationAudioContext() {
+	if (notificationAudioContext) {
+		try {
+			await notificationAudioContext.resume();
+		} catch (error) {
+			console.warn('Failed to resume notification audio context', error);
+		}
+		return notificationAudioContext;
+	}
+
+	const AudioCtx = window.AudioContext || window.webkitAudioContext;
+	if (!AudioCtx) return null;
+
+	notificationAudioContext = new AudioCtx();
+	return notificationAudioContext;
+}
+
+async function playNotificationSound() {
+	const ctx = await ensureNotificationAudioContext();
+	if (!ctx) return;
+
+	const now = ctx.currentTime;
+	const oscillator = ctx.createOscillator();
+	const gain = ctx.createGain();
+
+	oscillator.type = 'triangle';
+	oscillator.frequency.setValueAtTime(880, now);
+	oscillator.frequency.exponentialRampToValueAtTime(660, now + 0.25);
+
+	gain.gain.setValueAtTime(0.0001, now);
+	gain.gain.exponentialRampToValueAtTime(0.2, now + 0.02);
+	gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.4);
+
+	oscillator.connect(gain);
+	gain.connect(notificationAudioContext.destination);
+	oscillator.start(now);
+	oscillator.stop(now + 0.45);
+}
 
 // ----------- LOGGING ----------------//
 ipc.on("print-to-console", (e, data) => {
@@ -48,6 +106,14 @@ ipc.on("socket-disconnected", (e, data) => {
 	console.log("socket diconnected");
 	isSocketConnected = false;
 	connectionStatusIcon.classList.remove("logged-in-color");
+});
+
+ipc.on('notifications-update', (e, data) => {
+	updateNotificationsBadge(data?.unreadCount ?? 0);
+});
+
+ipc.on('notification-received', () => {
+	playNotificationSound().catch((error) => console.warn('Notification sound error', error));
 });
 
 // ------------- HELPERS ----------------//
@@ -513,6 +579,23 @@ countdownText.textContent = formatCountdownText(countdown);
 playPauseBtn.addEventListener('click', toggleCountdown);
 skipPauseBtn.addEventListener('click', handleSkipBreak);
 
+notificationsBtn?.addEventListener('click', () => {
+	ipc.send('notifications-toggle');
+	ensureNotificationAudioContext();
+});
+
+notificationsBtn?.addEventListener('keydown', (event) => {
+	if (event.key === 'Enter' || event.key === ' ') {
+		event.preventDefault();
+		ipc.send('notifications-toggle');
+		ensureNotificationAudioContext();
+	}
+});
+
+document.addEventListener('pointerdown', () => {
+	ensureNotificationAudioContext();
+}, { once: true });
+
 // ---------------- UTILITY FUNCTIONS ------------------- //
 
 // starts the countdown
@@ -750,6 +833,10 @@ const parseCommand = (input) => {
 	if (trimmed === 'aot') {
 		return { type: 'always_on_top' };
 	}
+
+	if (trimmed === 'notif') {
+		return { type: 'toggle_notifications' };
+	}
 	
 	// Split task: sp1, sp2, etc.
 	if (trimmed.match(/^sp(\d+)$/)) {
@@ -866,6 +953,10 @@ const executeCommand = (command) => {
 			console.log("Command: Toggling always on top");
 			ipc.send("toggle-always-on-top");
 			return { success: true, message: "Toggled always on top" };
+
+		case 'toggle_notifications':
+			ipc.send('notifications-toggle');
+			return { success: true, message: 'Toggled notifications window' };
 			
 		case 'split':
 			if (command.index > 0 && command.index <= taskKeys.length) {
@@ -899,20 +990,25 @@ const executeCommand = (command) => {
 const getCommandSuggestions = (input) => {
 	const trimmed = input.trim().toLowerCase();
 	const suggestions = [];
-	
+
 	if (trimmed.length === 0) {
 		// Show all available commands when input is empty
-		return [
-			{ command: 's1', description: 'switch to task 1' },
-			{ command: 'e2', description: 'edit task 2' },
-			{ command: 'c3', description: 'complete task 3' },
-			{ command: 'd4', description: 'duplicate task 4' },
-			{ command: 'ddd5', description: 'delete task 5' },
-			{ command: 'ec', description: 'edit current task' },
-			{ command: 'sat', description: 'show all tasks' },
-			{ command: 'sw0d', description: 'screen 0 down' },
-			{ command: 'sw0u', description: 'screen 0 up' }
-		];
+	return [
+		{ command: 's1', description: 'switch to task 1' },
+		{ command: 'e2', description: 'edit task 2' },
+		{ command: 'c3', description: 'complete task 3' },
+		{ command: 'd4', description: 'duplicate task 4' },
+		{ command: 'ddd5', description: 'delete task 5' },
+		{ command: 'ec', description: 'edit current task' },
+		{ command: 'sat', description: 'show all tasks' },
+		{ command: 'notif', description: 'toggle notifications window' },
+		{ command: 'sw0d', description: 'screen 0 down' },
+		{ command: 'sw0u', description: 'screen 0 up' }
+	];
+	}
+
+	if ('notif'.startsWith(trimmed)) {
+		suggestions.push({ command: 'notif', description: 'toggle notifications window' });
 	}
 	
 	// Filter commands that start with the input

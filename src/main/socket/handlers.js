@@ -5,6 +5,7 @@ export function createSocketHandlers({
 	syncCustomCommandsWindow,
 	forwardToRenderer,
 	getTaskbarWindow,
+	notificationsController,
 }) {
 	function handleSocketConnect() {
 		const win = getTaskbarWindow();
@@ -28,6 +29,24 @@ export function createSocketHandlers({
 		if (data.categories) {
 			appState.categories = data.categories.split(",");
 		}
+
+		let notifications = data.notifications;
+		if (typeof notifications === "string") {
+			try {
+				notifications = JSON.parse(notifications);
+			} catch {
+				notifications = [];
+			}
+		}
+
+		if (!Array.isArray(notifications)) {
+			notifications = [];
+		}
+
+		notificationsController?.bootstrap?.({
+			notifications,
+			unseenCount: data.notifications_unseen_count ?? data.notificationsUnseenCount,
+		});
 
 		const win = getTaskbarWindow();
 		if (win && win.webContents) {
@@ -81,6 +100,93 @@ export function createSocketHandlers({
 		request_hard_refresh: ({ data }) => {
 			appState.categories = data.categories.split(",");
 			broadcast("refresh_tasks", data.tasks);
+		},
+		notification_created: ({ data }) => {
+			if (!data) return;
+			let payload = data;
+			if (typeof data === "string") {
+				try {
+					payload = JSON.parse(data);
+				} catch {
+					payload = null;
+				}
+			}
+			if (!payload) return;
+			notificationsController?.handleNotificationsReemitted?.([payload]);
+		},
+		notifications_batch: ({ data }) => {
+			if (!data) return;
+			let notifications = data.notifications;
+			if (typeof notifications === "string") {
+				try {
+					notifications = JSON.parse(notifications);
+				} catch {
+					notifications = [];
+				}
+			}
+			if (!Array.isArray(notifications)) {
+				notifications = [];
+			}
+			notificationsController?.handleNotificationsBatch?.({
+				...data,
+				notifications,
+			});
+		},
+		notifications_marked_seen: ({ data }) => {
+			let list = data?.notifications;
+			if (typeof list === "string") {
+				try {
+					list = JSON.parse(list);
+				} catch {
+					list = [];
+				}
+			}
+			if (!Array.isArray(list)) {
+				list = [];
+			}
+			notificationsController?.handleNotificationsMarkedSeen?.(list);
+		},
+		notification_archived: ({ data }) => {
+			let payload = data;
+			if (typeof data === "string") {
+				try {
+					payload = JSON.parse(data);
+				} catch {
+					payload = null;
+				}
+			}
+			if (!payload) return;
+			notificationsController?.handleNotificationArchived?.(payload);
+		},
+		notification_snoozed: ({ data }) => {
+			let payload = data;
+			if (typeof data === "string") {
+				try {
+					payload = JSON.parse(data);
+				} catch {
+					payload = null;
+				}
+			}
+			if (!payload) return;
+			notificationsController?.handleNotificationSnoozed?.(payload);
+		},
+		notifications_reemitted: ({ data }) => {
+			let list = data?.notifications;
+			if (typeof list === "string") {
+				try {
+					list = JSON.parse(list);
+				} catch {
+					list = [];
+				}
+			}
+			if (!Array.isArray(list)) {
+				list = [];
+			}
+			notificationsController?.handleNotificationsReemitted?.(list);
+		},
+		notifications_unseen_count: ({ data }) => {
+			const count = data?.count ?? data;
+			notificationsController?.handleUnseenCountUpdate?.(count);
 		},
 	};
 

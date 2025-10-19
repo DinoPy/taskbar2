@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<meta charset="UTF-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Notifications</title>
+	<link href="../styles/variables.css" rel="stylesheet" />
+	<link href="../styles/notifications.css" rel="stylesheet" />
+	<script type="module" src="../js/notificationsWindow.js"></script>
+</head>
+
+<body>
+	<div class="notifications-root">
+		<header class="notifications-header">
+			<div>
+				<h2>Notifications</h2>
+				<p class="notifications-subtitle"></p>
+			</div>
+			<button class="text-btn mark-all-btn" data-action="mark-all" title="Mark all as viewed">
+				Mark all viewed
+			</button>
+		</header>
+
+		<section class="notifications-section" data-section="unseen">
+			<h3 class="section-title">New</h3>
+			<ul class="notifications-list" id="unseenList"></ul>
+			<p class="empty-state" data-empty="unseen">You're all caught up</p>
+		</section>
+
+		<section class="notifications-section history-collapsible" data-section="history">
+			<header class="history-header">
+				<h3 class="section-title">History</h3>
+				<button class="text-btn toggle-history-btn" data-action="toggle-history">Show history</button>
+			</header>
+			<div class="history-scroll">
+				<ul class="notifications-list" id="historyList"></ul>
+				<p class="empty-state" data-empty="history">Nothing viewed recently</p>
+				<p class="loading-indicator" id="historyLoading">Loading more…</p>
+			</div>
+		</section>
+	</div>
+</body>
+
+</html>

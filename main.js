@@ -15,12 +15,14 @@ import { createHelpWindow as createHelpBrowserWindow } from "./src/main/windows/
 import { createCustomCommandsWindow as createCustomCommandsBrowserWindow } from "./src/main/windows/customCommandsWindow.js";
 import { createTaskSplitWindow as createTaskSplitBrowserWindow } from "./src/main/windows/taskSplitWindow.js";
 import { createKeyWindow as createKeyBrowserWindow } from "./src/main/windows/keyWindow.js";
+import { createNotificationsWindow as createNotificationsBrowserWindow } from "./src/main/windows/notificationsWindow.js";
 import {
 	showMainContextMenu,
 	showTaskContextMenu,
 	showLoginContextMenu,
 } from "./src/main/menus/index.js";
 import { createSocketHandlers } from "./src/main/socket/handlers.js";
+import { createNotificationsController } from "./src/main/controllers/notificationsController.js";
 
 const logDir = path.dirname(config.logFilePath);
 if (!fs.existsSync(logDir)) {
@@ -71,6 +73,8 @@ const appState = {
 		category: null,
 		search_query: null,
 	},
+	notificationReminderIntervalMinutes: 0,
+	notificationsMuted: false,
 };
 
 app.setName("Task yourself");
@@ -91,6 +95,7 @@ const windowManager = createWindowManager({
 	createTaskSplitWindow: createTaskSplitBrowserWindow,
 	createKenbanWindow: createKenbanBrowserWindow,
 	createKeyWindow: createKeyBrowserWindow,
+	createNotificationsWindow: createNotificationsBrowserWindow,
 });
 
 const commandsController = createCommandsController({
@@ -121,6 +126,17 @@ const forwardToRenderer = (channel, payload) => {
 		taskbarWindow.webContents.send(channel, payload);
 	}
 };
+
+const notificationsController = createNotificationsController({
+	windowManager,
+	forwardToRenderer,
+	appState,
+	sendEvent: (eventName, data) => sendEvent?.(eventName, data),
+	log: (...args) => console.log(...args),
+});
+
+notificationsController.setMuted(appState.notificationsMuted);
+notificationsController.setReminderInterval(appState.notificationReminderIntervalMinutes);
 
 const scheduleCompletedTasksRefresh = () => {
 	setTimeout(() => {
@@ -176,6 +192,8 @@ const handleSwitchScreen = (data) => {
 			width: display.bounds.width,
 		});
 	}
+
+	notificationsController.repositionWindow();
 };
 
 const toggleAlwaysOnTop = () => {
@@ -189,9 +207,19 @@ const showMainMenu = () =>
 		win,
 		appState,
 		createCompletedTasksPopUp,
-		createCustomCommandsWindow,
-		createHelpWindow,
-		toggleAlwaysOnTop,
+	createCustomCommandsWindow,
+	createHelpWindow,
+	toggleAlwaysOnTop,
+	notificationReminderIntervalMinutes: appState.notificationReminderIntervalMinutes,
+	setNotificationReminderInterval: (minutes) => {
+		appState.notificationReminderIntervalMinutes = minutes;
+		notificationsController.setReminderInterval(minutes);
+	},
+	notificationsMuted: appState.notificationsMuted,
+	setNotificationsMuted: (value) => {
+		appState.notificationsMuted = Boolean(value);
+		notificationsController.setMuted(appState.notificationsMuted);
+	},
 	});
 
 const showTaskMenu = (task) =>
@@ -226,6 +254,7 @@ const {
 	syncCustomCommandsWindow,
 	forwardToRenderer,
 	getTaskbarWindow: () => windowManager.getTaskbarWindow(),
+	notificationsController,
 });
 
 socketClient = createSocketClient({
@@ -263,6 +292,7 @@ registerIpcHandlers({
 	handleTaskToggle,
 	handleSwitchScreen,
 	toggleAlwaysOnTop,
+	notificationsController,
 	log: (...args) => console.log(...args),
 });
 
@@ -272,6 +302,7 @@ const handleCloseAppRequest = () => {
 	windowManager.closeEditWindow();
 	windowManager.closeCompletedTasksWindow();
 	windowManager.closeTaskSplitWindow();
+	windowManager.closeNotificationsWindow();
 	windowManager.getTaskbarWindow()?.close();
 };
 
@@ -283,9 +314,10 @@ const createTaskbarWindowInstance = () => {
 		getIsTimerRunning,
 		onCloseApp: handleCloseAppRequest,
 		onShowTaskContextMenu: showTaskMenu,
-		onShowGeneralContextMenu: showMainMenu,
-		onShowLoginContextMenu: showLoginMenu,
+	onShowGeneralContextMenu: showMainMenu,
+	onShowLoginContextMenu: showLoginMenu,
 	});
+	notificationsController.broadcastSnapshot();
 	return win;
 };
 
@@ -406,8 +438,9 @@ const doAuthentication = () => {
 			if (userInfo.hasOwnProperty("id")) {
 				win.webContents.send("user-logged-in", userInfo);
 				socketConnect(userInfo);
-			}
-		});
+	}
+});
+
 }
 process.on('uncaughtException', (err) => {
 	console.error('Unhandled Exception:', err);
@@ -511,6 +544,3 @@ function createTaskSplitWindow(props) {
 		props,
 	});
 }
-
-
-

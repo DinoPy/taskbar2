@@ -315,7 +315,7 @@ body {
 	font-family: 'Nunito', sans-serif;
 }
 
-.user, .connection-status {
+.user, .connection-status, .notifications {
     padding: var(--spacing-user-padding);
 	border-left: var(--border-width) solid var(--color-primary-border);
     display: flex;
@@ -329,6 +329,41 @@ body {
 
 .logged-in-color {
     fill: var(--color-status-success);
+}
+
+.notifications {
+	position: relative;
+	cursor: pointer;
+}
+
+.notifications .button {
+	margin: var(--spacing-button-margin);
+}
+
+.notifications-badge {
+	position: absolute;
+	top: 6px;
+	right: 6px;
+	min-width: 18px;
+	padding: 2px 6px;
+	border-radius: 999px;
+	background-color: var(--color-status-warning);
+	color: #000;
+	font-size: 11px;
+	font-weight: 600;
+	line-height: 1;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.notifications-badge.hidden {
+	display: none;
+}
+
+.notifications.has-unread .notifications-icon {
+	background-color: rgba(249, 115, 22, 0.18);
+	border-radius: 50%;
 }
 
 .timer {
@@ -521,4 +556,3 @@ body:hover .noActiveTaskWarning {
     background-color: var(--color-urgency-critical);
     animation: pulse 1s infinite;
 }
-

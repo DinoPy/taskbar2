@@ -1,6 +1,7 @@
 # Next steps
 Move the due dates logic to server, we would like the server to be in control of when a task should show or hide. The tasks will exist already in the client as per usual but there won't be an interval function that will show them it will be an event from the server. At a later point this event will also trigger notifications on the mobile app.
 
+[] make a key shortcut in command shift s to trigger the notification window
 [x] adjust the format of the taskbar and the contents of the tasks.
 [x] implement the duplicate functionality
 [x] add day separation to complete pop-up

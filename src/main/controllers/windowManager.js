@@ -7,6 +7,7 @@ export function createWindowManager({
 	createTaskSplitWindow,
 	createKenbanWindow,
 	createKeyWindow,
+	createNotificationsWindow,
 }) {
 	const state = {
 		taskbar: null,
@@ -16,6 +17,7 @@ export function createWindowManager({
 		customCommands: null,
 		taskSplit: null,
 		kenban: null,
+		notifications: null,
 		commandWindows: new Map(),
 	};
 
@@ -143,6 +145,30 @@ export function createWindowManager({
 
 		getCustomCommandsWindow() {
 			return state.customCommands;
+		},
+
+		openNotificationsWindow(options = {}) {
+			if (state.notifications && !state.notifications.isDestroyed()) {
+				return state.notifications;
+			}
+			state.notifications = createNotificationsWindow({
+				...options,
+				onClose: () => {
+					state.notifications = null;
+					options?.onClose?.();
+				},
+			});
+			return state.notifications;
+		},
+
+		getNotificationsWindow() {
+			return state.notifications;
+		},
+
+		closeNotificationsWindow() {
+			if (state.notifications && !state.notifications.isDestroyed()) {
+				state.notifications.close();
+			}
 		},
 
 		openTaskSplitWindow({ props, onClose }) {

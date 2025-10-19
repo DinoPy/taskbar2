@@ -7,6 +7,10 @@ export function showMainContextMenu({
 	createCustomCommandsWindow,
 	createHelpWindow,
 	toggleAlwaysOnTop,
+	notificationReminderIntervalMinutes,
+	setNotificationReminderInterval,
+	notificationsMuted,
+	setNotificationsMuted,
 }) {
 	const menu = new Menu();
 
@@ -38,6 +42,16 @@ export function showMainContextMenu({
 				});
 			},
 		}))
+	);
+
+	menu.append(
+		new MenuItem({
+			label: "Mute notifications",
+			toolTip: "Silence system alerts and sounds for notifications",
+			type: "checkbox",
+			checked: Boolean(notificationsMuted),
+			click: () => setNotificationsMuted?.(!notificationsMuted),
+		})
 	);
 
 	menu.append(
@@ -77,6 +91,30 @@ export function showMainContextMenu({
 			type: "checkbox",
 			checked: win.isAlwaysOnTop(),
 			click: () => toggleAlwaysOnTop(),
+		})
+	);
+
+	const reminderOptions = [
+		{ label: "Off", value: 0 },
+		{ label: "Every minute", value: 1 },
+		{ label: "Every 5 minutes", value: 5 },
+		{ label: "Every 15 minutes", value: 15 },
+		{ label: "Every 30 minutes", value: 30 },
+		{ label: "Every hour", value: 60 },
+	];
+
+	menu.append(
+		new MenuItem({
+			label: "Notification reminder",
+			toolTip: "Choose how often unread notifications resurface",
+			submenu: reminderOptions.map(({ label, value }) =>
+				new MenuItem({
+					label,
+					type: "radio",
+					checked: value === notificationReminderIntervalMinutes,
+					click: () => setNotificationReminderInterval?.(value),
+				})
+			),
 		})
 	);
 

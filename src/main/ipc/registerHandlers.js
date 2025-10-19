@@ -16,6 +16,7 @@ export function registerIpcHandlers({
     handleTaskToggle,
     handleSwitchScreen,
     toggleAlwaysOnTop,
+    notificationsController,
     log,
 }) {
     const logger = log ?? console.log;
@@ -104,6 +105,58 @@ export function registerIpcHandlers({
     ipc.on("toggle-show-all-tasks", () => {
         appState.showAllTasks = !appState.showAllTasks;
         forwardToRenderer("toggle-show-all-tasks", { showAllTasks: appState.showAllTasks });
+    });
+
+    ipc.on("notifications-toggle", () => {
+        notificationsController?.toggleWindow();
+    });
+
+    ipc.on("notifications-window-ready", () => {
+        notificationsController?.sendSnapshotToNotificationsWindow();
+    });
+
+    ipc.on("notifications-window-resize", (_, data) => {
+        notificationsController?.setWindowHeight?.({
+            height: data?.height ?? 0,
+            visible: Boolean(data?.visible),
+        });
+    });
+
+    ipc.on("notifications-acknowledge", (_, data) => {
+        if (!data?.id) return;
+        notificationsController?.acknowledgeNotification?.(String(data.id));
+    });
+
+    ipc.on("notifications-acknowledge-all", () => {
+        notificationsController?.acknowledgeAll?.();
+    });
+
+    ipc.on("notifications-history-visibility", (_, data) => {
+        notificationsController?.setHistoryVisibility?.(Boolean(data?.show));
+    });
+
+    ipc.on("notifications-load-more", () => {
+        notificationsController?.loadMoreHistory?.();
+    });
+
+    ipc.on("notifications-snooze", (_, data = {}) => {
+        if (!data?.id) return;
+        const payload = {
+            id: String(data.id),
+        };
+
+        if (data.minutes !== undefined) {
+            const minutes = Number(data.minutes);
+            if (!Number.isNaN(minutes)) {
+                payload.minutes = minutes;
+            }
+        }
+
+        if (data.until) {
+            payload.until = data.until;
+        }
+
+        notificationsController?.snoozeNotification?.(payload);
     });
 
     ipc.on("switch-screen", (_, data) => {
