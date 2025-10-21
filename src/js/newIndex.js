@@ -452,58 +452,6 @@ setInterval(() => {
 	}
 }, 60000); // 60 seconds
 
-// Timer to check for due date notifications every minute
-setInterval(() => {
-	checkDueDateNotifications();
-}, 60000); // 1 minute (60000 ms)
-
-// Function to check and send due date notifications
-function checkDueDateNotifications() {
-	const currentTime = new Date();
-	
-	for (let id in tasks) {
-		const task = tasks[id];
-		
-		// Skip if task has no due date or is invalid
-		if (!task.due_at || task.due_at === "0001-01-01T00:00:00Z" || task.due_at === "0001-01-01T00:00:00.000Z") {
-			continue;
-		}
-		
-		const dueDate = new Date(task.due_at);
-		
-		// Skip if due date is invalid
-		if (isNaN(dueDate.getTime())) {
-			continue;
-		}
-		
-		const timeRemaining = dueDate.getTime() - currentTime.getTime();
-		const minutesRemaining = Math.floor(timeRemaining / (1000 * 60));
-		const hoursRemaining = Math.floor(minutesRemaining / 60);
-		
-		// Send notification if:
-		// 1. Task is due within 6 hours and not overdue
-		// 2. Minutes remaining is exactly divisible by 60 (hour mark)
-		// 3. We haven't already sent a notification for this hour
-		if (hoursRemaining >= 0 && hoursRemaining <= 6 && minutesRemaining % 60 === 0) {
-			// Check if we've already sent a notification for this hour
-			const notificationKey = `${id}_${hoursRemaining}`;
-			if (!task.lastNotificationHour || task.lastNotificationHour !== hoursRemaining) {
-				const dueTime = dueDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-				const notificationBody = `${task.title} - Due in ${hoursRemaining} hour${hoursRemaining !== 1 ? 's' : ''} at ${dueTime}`;
-				
-				// Send notification via IPC to main process
-				ipc.send("due_date_notification", {
-					title: "Task Due Soon",
-					body: notificationBody
-				});
-				
-				// Track that we've sent notification for this hour
-				task.lastNotificationHour = hoursRemaining;
-			}
-		}
-	}
-}
-
 // -------------- CMD HELPERS ---------------------- //
 
 ipc.on("request-current-task-data-for-edit", () => {
@@ -837,6 +785,10 @@ const parseCommand = (input) => {
 	if (trimmed === 'notif') {
 		return { type: 'toggle_notifications' };
 	}
+
+	if (trimmed === 'remind') {
+		return { type: 'open_reminder' };
+	}
 	
 	// Split task: sp1, sp2, etc.
 	if (trimmed.match(/^sp(\d+)$/)) {
@@ -977,6 +929,10 @@ const executeCommand = (command) => {
 				direction: command.direction 
 			});
 			return { success: true, message: `Switching to screen ${command.screenIndex} ${command.direction}` };
+
+		case 'open_reminder':
+			ipc.send('open-reminder-window');
+			return { success: true, message: "Opening reminder window" };
 			
 		case 'invalid':
 			return { success: false, message: `Invalid command: ${command.input}` };
@@ -1002,6 +958,7 @@ const getCommandSuggestions = (input) => {
 		{ command: 'ec', description: 'edit current task' },
 		{ command: 'sat', description: 'show all tasks' },
 		{ command: 'notif', description: 'toggle notifications window' },
+		{ command: 'remind', description: 'create reminder/task' },
 		{ command: 'sw0d', description: 'screen 0 down' },
 		{ command: 'sw0u', description: 'screen 0 up' }
 	];
@@ -1010,7 +967,7 @@ const getCommandSuggestions = (input) => {
 	if ('notif'.startsWith(trimmed)) {
 		suggestions.push({ command: 'notif', description: 'toggle notifications window' });
 	}
-	
+
 	// Filter commands that start with the input
 	const allCommands = [
 		{ command: 's', description: 'switch to task', pattern: /^s(\d+)$/ },
@@ -1022,7 +979,8 @@ const getCommandSuggestions = (input) => {
 		{ command: 'ec', description: 'edit current task', pattern: /^ec$/ },
 		{ command: 'aot', description: 'toggle always on top', pattern: /^aot$/ },
 		{ command: 'sp', description: 'split task', pattern: /^sp(\d+)$/ },
-		{ command: 'sw', description: 'switch screen', pattern: /^sw(\d+)([du])$/ }
+		{ command: 'sw', description: 'switch screen', pattern: /^sw(\d+)([du])$/ },
+		{ command: 'remind', description: 'create reminder/task', pattern: /^remind$/ }
 	];
 	
 	// Handle all command types with consistent logic
@@ -1083,6 +1041,8 @@ const getCommandSuggestions = (input) => {
 		suggestions.push({ command: 'ec', description: 'edit current task' });
 	} else if (trimmed === 'aot') {
 		suggestions.push({ command: 'aot', description: 'toggle always on top' });
+	} else if (trimmed === 'remind') {
+		suggestions.push({ command: 'remind', description: 'create reminder/task' });
 	} else {
 		// Find matching commands for other cases
 		for (const cmd of allCommands) {
@@ -1113,6 +1073,8 @@ const getCommandSuggestions = (input) => {
 						suggestions.push({ command: trimmed, description: 'edit current task' });
 					} else if (trimmed === 'aot') {
 						suggestions.push({ command: trimmed, description: 'toggle always on top' });
+					} else if (trimmed === 'remind') {
+						suggestions.push({ command: trimmed, description: 'create reminder/task' });
 					}
 				} else {
 					// Partial match - collect command names only
@@ -1132,6 +1094,8 @@ const getCommandSuggestions = (input) => {
 						suggestions.push({ command: 'ec', description: 'edit current task' });
 					} else if (cmd.command === 'aot') {
 						suggestions.push({ command: 'aot', description: 'toggle always on top' });
+					} else if (cmd.command === 'remind') {
+						suggestions.push({ command: 'remind', description: 'create reminder/task' });
 					} else if (cmd.command === 'sp') {
 						suggestions.push({ command: 'sp1, sp2, sp3...', description: 'split task' });
 					} else if (cmd.command === 'sw') {
@@ -1180,7 +1144,7 @@ const updateCommandHelp = (input) => {
 const handleTaskChangeSearch = () => {
 	searchContainer.style.display = "flex";
 	searchInput.focus();
-	searchInput.placeholder = "s1, e2, c3, d4, ddd5, ec, sat, sw0d...";
+	searchInput.placeholder = "s1, e2, c3, d4, ddd5, ec, sat, sw0d, remind...";
 
 	const commandHelp = document.querySelector('.commandHelp');
 	
@@ -1212,7 +1176,7 @@ const handleTaskChangeSearch = () => {
 		setTimeout(() => {
 			searchInput.blur();
 			searchInput.value = "";
-			searchInput.placeholder = "s1, e2, c3, d4, ddd5, ec, sat, sw0d...";
+			searchInput.placeholder = "s1, e2, c3, d4, ddd5, ec, sat, sw0d, remind...";
 			searchInput.style.backgroundColor = '';
 			searchInput.style.color = '';
 			searchContainer.style.display = "none";

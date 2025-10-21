@@ -139,6 +139,22 @@ export function registerIpcHandlers({
         notificationsController?.loadMoreHistory?.();
     });
 
+    ipc.on("open-reminder-window", () => {
+        windowManager.openReminderWindow({
+            screenIndex: appState.currentlySelectedScreenIndex ?? 0,
+        });
+    });
+
+    ipc.on("reminder-close-window", () => {
+        windowManager.closeReminderWindow();
+    });
+
+    ipc.on("reminder-submit", (_, data) => {
+        if (!data) return;
+        sendEvent?.("reminder_submit", data);
+        windowManager.closeReminderWindow();
+    });
+
     ipc.on("notifications-snooze", (_, data = {}) => {
         if (!data?.id) return;
         const payload = {

@@ -16,6 +16,7 @@ import { createCustomCommandsWindow as createCustomCommandsBrowserWindow } from 
 import { createTaskSplitWindow as createTaskSplitBrowserWindow } from "./src/main/windows/taskSplitWindow.js";
 import { createKeyWindow as createKeyBrowserWindow } from "./src/main/windows/keyWindow.js";
 import { createNotificationsWindow as createNotificationsBrowserWindow } from "./src/main/windows/notificationsWindow.js";
+import { createReminderWindow as createReminderBrowserWindow } from "./src/main/windows/reminderWindow.js";
 import {
 	showMainContextMenu,
 	showTaskContextMenu,
@@ -96,6 +97,7 @@ const windowManager = createWindowManager({
 	createKenbanWindow: createKenbanBrowserWindow,
 	createKeyWindow: createKeyBrowserWindow,
 	createNotificationsWindow: createNotificationsBrowserWindow,
+	createReminderWindow: createReminderBrowserWindow,
 });
 
 const commandsController = createCommandsController({
@@ -191,6 +193,15 @@ const handleSwitchScreen = (data) => {
 			height: appState.taskbarHeight,
 			width: display.bounds.width,
 		});
+
+		const reminderWin = windowManager.getReminderWindow();
+		if (reminderWin && !reminderWin.isDestroyed()) {
+			const frame = display.workArea ?? display.bounds;
+			const [reminderWidth, reminderHeight] = reminderWin.getSize();
+			const nextX = Math.round(frame.x + (frame.width - reminderWidth) / 2);
+			const nextY = Math.round(frame.y + (frame.height - reminderHeight) / 2);
+			reminderWin.setPosition(nextX, nextY);
+		}
 	}
 
 	notificationsController.repositionWindow();
@@ -303,6 +314,7 @@ const handleCloseAppRequest = () => {
 	windowManager.closeCompletedTasksWindow();
 	windowManager.closeTaskSplitWindow();
 	windowManager.closeNotificationsWindow();
+	windowManager.closeReminderWindow();
 	windowManager.getTaskbarWindow()?.close();
 };
 
@@ -337,6 +349,7 @@ app.whenReady().then(async () => {
 		win?.webContents.send("addEmergencyTask");
 	});
 	globalShortcut.register("CommandOrControl+Shift+j", () => {
+		// Open dev tools for all windows
 		win?.webContents.openDevTools();
 		getTaskWindow()?.webContents.openDevTools();
 		windowManager.getCompletedTasksWindow()?.webContents.openDevTools();
@@ -344,6 +357,13 @@ app.whenReady().then(async () => {
 		windowManager.getHelpWindow()?.webContents.openDevTools();
 		windowManager.getCustomCommandsWindow()?.webContents.openDevTools();
 		windowManager.getTaskSplitWindow()?.webContents.openDevTools();
+		windowManager.getNotificationsWindow()?.webContents.openDevTools();
+		windowManager.getReminderWindow()?.webContents.openDevTools();
+		
+		// Open dev tools for all command windows
+		windowManager.getAllCommandWindows().forEach((commandWin) => {
+			commandWin.webContents.openDevTools();
+		});
 	});
 	globalShortcut.register("CommandOrControl+Shift+e", () => {
 		win?.webContents.send("request-current-task-data-for-edit");

@@ -8,6 +8,7 @@ export function createWindowManager({
 	createKenbanWindow,
 	createKeyWindow,
 	createNotificationsWindow,
+	createReminderWindow,
 }) {
 	const state = {
 		taskbar: null,
@@ -18,6 +19,7 @@ export function createWindowManager({
 		taskSplit: null,
 		kenban: null,
 		notifications: null,
+		reminder: null,
 		commandWindows: new Map(),
 	};
 
@@ -171,6 +173,31 @@ export function createWindowManager({
 			}
 		},
 
+		openReminderWindow(options = {}) {
+			if (state.reminder && !state.reminder.isDestroyed()) {
+				state.reminder.focus();
+				return state.reminder;
+			}
+			state.reminder = createReminderWindow({
+				...options,
+				onClose: () => {
+					state.reminder = null;
+					options?.onClose?.();
+				},
+			});
+			return state.reminder;
+		},
+
+		getReminderWindow() {
+			return state.reminder;
+		},
+
+		closeReminderWindow() {
+			if (state.reminder && !state.reminder.isDestroyed()) {
+				state.reminder.close();
+			}
+		},
+
 		openTaskSplitWindow({ props, onClose }) {
 			if (state.taskSplit && !state.taskSplit.isDestroyed()) {
 				state.taskSplit.focus();
@@ -235,6 +262,10 @@ export function createWindowManager({
 			if (win && !win.isDestroyed()) {
 				win.close();
 			}
+		},
+
+		getAllCommandWindows() {
+			return Array.from(state.commandWindows.values()).filter(win => win && !win.isDestroyed());
 		},
 	};
 }

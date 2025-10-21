@@ -67,16 +67,6 @@ export const createTaskbarWindow = ({
         }).show();
     };
 
-    const handleDueDateNotification = (_, data) => {
-        new Notification({
-            title: data.title,
-            body: data.body,
-            silent: false,
-            icon: DEFAULT_ICON,
-            timeoutType: "never",
-        }).show();
-    };
-
     const handleShowTaskContextMenu = (_, args) => {
         onShowTaskContextMenu?.(args);
     };
@@ -119,7 +109,6 @@ export const createTaskbarWindow = ({
 
     ipcMain.on("close_app", handleCloseApp);
     ipcMain.on("interval_end", handleIntervalEnd);
-    ipcMain.on("due_date_notification", handleDueDateNotification);
     ipcMain.on("show-task-context-menu", handleShowTaskContextMenu);
     ipcMain.on("show-general-context-menu", handleShowGeneralContextMenu);
     ipcMain.on("show-login-context-menu", handleShowLoginContextMenu);
@@ -133,7 +122,6 @@ export const createTaskbarWindow = ({
     win.on("closed", () => {
         ipcMain.removeListener("close_app", handleCloseApp);
         ipcMain.removeListener("interval_end", handleIntervalEnd);
-        ipcMain.removeListener("due_date_notification", handleDueDateNotification);
         ipcMain.removeListener("show-task-context-menu", handleShowTaskContextMenu);
         ipcMain.removeListener("show-general-context-menu", handleShowGeneralContextMenu);
         ipcMain.removeListener("show-login-context-menu", handleShowLoginContextMenu);

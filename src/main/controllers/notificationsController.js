@@ -16,6 +16,13 @@ const parseTimestamp = (value) => {
 	return Number.isNaN(parsed) ? null : parsed;
 };
 
+const extractNullableString = (field) => {
+	if (!field) return "";
+	if (typeof field === "string") return field;
+	if (field.Valid && typeof field.String === "string") return field.String;
+	return "";
+};
+
 const normalizeNotification = (raw) => {
 	if (!raw) return null;
 	const id = raw.id ?? raw.notification_id ?? raw.uuid;
@@ -30,12 +37,16 @@ const normalizeNotification = (raw) => {
 
 	const status = raw.status ?? (seenAt ? "seen" : "unseen");
 
+	const description = extractNullableString(raw.description) || extractNullableString(raw.body) || "";
+	const actionUrl = extractNullableString(raw.action_url);
+	const actionText = extractNullableString(raw.action_text);
+
 	return {
 		...raw,
 		id,
-		title: raw.title ?? raw.payload?.title ?? raw.description ?? "",
-		description: raw.description ?? raw.body ?? "",
-		body: raw.body ?? raw.description ?? "",
+		title: raw.payload.title ??raw.title ?? raw.payload?.title ?? description ?? "",
+		description,
+		body: description,
 		status,
 		priority: raw.priority ?? "normal",
 		notificationType: raw.notification_type ?? raw.notificationType ?? null,
@@ -48,6 +59,8 @@ const normalizeNotification = (raw) => {
 		isUnseen: status === "unseen",
 		isArchived: status === "archived" || Boolean(archivedAt),
 		payload: raw.payload ?? {},
+		actionUrl,
+		actionText,
 	};
 };
 
@@ -109,10 +122,26 @@ export function createNotificationsController({
 
 	const getSnapshot = () => {
 		const sorted = getSortedNotifications();
-		const unseen = sorted.filter((notification) => notification.status === "unseen");
-		const historySource = sorted.filter((notification) =>
-			notification.status !== "unseen" && notification.status !== "archived"
+		const now = Date.now();
+		
+		// Helper to check if notification is currently snoozed
+		const isCurrentlySnoozed = (notification) => {
+			if (!notification.snoozedUntil) return false;
+			return now < notification.snoozedUntil;
+		};
+		
+		// Filter out snoozed notifications from unseen list
+		const unseen = sorted.filter((notification) => 
+			notification.status === "unseen" && !isCurrentlySnoozed(notification)
 		);
+		
+		// Filter out snoozed notifications from history
+		const historySource = sorted.filter((notification) =>
+			notification.status !== "unseen" && 
+			notification.status !== "archived" &&
+			!isCurrentlySnoozed(notification)
+		);
+		
 		const history = state.showHistory
 			? historySource.slice(0, state.historyVisibleCount)
 			: [];

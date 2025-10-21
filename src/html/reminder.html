@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Create Reminder</title>
+	<link rel="stylesheet" href="../styles/reminder.css">
+</head>
+<body>
+	<div class="reminder-shell" role="dialog" aria-modal="true">
+		<header class="reminder-header">
+			<div>
+				<p class="reminder-heading">Quick Command</p>
+				<h1 class="reminder-title">New reminder</h1>
+			</div>
+			<div class="reminder-header-actions">
+				<span class="reminder-progress" data-progress>Step 1 of 3</span>
+				<button class="icon-button" data-action="close" aria-label="Close reminder window">×</button>
+			</div>
+		</header>
+
+		<div class="pill-bar" role="list">
+			<span class="pill active" data-pill="title" role="listitem">Title</span>
+			<span class="pill" data-pill="type" role="listitem">Type</span>
+			<span class="pill" data-pill="schedule" role="listitem">When</span>
+			<span class="pill hidden" data-pill="lead" role="listitem">Lead time</span>
+		</div>
+
+		<main class="step-container">
+			<section class="step active" data-step="title">
+				<label class="step-label" for="reminderTitle">What should we call it?</label>
+				<input type="text" id="reminderTitle" data-input="title" autocomplete="off" spellcheck="false" placeholder="e.g. Weekly sync prep" />
+				<p class="step-hint">Press Enter to continue.</p>
+				<p class="step-error" data-error="title" hidden>Give this reminder a title before continuing.</p>
+			</section>
+
+			<section class="step" data-step="type" aria-live="polite">
+				<p class="step-label">Is this a reminder or a task?</p>
+				<div class="type-options" role="radiogroup" aria-label="Reminder type">
+					<button class="type-option selected" type="button" role="radio" aria-checked="true" data-value="reminder">
+						<span class="option-label">Reminder</span>
+						<span class="option-detail">One-off or repeating reminder</span>
+					</button>
+					<button class="type-option" type="button" role="radio" aria-checked="false" data-value="task">
+						<span class="option-label">Task</span>
+						<span class="option-detail">Track as task with lead time</span>
+					</button>
+				</div>
+				<p class="step-hint">Use Enter to confirm, arrows to switch.</p>
+			</section>
+
+			<section class="step" data-step="schedule">
+				<label class="step-label" for="reminderSchedule">When should we remind you?</label>
+				<input type="text" id="reminderSchedule" data-input="schedule" autocomplete="off" spellcheck="false" placeholder="Try “every second Monday at 9am”" />
+				<div class="schedule-preview" data-preview>
+					<p class="schedule-status" data-preview-status>Start typing to see what we understand.</p>
+					<div class="schedule-cards" data-preview-cards></div>
+				</div>
+				<p class="step-error" data-error="schedule" hidden>We need a schedule we can understand.</p>
+			</section>
+
+			<section class="step" data-step="lead">
+				<p class="step-label">How long before should the task appear?</p>
+				<div class="lead-inputs">
+					<label class="lead-field">
+						<input type="number" min="0" max="168" step="1" value="0" data-input="lead-hours" inputmode="numeric" />
+						<span class="suffix">hours</span>
+					</label>
+					<label class="lead-field">
+						<input type="number" min="0" max="59" step="1" value="15" data-input="lead-minutes" inputmode="numeric" />
+						<span class="suffix">minutes</span>
+					</label>
+				</div>
+				<p class="step-hint">Press Enter when you are happy with the lead time.</p>
+				<p class="step-error" data-error="lead" hidden>Enter a non-negative number of hours or minutes.</p>
+			</section>
+		</main>
+
+		<footer class="reminder-footer">
+			<div class="footer-hints">
+				<span>Enter &mdash; next</span>
+				<span>Esc &mdash; back</span>
+			</div>
+			<span class="escape-hint" data-escape-hint hidden>Press Esc again to close.</span>
+		</footer>
+	</div>
+	<script type="module" src="../js/reminderWindow.js"></script>
+</body>
+</html>
