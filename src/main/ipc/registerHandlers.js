@@ -17,6 +17,7 @@ export function registerIpcHandlers({
     handleSwitchScreen,
     toggleAlwaysOnTop,
     notificationsController,
+    schedulesController,
     log,
 }) {
     const logger = log ?? console.log;
@@ -173,6 +174,11 @@ export function registerIpcHandlers({
         }
 
         notificationsController?.snoozeNotification?.(payload);
+    });
+
+    ipc.on("schedule-delete", (_, data) => {
+        if (!data?.id) return;
+        schedulesController?.deleteSchedule?.(data.id);
     });
 
     ipc.on("switch-screen", (_, data) => {

@@ -23,22 +23,32 @@
 			</button>
 		</header>
 
-		<section class="notifications-section" data-section="unseen">
-			<h3 class="section-title">New</h3>
+		<!-- Tab Navigation -->
+		<nav class="tab-nav">
+			<button class="tab-btn active" data-tab="unseen">New</button>
+			<button class="tab-btn" data-tab="history">History</button>
+			<button class="tab-btn" data-tab="schedules">Schedules</button>
+		</nav>
+
+		<!-- Unseen Tab -->
+		<section class="tab-content active" data-tab-content="unseen">
 			<ul class="notifications-list" id="unseenList"></ul>
 			<p class="empty-state" data-empty="unseen">You're all caught up</p>
 		</section>
 
-		<section class="notifications-section history-collapsible" data-section="history">
-			<header class="history-header">
-				<h3 class="section-title">History</h3>
-				<button class="text-btn toggle-history-btn" data-action="toggle-history">Show history</button>
-			</header>
+		<!-- History Tab -->
+		<section class="tab-content" data-tab-content="history">
 			<div class="history-scroll">
 				<ul class="notifications-list" id="historyList"></ul>
 				<p class="empty-state" data-empty="history">Nothing viewed recently</p>
 				<p class="loading-indicator" id="historyLoading">Loading more…</p>
 			</div>
+		</section>
+
+		<!-- Schedules Tab -->
+		<section class="tab-content" data-tab-content="schedules">
+			<ul class="schedules-list" id="schedulesList"></ul>
+			<p class="empty-state" data-empty="schedules">No active schedules</p>
 		</section>
 	</div>
 </body>

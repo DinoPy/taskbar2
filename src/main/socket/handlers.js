@@ -6,6 +6,7 @@ export function createSocketHandlers({
 	forwardToRenderer,
 	getTaskbarWindow,
 	notificationsController,
+	schedulesController,
 }) {
 	function handleSocketConnect() {
 		const win = getTaskbarWindow();
@@ -47,6 +48,18 @@ export function createSocketHandlers({
 			notifications,
 			unseenCount: data.notifications_unseen_count ?? data.notificationsUnseenCount,
 		});
+
+		// Handle schedules
+		let schedules = data.schedules ?? data.schedule_list ?? [];
+		if (typeof schedules === "string") {
+			try {
+				schedules = JSON.parse(schedules);
+			} catch {
+				schedules = [];
+			}
+		}
+		if (!Array.isArray(schedules)) schedules = [];
+		schedulesController?.bootstrap?.(schedules);
 
 		const win = getTaskbarWindow();
 		if (win && win.webContents) {
@@ -187,6 +200,41 @@ export function createSocketHandlers({
 		notifications_unseen_count: ({ data }) => {
 			const count = data?.count ?? data;
 			notificationsController?.handleUnseenCountUpdate?.(count);
+		},
+		reminder_submit_response: ({ data }) => {
+			let payload = data;
+			if (typeof data === "string") {
+				try {
+					payload = JSON.parse(data);
+				} catch {
+					return;
+				}
+			}
+			if (payload?.success && payload?.schedule) {
+				schedulesController?.handleScheduleUpserted?.(payload.schedule);
+				notificationsController?.sendSnapshotToNotificationsWindow?.();
+			}
+		},
+		schedule_updated: ({ data }) => {
+			let payload = data;
+			if (typeof data === "string") {
+				try {
+					payload = JSON.parse(data);
+				} catch {
+					return;
+				}
+			}
+			if (payload?.schedule) {
+				schedulesController?.handleScheduleUpserted?.(payload.schedule);
+				notificationsController?.sendSnapshotToNotificationsWindow?.();
+			}
+		},
+		schedule_deleted: ({ data }) => {
+			const scheduleId = data?.schedule_id ?? data?.id ?? data;
+			if (scheduleId) {
+				schedulesController?.handleScheduleDeleted?.(scheduleId);
+				notificationsController?.sendSnapshotToNotificationsWindow?.();
+			}
 		},
 	};
 

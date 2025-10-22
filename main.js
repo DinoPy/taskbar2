@@ -24,6 +24,7 @@ import {
 } from "./src/main/menus/index.js";
 import { createSocketHandlers } from "./src/main/socket/handlers.js";
 import { createNotificationsController } from "./src/main/controllers/notificationsController.js";
+import { createSchedulesController } from "./src/main/controllers/schedulesController.js";
 
 const logDir = path.dirname(config.logFilePath);
 if (!fs.existsSync(logDir)) {
@@ -129,12 +130,18 @@ const forwardToRenderer = (channel, payload) => {
 	}
 };
 
+const schedulesController = createSchedulesController({
+	sendEvent: (eventName, data) => sendEvent?.(eventName, data),
+	log: (...args) => console.log(...args),
+});
+
 const notificationsController = createNotificationsController({
 	windowManager,
 	forwardToRenderer,
 	appState,
 	sendEvent: (eventName, data) => sendEvent?.(eventName, data),
 	log: (...args) => console.log(...args),
+	getSchedules: () => schedulesController?.getAllSchedules?.() ?? [],
 });
 
 notificationsController.setMuted(appState.notificationsMuted);
@@ -266,6 +273,7 @@ const {
 	forwardToRenderer,
 	getTaskbarWindow: () => windowManager.getTaskbarWindow(),
 	notificationsController,
+	schedulesController,
 });
 
 socketClient = createSocketClient({
@@ -304,6 +312,7 @@ registerIpcHandlers({
 	handleSwitchScreen,
 	toggleAlwaysOnTop,
 	notificationsController,
+	schedulesController,
 	log: (...args) => console.log(...args),
 });
 

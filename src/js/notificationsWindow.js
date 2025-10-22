@@ -13,7 +13,14 @@ const toggleHistoryBtn = document.querySelector('[data-action="toggle-history"]'
 const unseenEmptyState = document.querySelector('[data-empty="unseen"]');
 const historyEmptyState = document.querySelector('[data-empty="history"]');
 
+// Tab elements
+const tabButtons = document.querySelectorAll(".tab-btn");
+const tabContents = document.querySelectorAll(".tab-content");
+const schedulesListEl = document.getElementById("schedulesList");
+const schedulesEmptyState = document.querySelector('[data-empty="schedules"]');
+
 const state = {
+	activeTab: "unseen",
 	showHistory: false,
 	hasMoreHistory: false,
 	loadingMore: false,
@@ -239,6 +246,100 @@ const updateSubtitle = (unseenCount) => {
 	}
 };
 
+// Tab switching
+const switchTab = (tabName) => {
+	state.activeTab = tabName;
+	
+	tabButtons.forEach((btn) => {
+		btn.classList.toggle("active", btn.dataset.tab === tabName);
+	});
+	
+	tabContents.forEach((content) => {
+		content.classList.toggle("active", content.dataset.tabContent === tabName);
+	});
+	
+	// Load history on first view
+	if (tabName === "history" && !state.showHistory) {
+		ipcRenderer.send("notifications-history-visibility", { show: true });
+	}
+	
+	resizeWindow();
+};
+
+// Schedule item creation
+const createScheduleItem = (schedule) => {
+	const li = document.createElement("li");
+	li.className = "schedule-item";
+	li.dataset.id = schedule.id;
+
+	const info = document.createElement("div");
+	info.className = "schedule-info";
+
+	const title = document.createElement("p");
+	title.className = "schedule-title";
+	title.textContent = schedule.title || "Untitled schedule";
+
+	// Create recurrence rule element with date/time included
+	const rrule = document.createElement("p");
+	rrule.className = "schedule-rrule";
+	
+	let ruleText = schedule.recurrenceRule || "No recurrence rule";
+	if (schedule.startTime) {
+		ruleText = schedule.startTime + "\n" + ruleText;
+	}
+	rrule.textContent = ruleText;
+
+	info.appendChild(title);
+	info.appendChild(rrule);
+
+	const deleteBtn = document.createElement("button");
+	deleteBtn.className = "hover-btn icon-btn schedule-delete-btn";
+	deleteBtn.dataset.action = "schedule-delete";
+	deleteBtn.dataset.id = schedule.id;
+	deleteBtn.title = "Delete schedule";
+	deleteBtn.innerHTML = `<img src="../images/close.svg" alt="Delete" class="icon" />`;
+
+	li.appendChild(info);
+	li.appendChild(deleteBtn);
+
+	return li;
+};
+
+// Render schedules
+const renderSchedules = (schedules = []) => {
+	clearList(schedulesListEl);
+	
+	// Separate one-time and recurring schedules
+	const oneTimeSchedules = schedules.filter(schedule => !schedule.rrule || schedule.rrule === "");
+	const recurringSchedules = schedules.filter(schedule => schedule.rrule && schedule.rrule !== "");
+	
+	// Render one-time schedules section
+	if (oneTimeSchedules.length > 0) {
+		const instantHeader = document.createElement("li");
+		instantHeader.className = "schedule-section-header";
+		instantHeader.textContent = "Instant";
+		schedulesListEl.appendChild(instantHeader);
+		
+		oneTimeSchedules.forEach((schedule) => {
+			schedulesListEl.appendChild(createScheduleItem(schedule));
+		});
+	}
+	
+	// Render recurring schedules section
+	if (recurringSchedules.length > 0) {
+		const recurringHeader = document.createElement("li");
+		recurringHeader.className = "schedule-section-header";
+		recurringHeader.textContent = "Recurring";
+		schedulesListEl.appendChild(recurringHeader);
+		
+		recurringSchedules.forEach((schedule) => {
+			schedulesListEl.appendChild(createScheduleItem(schedule));
+		});
+	}
+	
+	schedulesEmptyState.classList.toggle("is-visible", schedules.length === 0);
+};
+
 const resizeWindow = () => {
 	if (!rootEl) return;
 	const totalItems = rootEl.querySelectorAll(".notifications-item").length;
@@ -260,6 +361,7 @@ const resizeWindow = () => {
 const renderNotifications = (payload) => {
 	const unseen = payload.unseen ?? [];
 	const history = payload.history ?? [];
+	const schedules = payload.schedules ?? [];
 
 	closeReminderMenu();
 
@@ -288,6 +390,8 @@ const renderNotifications = (payload) => {
 			);
 		});
 	}
+
+	renderSchedules(schedules);
 
 	updateEmptyStates({
 		unseenCount: unseen.length,
@@ -361,6 +465,11 @@ rootEl?.addEventListener("click", (event) => {
 			closeReminderMenu();
 			break;
 		}
+		case "schedule-delete": {
+			if (!id) return;
+			ipcRenderer.send("schedule-delete", { id });
+			break;
+		}
 		default:
 			break;
 	}
@@ -398,6 +507,13 @@ window.addEventListener("resize", () => {
 
 ipcRenderer.on("notifications-data", (_, payload) => {
 	renderNotifications(payload ?? {});
+});
+
+// Tab button clicks
+tabButtons.forEach((btn) => {
+	btn.addEventListener("click", () => {
+		switchTab(btn.dataset.tab);
+	});
 });
 
 window.addEventListener("DOMContentLoaded", () => {

@@ -70,6 +70,7 @@ export function createNotificationsController({
 	appState,
 	sendEvent,
 	log = console.log,
+	getSchedules,
 }) {
 	const state = {
 		notifications: new Map(),
@@ -150,9 +151,12 @@ export function createNotificationsController({
 			? Math.max(0, state.unseenCount)
 			: unseen.length;
 
+		const schedules = getSchedules?.() ?? [];
+
 		return {
 			unseen,
 			history,
+			schedules,
 			showHistory: state.showHistory,
 			hasMoreHistory,
 			visibilityMode: state.visibilityMode,
