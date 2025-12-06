@@ -1,7 +1,7 @@
 import { BrowserWindow, screen } from "electron";
 
-const WINDOW_WIDTH = 560;
-const WINDOW_HEIGHT = 420;
+const WINDOW_WIDTH = 660;
+const WINDOW_HEIGHT = 670;
 
 const clampIndex = (index, max) => {
 	if (!Number.isFinite(index)) return 0;
@@ -27,8 +27,8 @@ export function createReminderWindow({
 		y,
 		width: WINDOW_WIDTH,
 		height: WINDOW_HEIGHT,
-		minWidth: 480,
-		minHeight: 360,
+		minWidth: 520,
+		minHeight: 420,
 		maximizable: false,
 		minimizable: false,
 		resizable: false,

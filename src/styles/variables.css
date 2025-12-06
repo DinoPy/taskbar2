@@ -142,7 +142,6 @@
 	--size-task-min-width: 60px;
 	--size-timer-width: 255px;
 	--size-timer-min-width: 300px;
-	--size-main-content-width: calc(100% - 255px);
 	
 	/* Component Sizes */
 	--size-button-height: 40px;

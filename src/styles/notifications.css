@@ -127,6 +127,7 @@ body::-webkit-scrollbar-thumb:hover {
 	font-size: 13px;
 	font-weight: 600;
 	margin: 0;
+	margin-bottom: 12px;
 	color: var(--color-text-white);
 }
 
@@ -139,11 +140,26 @@ body::-webkit-scrollbar-thumb:hover {
 
 .notification-meta {
 	display: flex;
+	justify-content: space-between;
 	align-items: center;
 	gap: var(--spacing-xs);
 	font-size: 11px;
 	color: rgba(255, 255, 255, 0.45);
+}
+
+.notification-meta-left,
+.notification-meta-right {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-xs);
+}
+
+.notification-meta-left {
 	flex-wrap: wrap;
+}
+
+.notification-meta-right {
+	flex-shrink: 0;
 }
 
 .pill {
@@ -155,6 +171,12 @@ body::-webkit-scrollbar-thumb:hover {
 	font-size: 10px;
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
+}
+
+.notification-snoozed-text {
+	font-size: 10px;
+	color: rgba(255, 255, 255, 0.7);
+	text-transform: none;
 }
 
 .pill.snoozed {

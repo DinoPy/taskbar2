@@ -26,6 +26,7 @@ const state = {
 	loadingMore: false,
 	lastHistoryLength: 0,
 	mode: "hidden",
+	suppressAutoSwitch: false,
 };
 
 const REMINDER_OPTIONS = [
@@ -141,14 +142,80 @@ const openCustomReminderForm = (id) => {
 
 const formatTime = (timestamp) => {
 	const date = new Date(timestamp);
+	if (Number.isNaN(date.getTime())) return "";
 	return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+};
+
+const formatDate = (timestamp) => {
+	const date = new Date(timestamp);
+	if (Number.isNaN(date.getTime())) return "";
+	return date.toLocaleDateString([], { month: "short", day: "numeric" });
+};
+
+const formatBadgeDateTime = (timestamp) => {
+	const datePart = formatDate(timestamp);
+	const timePart = formatTime(timestamp);
+	if (datePart && timePart) return `${datePart} · ${timePart}`;
+	return datePart || timePart || "";
+};
+
+const parseTimestampValue = (value) => {
+	if (!value) return null;
+	if (value instanceof Date) {
+		const time = value.getTime();
+		return Number.isNaN(time) ? null : time;
+	}
+	if (typeof value === "number") {
+		if (!Number.isFinite(value) || value <= 0) return null;
+		return value > 1e12 ? value : value > 1e9 ? value * 1000 : null;
+	}
+	if (typeof value === "string") {
+		const trimmed = value.trim();
+		if (trimmed.length === 0) return null;
+		const numeric = Number(trimmed);
+		if (!Number.isNaN(numeric) && numeric > 0) {
+			return numeric > 1e12 ? numeric : numeric > 1e9 ? numeric * 1000 : null;
+		}
+		const parsed = Date.parse(trimmed);
+		return Number.isNaN(parsed) ? null : parsed;
+	}
+	return null;
+};
+
+const getSnoozedUntilTimestamp = (notification) => {
+	const sources = [
+		notification?.snooze_until,
+		notification?.snoozedUntil,
+		notification?.snoozed_until,
+		notification?.meta?.snoozedUntil,
+		notification?.meta?.snoozed_until,
+		notification?.payload?.snoozedUntil,
+		notification?.payload?.snoozed_until,
+	];
+	for (const candidate of sources) {
+		const parsed = parseTimestampValue(candidate);
+		if (parsed) return parsed;
+	}
+	return null;
+};
+
+const appendNotifications = (target, notifications, options) => {
+	if (!target || !Array.isArray(notifications) || notifications.length === 0) return;
+	const rendered = new Set();
+	notifications.forEach((notification) => {
+		const id = notification?.id ?? notification?.notification_id ?? notification?.uuid;
+		if (!id || rendered.has(id)) return;
+		rendered.add(id);
+		target.appendChild(createNotificationItem(notification, options));
+	});
 };
 
 const createNotificationItem = (notification, { isUnseen }) => {
 	const li = document.createElement("li");
 	li.className = `notifications-item ${isUnseen ? "unseen" : ""}`;
 	li.dataset.id = notification.id;
-	if (notification.snoozedUntil) {
+	const snoozedUntilTs = getSnoozedUntilTimestamp(notification);
+	if (snoozedUntilTs) {
 		li.classList.add("snoozed");
 	}
 
@@ -156,37 +223,40 @@ const createNotificationItem = (notification, { isUnseen }) => {
 
 	const title = document.createElement("p");
 	title.className = "notification-title";
-	title.textContent = notification.title;
+	title.textContent = notification.description || notification.title || "Notification";
 	infoWrapper.appendChild(title);
-
-	if (notification.body) {
-		const body = document.createElement("p");
-		body.className = "notification-body";
-		body.textContent = notification.body;
-		infoWrapper.appendChild(body);
-	}
 
 	const meta = document.createElement("div");
 	meta.className = "notification-meta";
 
+	const metaLeft = document.createElement("div");
+	metaLeft.className = "notification-meta-left";
+
 	const timePill = document.createElement("span");
 	timePill.className = "pill";
-	timePill.textContent = formatTime(notification.createdAt);
-
-	meta.appendChild(timePill);
+	timePill.textContent = formatBadgeDateTime(notification.createdAt);
+	metaLeft.appendChild(timePill);
 
 	if (notification.meta?.scope) {
 		const scopePill = document.createElement("span");
 		scopePill.className = "pill";
 		scopePill.textContent = notification.meta.scope;
-		meta.appendChild(scopePill);
+		metaLeft.appendChild(scopePill);
 	}
 
-	if (notification.snoozedUntil) {
-		const snoozePill = document.createElement("span");
-		snoozePill.className = "pill snoozed";
-		snoozePill.textContent = `Snoozed until ${formatTime(notification.snoozedUntil)}`;
-		meta.appendChild(snoozePill);
+	meta.appendChild(metaLeft);
+
+	if (snoozedUntilTs) {
+		const metaRight = document.createElement("div");
+		metaRight.className = "notification-meta-right";
+		const snoozeText = document.createElement("span");
+		snoozeText.className = "notification-snoozed-text";
+		const snoozeLabel = formatBadgeDateTime(snoozedUntilTs);
+		snoozeText.textContent = snoozeLabel
+			? `Snoozed until ${snoozeLabel}`
+			: "Snoozed until unknown time";
+		metaRight.appendChild(snoozeText);
+		meta.appendChild(metaRight);
 	}
 
 	infoWrapper.appendChild(meta);
@@ -368,6 +438,22 @@ const renderNotifications = (payload) => {
 	state.mode = payload.visibilityMode ?? "hidden";
 	state.showHistory = Boolean(payload.showHistory);
 
+	// Auto-switch tabs based on context
+	if (!state.suppressAutoSwitch) {
+		// Switch to schedules tab if opening after a new schedule was created
+		if (payload.switchToSchedulesTab && payload.visibilityMode === "manual") {
+			switchTab("schedules");
+		}
+		// Switch to "unseen" tab when window opens with new notifications
+		else if (
+			payload.visibilityMode === "auto" &&
+			Array.isArray(unseen) &&
+			unseen.length > 0
+		) {
+			switchTab("unseen");
+		}
+	}
+
 	if (!state.loadingMore || history.length > state.lastHistoryLength) {
 		state.loadingMore = false;
 	}
@@ -376,19 +462,11 @@ const renderNotifications = (payload) => {
 	state.lastHistoryLength = history.length;
 
 	clearList(unseenListEl);
-	unseen.forEach((notification) => {
-		unseenListEl.appendChild(
-			createNotificationItem(notification, { isUnseen: true }),
-		);
-	});
+	appendNotifications(unseenListEl, unseen, { isUnseen: true });
 
 	clearList(historyListEl);
 	if (state.showHistory) {
-		history.forEach((notification) => {
-			historyListEl.appendChild(
-				createNotificationItem(notification, { isUnseen: false }),
-			);
-		});
+		appendNotifications(historyListEl, history, { isUnseen: false });
 	}
 
 	renderSchedules(schedules);
@@ -406,6 +484,8 @@ const renderNotifications = (payload) => {
 
 	historyScrollEl.classList.toggle("hidden", !state.showHistory);
 	historyLoadingEl.classList.toggle("is-visible", state.loadingMore);
+
+	state.suppressAutoSwitch = false;
 
 	resizeWindow();
 };
@@ -482,6 +562,7 @@ if (historyScrollEl) {
 		const { scrollTop, clientHeight, scrollHeight } = historyScrollEl;
 		if (scrollHeight - (scrollTop + clientHeight) <= LOAD_MORE_THRESHOLD) {
 			state.loadingMore = true;
+			state.suppressAutoSwitch = true;
 			historyLoadingEl.classList.add("is-visible");
 			ipcRenderer.send("notifications-load-more");
 		}

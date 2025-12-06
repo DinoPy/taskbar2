@@ -1,4 +1,4 @@
-import { isSocketConnected, tasks_compl_or_del_while_nocon, tasks} from "./newIndex.js";
+import { isSocketConnected, tasks_compl_or_del_while_nocon, tasks, renderTasksByCategory} from "./newIndex.js";
 const { ipcRenderer } = window.require('electron');
 const ipc = ipcRenderer;
 
@@ -22,13 +22,30 @@ export const formatCurrentDate = () => {
 };
 
 
-export const taskIndexUpdater = (tasks) => {
-    console.log(tasks);
-    const keys =  Object.keys(tasks);
-    console.log(`Current number of tasks: ${keys.length}`);
-    for (let i = 0; i < keys.length; i++) {
-       tasks[keys[i]].updateIndex(i+1);
+export const taskIndexUpdater = (tasks, visualTaskOrder = null) => {
+    // Use visualTaskOrder if provided, otherwise fall back to DOM order
+    let visibleTasks;
+    
+    if (visualTaskOrder && visualTaskOrder.length > 0) {
+        // Use the visual order from renderTasksByCategory
+        visibleTasks = visualTaskOrder.map(taskId => tasks[taskId]).filter(task => task);
+    } else {
+        // Fallback: get tasks in DOM order
+        const taskContainer = document.querySelector('.taskContainer');
+        if (taskContainer) {
+            const allVisibleTasks = Array.from(taskContainer.querySelectorAll('.task'));
+            visibleTasks = allVisibleTasks.map(taskEl => tasks[taskEl.id]).filter(task => task);
+        } else {
+            // Last resort: use internal order
+            visibleTasks = Object.values(tasks).filter(
+                task => task.taskEl.parentElement !== null
+            );
+        }
     }
+    
+    visibleTasks.forEach((task, index) => {
+        task.updateIndex(index + 1);
+    });
 }
 
 // Urgency calculation function - Refined 5-level system
@@ -322,6 +339,12 @@ export class Task {
     // TODO: add toggled at from relative
         startTimer (existentTime) {
             console.log("existentTime", existentTime);
+            
+            // Clear any existing timer before starting a new one
+            if (this.taskTimerInterval) {
+                clearInterval(this.taskTimerInterval);
+            }
+            
             // update when the task was focused first
             this.toggledFocusAt = existentTime || new Date().getTime();
             
@@ -401,7 +424,7 @@ export class Task {
                     this.destroySelfFromDOM();
                     delete tasks[this.id];
 
-                    taskIndexUpdater(tasks)
+                    renderTasksByCategory();
                 } else if (e.which === 3) {
                     this.openCtxMenu();
                     e.stopPropagation();

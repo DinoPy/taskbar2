@@ -11,7 +11,7 @@ export const createHelpWindow = ({ onClose } = {}) => {
 		minimizable: false,
 		resizable: false,
 		modal: true,
-		frame: true,
+		frame: false,
 		alwaysOnTop: true,
 		webPreferences: {
 			webgl: true,

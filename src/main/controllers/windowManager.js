@@ -9,6 +9,8 @@ export function createWindowManager({
 	createKeyWindow,
 	createNotificationsWindow,
 	createReminderWindow,
+	createDeleteConfirmWindow,
+	createCalendarWindow,
 }) {
 	const state = {
 		taskbar: null,
@@ -20,6 +22,8 @@ export function createWindowManager({
 		kenban: null,
 		notifications: null,
 		reminder: null,
+		deleteConfirm: null,
+		calendar: null,
 		commandWindows: new Map(),
 	};
 
@@ -173,6 +177,31 @@ export function createWindowManager({
 			}
 		},
 
+		openCalendarWindow(options = {}) {
+			if (state.calendar && !state.calendar.isDestroyed()) {
+				state.calendar.focus();
+				return state.calendar;
+			}
+			state.calendar = createCalendarWindow({
+				...options,
+				onClose: () => {
+					state.calendar = null;
+					options?.onClose?.();
+				},
+			});
+			return state.calendar;
+		},
+
+		getCalendarWindow() {
+			return state.calendar;
+		},
+
+		closeCalendarWindow() {
+			if (state.calendar && !state.calendar.isDestroyed()) {
+				state.calendar.close();
+			}
+		},
+
 		openReminderWindow(options = {}) {
 			if (state.reminder && !state.reminder.isDestroyed()) {
 				state.reminder.focus();
@@ -195,6 +224,34 @@ export function createWindowManager({
 		closeReminderWindow() {
 			if (state.reminder && !state.reminder.isDestroyed()) {
 				state.reminder.close();
+			}
+		},
+
+		openDeleteConfirmWindow(options = {}) {
+			if (state.deleteConfirm && !state.deleteConfirm.isDestroyed()) {
+				state.deleteConfirm.focus();
+				state.deleteConfirm.webContents.send("delete-confirm-data", {
+					tasks: options?.tasks ?? [],
+				});
+				return state.deleteConfirm;
+			}
+			state.deleteConfirm = createDeleteConfirmWindow({
+				...options,
+				onClose: () => {
+					state.deleteConfirm = null;
+					options?.onClose?.();
+				},
+			});
+			return state.deleteConfirm;
+		},
+
+		getDeleteConfirmWindow() {
+			return state.deleteConfirm;
+		},
+
+		closeDeleteConfirmWindow() {
+			if (state.deleteConfirm && !state.deleteConfirm.isDestroyed()) {
+				state.deleteConfirm.close();
 			}
 		},
 

@@ -7,6 +7,7 @@ export function createSocketHandlers({
 	getTaskbarWindow,
 	notificationsController,
 	schedulesController,
+	calendarController,
 }) {
 	function handleSocketConnect() {
 		const win = getTaskbarWindow();
@@ -29,6 +30,7 @@ export function createSocketHandlers({
 	function setUpTasks(data) {
 		if (data.categories) {
 			appState.categories = data.categories.split(",");
+			appState.selectedCategories = []; // Show all categories by default
 		}
 
 		let notifications = data.notifications;
@@ -212,6 +214,42 @@ export function createSocketHandlers({
 			}
 			if (payload?.success && payload?.schedule) {
 				schedulesController?.handleScheduleUpserted?.(payload.schedule);
+				notificationsController?.showWindow?.("manual");
+				// Send snapshot with flag to switch to schedules tab
+				const win = windowManager.getNotificationsWindow();
+				if (win && !win.isDestroyed()) {
+					const snapshot = notificationsController?.getSnapshot?.();
+					win.webContents.send("notifications-data", {
+						...snapshot,
+						switchToSchedulesTab: true,
+					});
+				}
+			}
+		},
+		occurrences_list: ({ data }) => {
+			let payload = data;
+			if (typeof data === "string") {
+				try {
+					payload = JSON.parse(data);
+				} catch {
+					return;
+				}
+			}
+			if (!payload) return;
+			calendarController?.handleOccurrencesList?.(payload);
+		},
+		schedule_created: ({ data }) => {
+			let payload = data;
+			if (typeof data === "string") {
+				try {
+					payload = JSON.parse(data);
+				} catch {
+					return;
+				}
+			}
+			if (payload?.schedule) {
+				schedulesController?.handleScheduleUpserted?.(payload.schedule);
+				calendarController?.handleSchedulesChanged?.();
 				notificationsController?.sendSnapshotToNotificationsWindow?.();
 			}
 		},
@@ -226,6 +264,7 @@ export function createSocketHandlers({
 			}
 			if (payload?.schedule) {
 				schedulesController?.handleScheduleUpserted?.(payload.schedule);
+				calendarController?.handleSchedulesChanged?.();
 				notificationsController?.sendSnapshotToNotificationsWindow?.();
 			}
 		},
@@ -233,6 +272,7 @@ export function createSocketHandlers({
 			const scheduleId = data?.schedule_id ?? data?.id ?? data;
 			if (scheduleId) {
 				schedulesController?.handleScheduleDeleted?.(scheduleId);
+				calendarController?.handleSchedulesChanged?.();
 				notificationsController?.sendSnapshotToNotificationsWindow?.();
 			}
 		},

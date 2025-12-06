@@ -11,6 +11,7 @@
     "electron-localshortcut": "^3.2.1",
     "google-auth-library": "^9.15.0",
     "googleapis": "^144.0.0",
+    "rrule": "^2.8.1",
     "socket.io-client": "^4.8.1",
     "ws": "^8.18.0"
   },
@@ -23,5 +24,21 @@
     "start": "electron .",
     "build": "electron-builder",
     "dev": "electron . --trace-warnings"
+  },
+  "build": {
+    "appId": "com.taskbar2.app",
+    "productName": "taskbar2",
+    "icon": "dino.icns",
+    "files": [
+      "**/*",
+      "!dist"
+    ],
+    "extraMetadata": {
+      "env": {
+        "GOOGLE_CLIENT_ID": "${GOOGLE_CLIENT_ID}",
+        "GOOGLE_CLIENT_SECRET": "${GOOGLE_CLIENT_SECRET}",
+        "APP_STAGE": "${APP_STAGE}"
+      }
+    }
   }
 }

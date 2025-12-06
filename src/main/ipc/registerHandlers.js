@@ -18,7 +18,9 @@ export function registerIpcHandlers({
     toggleAlwaysOnTop,
     notificationsController,
     schedulesController,
+    calendarController,
     log,
+    requestTaskDeletion,
 }) {
     const logger = log ?? console.log;
 
@@ -91,6 +93,32 @@ export function registerIpcHandlers({
         tasksController.duplicateTask({ id: data.id });
     });
 
+    ipc.on("request-task-delete", (_, data) => {
+        const tasks = Array.isArray(data?.tasks) ? data.tasks : [data];
+        requestTaskDeletion?.(tasks.filter(Boolean));
+    });
+
+    ipc.on("delete-confirmation-confirmed", (_, data) => {
+        const tasks = Array.isArray(data?.tasks) ? data.tasks : [];
+        const ids = tasks
+            .map((task) => task?.id)
+            .filter((id, index, array) => id && array.indexOf(id) === index);
+
+        ids.forEach((id) => {
+            if (appState.openTaskProps?.id === id) {
+                windowManager.closeEditWindow();
+                appState.openTaskProps = null;
+            }
+            tasksController.deleteTask({ id });
+        });
+
+        windowManager.closeDeleteConfirmWindow();
+    });
+
+    ipc.on("delete-confirmation-cancelled", () => {
+        windowManager.closeDeleteConfirmWindow();
+    });
+
     ipc.on("complete-task", (_, data) => {
         tasksController.completeTask({ id: data.id });
     });
@@ -101,6 +129,10 @@ export function registerIpcHandlers({
 
     ipc.on("open-task-split", (_, data) => {
         createTaskSplitWindow(data.taskData);
+    });
+
+    ipc.on("open-calendar-window", () => {
+        windowManager.openCalendarWindow();
     });
 
     ipc.on("toggle-show-all-tasks", () => {
@@ -141,8 +173,12 @@ export function registerIpcHandlers({
     });
 
     ipc.on("open-reminder-window", () => {
-        windowManager.openReminderWindow({
+        const win = windowManager.openReminderWindow({
             screenIndex: appState.currentlySelectedScreenIndex ?? 0,
+        });
+        // Send categories once window is loaded
+        win.webContents.once("did-finish-load", () => {
+            win.webContents.send("reminder-categories", appState.categories);
         });
     });
 
@@ -179,6 +215,13 @@ export function registerIpcHandlers({
     ipc.on("schedule-delete", (_, data) => {
         if (!data?.id) return;
         schedulesController?.deleteSchedule?.(data.id);
+    });
+
+    ipc.on("calendar-fetch-occurrences", (_, data) => {
+        const start = data?.start;
+        const end = data?.end;
+        if (!start || !end) return;
+        calendarController?.requestOccurrences?.({ start, end });
     });
 
     ipc.on("switch-screen", (_, data) => {

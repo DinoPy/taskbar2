@@ -16,6 +16,7 @@ const previewStatus = document.querySelector('[data-preview-status]');
 const previewCards = document.querySelector('[data-preview-cards]');
 const leadHoursInput = document.querySelector('[data-input="lead-hours"]');
 const leadMinutesInput = document.querySelector('[data-input="lead-minutes"]');
+const categorySelect = document.querySelector('[data-input="category"]');
 const escapeHint = document.querySelector('[data-escape-hint]');
 const progressLabel = document.querySelector("[data-progress]");
 const closeButton = document.querySelector('[data-action="close"]');
@@ -45,6 +46,7 @@ const state = {
 	scheduleText: "",
 	scheduleResult: null,
 	leadMinutes: 15,
+	category: "Life",
 };
 
 const dateTimeFormatter = new Intl.DateTimeFormat("en-GB", {
@@ -447,7 +449,12 @@ const submit = () => {
 			recurrence: state.scheduleResult?.recurrence ?? null,
 		},
 		show_before_minutes: state.leadMinutes,
+		category: state.category,
 	};
+	const trimmedLanguage = (state.scheduleText ?? "").trim();
+	if (trimmedLanguage) {
+		payload.common_language = trimmedLanguage;
+	}
 	if (state.kind === "task") {
 		payload.show_before_minutes = state.leadMinutes;
 	}
@@ -562,6 +569,10 @@ if (leadMinutesInput) {
 	});
 }
 
+categorySelect?.addEventListener("change", () => {
+	state.category = categorySelect.value;
+});
+
 const debouncedSchedule = debounce(parseSchedule, 140);
 scheduleInput?.addEventListener("input", (event) => {
 	const value = event.target.value;
@@ -574,6 +585,18 @@ scheduleInput?.addEventListener("input", (event) => {
 
 document.addEventListener("keydown", handleGlobalKeyDown, true);
 closeButton?.addEventListener("click", closeWindow);
+
+ipcRenderer.on("reminder-categories", (_, categories) => {
+	if (!categorySelect) return;
+	categorySelect.innerHTML = "";
+	categories.forEach((cat) => {
+		const option = document.createElement("option");
+		option.value = cat;
+		option.textContent = cat;
+		option.selected = cat === state.category;
+		categorySelect.appendChild(option);
+	});
+});
 
 updateTypeSelection(state.kind);
 setActiveStep("title");

@@ -69,11 +69,16 @@ ipc.on('data-from-parent', (e, data) => {
 	// Populate form fields
 	priorityInput.value = priority || '';
 
-	if (due_at) {
+	if (due_at && due_at !== "0001-01-01T00:00:00Z") {
 		// Convert ISO date to datetime-local format
 		const date = new Date(due_at);
-		const localDateTime = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-		dueAtInput.value = localDateTime;
+		// Validate the date is reasonable
+		if (!isNaN(date.getTime()) && date.getFullYear() > 1900) {
+			const localDateTime = new Date(date.getTime() - date.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+			dueAtInput.value = localDateTime;
+		} else {
+			dueAtInput.value = '';
+		}
 	} else {
 		// Leave empty if no due date is set
 		dueAtInput.value = '';
@@ -193,8 +198,12 @@ function handleSubmit() {
 	// Only process due date if it was actually changed
 	let dueAtValue = null;
 	if (dueAtInput.value) {
-		const newDueAt = new Date(dueAtInput.value).toISOString();
-		dueAtValue = newDueAt;
+		const date = new Date(dueAtInput.value);
+		// Validate before sending to server
+		if (!isNaN(date.getTime()) && date.getFullYear() > 1900) {
+			dueAtValue = date.toISOString();
+		}
+		// If invalid, dueAtValue stays null
 	}
 	// If dueAtInput.value is empty, dueAtValue remains null
 	// This means if there was an original due date and user clears the field, it will be set to null

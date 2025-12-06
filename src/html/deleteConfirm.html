@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Confirm Delete</title>
+	<link rel="stylesheet" href="../styles/variables.css" />
+	<link rel="stylesheet" href="../styles/deleteConfirm.css" />
+	<script type="module" src="../js/deleteConfirm.js" defer></script>
+</head>
+<body>
+	<div class="confirm-card">
+		<h1>Delete task?</h1>
+		<p class="confirm-summary" id="deleteConfirmSummary"></p>
+		<ul class="confirm-task-list" id="deleteConfirmList"></ul>
+		<div class="confirm-actions">
+			<button class="confirm-button cancel" id="deleteCancelBtn">Cancel</button>
+			<button class="confirm-button danger" id="deleteConfirmBtn">Delete</button>
+		</div>
+	</div>
+</body>
+</html>

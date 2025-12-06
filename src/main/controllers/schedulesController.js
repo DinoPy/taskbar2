@@ -57,7 +57,31 @@ export function createSchedulesController({ sendEvent, log = console.log }) {
         // Extract rrule string from Go nullable type
         const rruleText = extractNullableString(raw.rrule);
         const startLocal = extractNullableTime(raw.start_local);
-        
+
+        const deriveTitle = () => {
+            const sources = [
+                raw.title,
+                raw.name,
+                raw.label,
+                raw.summary,
+                raw.description,
+            ];
+            for (const source of sources) {
+                if (!source) continue;
+                if (typeof source === "string" && source.trim()) {
+                    return source.trim();
+                }
+                if (typeof source === "object") {
+                    const extracted = extractNullableString(source);
+                    if (extracted) {
+                        return extracted;
+                    }
+                }
+            }
+            return "";
+        };
+        const displayTitle = deriveTitle();
+
         let displayInfo = {
             startTime: null,
             recurrenceRule: ""
@@ -85,7 +109,7 @@ export function createSchedulesController({ sendEvent, log = console.log }) {
         return {
             ...raw,
             id,
-            title: raw.title ?? "",
+            title: displayTitle,
             rrule: rruleText,
             startTime: displayInfo.startTime,
             recurrenceRule: displayInfo.recurrenceRule,
@@ -104,7 +128,7 @@ export function createSchedulesController({ sendEvent, log = console.log }) {
     const getAllSchedules = () => {
         const schedules = Array.from(state.schedules.values());
         
-        // Sort schedules: one-time first, then recurring
+        // Sort schedules: one-time first (by start time), then recurring (by title)
         return schedules.sort((a, b) => {
             const aIsOneTime = !a.rrule || a.rrule === "";
             const bIsOneTime = !b.rrule || b.rrule === "";
@@ -113,7 +137,19 @@ export function createSchedulesController({ sendEvent, log = console.log }) {
             if (aIsOneTime && !bIsOneTime) return -1;
             if (!aIsOneTime && bIsOneTime) return 1;
             
-            // Within same type, sort by title alphabetically
+            if (aIsOneTime && bIsOneTime) {
+                // For one-time schedules, sort by start_local (closest first)
+                const getStartTime = (schedule) => {
+                    if (!schedule.start_local) return 0;
+                    const startLocal = extractNullableTime(schedule.start_local);
+                    return startLocal ? new Date(startLocal).getTime() : 0;
+                };
+                const aStart = getStartTime(a);
+                const bStart = getStartTime(b);
+                return aStart - bStart;
+            }
+            
+            // For recurring schedules, sort by title alphabetically
             return a.title.localeCompare(b.title);
         });
     };

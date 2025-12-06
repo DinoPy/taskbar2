@@ -1,0 +1,97 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600&display=swap');
+
+* {
+	box-sizing: border-box;
+}
+
+body {
+	margin: 0;
+	padding: var(--spacing-xl);
+	font-family: 'Nunito', sans-serif;
+	color: var(--color-text-white);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 100%;
+	height: 100%;
+}
+
+.confirm-card {
+	background: var(--color-bg-root);
+	border-radius: 14px;
+	padding: calc(var(--spacing-lg) + 4px);
+	width: 100%;
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-md);
+	box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
+	border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.confirm-card h1 {
+	font-size: var(--font-size-3xl);
+	margin: 0;
+	color: var(--color-text-white);
+}
+
+.confirm-summary {
+	font-size: var(--font-size-md);
+	margin: 0;
+	color: rgba(255, 255, 255, 0.72);
+}
+
+.confirm-task-list {
+	margin: 0;
+	padding-left: 18px;
+	display: flex;
+	flex-direction: column;
+	gap: var(--spacing-xs);
+	font-size: var(--font-size-md);
+	color: rgba(255, 255, 255, 0.88);
+	max-height: 180px;
+	overflow-y: auto;
+}
+
+.confirm-task-list li {
+	list-style: disc;
+}
+
+.confirm-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: var(--spacing-sm);
+	margin-top: var(--spacing-md);
+}
+
+.confirm-button {
+	min-width: 108px;
+	padding: var(--spacing-sm) var(--spacing-md);
+	font-size: var(--font-size-md);
+	border-radius: 8px;
+	border: 1px solid transparent;
+	cursor: pointer;
+	transition: background-color 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+	color: var(--color-text-white);
+}
+
+.confirm-button.cancel {
+	background: rgba(255, 255, 255, 0.08);
+	border-color: rgba(255, 255, 255, 0.12);
+}
+
+.confirm-button.cancel:hover {
+	background: rgba(255, 255, 255, 0.18);
+}
+
+.confirm-button.danger {
+	background: var(--color-status-error);
+	color: var(--color-text-white);
+}
+
+.confirm-button.danger:hover {
+	background: oklch(0.58 0.18 27);
+}
+
+.confirm-button:active {
+	transform: scale(0.97);
+}

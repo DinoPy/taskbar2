@@ -8,13 +8,15 @@ export const createEditWindow = ({
 } = {}) => {
 	const cursorPosition = screen.getCursorScreenPoint();
 	const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
+	const windowWidth = 520;
+	const minWindowHeight = 360;
 	const editWindow = new BrowserWindow({
-		x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - 400 / 2),
+		x: activeDisplay.bounds.x + Math.floor(activeDisplay.bounds.width / 2 - windowWidth / 2),
 		y: activeDisplay.bounds.y + Math.floor(activeDisplay.bounds.height * 0.2),
-		width: 400,
-		minHeight: 200,
+		width: windowWidth,
+		minHeight: minWindowHeight,
 		minimizable: false,
-		resizable: false,
+		resizable: true,
 		modal: true,
 		alwaysOnTop: true,
 		show: false,
@@ -28,14 +30,13 @@ export const createEditWindow = ({
 		},
 	});
 
-	editWindow.setBackgroundColor = "#1b1d23";
+	editWindow.setBackgroundColor("#1b1d23");
 	editWindow.loadFile("src/html/child.html");
 
 	editWindow.webContents.once("dom-ready", async () => {
-		const height = await editWindow.webContents.executeJavaScript(
-			"document.body.offsetHeight"
-		);
-		editWindow.setSize(400, height + 27);
+		const height = await editWindow.webContents.executeJavaScript("document.body.offsetHeight");
+		editWindow.setSize(windowWidth, Math.max(minWindowHeight, height + 27));
+		editWindow.center();
 		editWindow.show();
 	});
 

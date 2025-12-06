@@ -17,6 +17,8 @@ import { createTaskSplitWindow as createTaskSplitBrowserWindow } from "./src/mai
 import { createKeyWindow as createKeyBrowserWindow } from "./src/main/windows/keyWindow.js";
 import { createNotificationsWindow as createNotificationsBrowserWindow } from "./src/main/windows/notificationsWindow.js";
 import { createReminderWindow as createReminderBrowserWindow } from "./src/main/windows/reminderWindow.js";
+import { createDeleteConfirmWindow as createDeleteConfirmBrowserWindow } from "./src/main/windows/deleteConfirmWindow.js";
+import { createCalendarWindow as createCalendarBrowserWindow } from "./src/main/windows/calendarWindow.js";
 import {
 	showMainContextMenu,
 	showTaskContextMenu,
@@ -25,6 +27,7 @@ import {
 import { createSocketHandlers } from "./src/main/socket/handlers.js";
 import { createNotificationsController } from "./src/main/controllers/notificationsController.js";
 import { createSchedulesController } from "./src/main/controllers/schedulesController.js";
+import { createCalendarController } from "./src/main/controllers/calendarController.js";
 
 const logDir = path.dirname(config.logFilePath);
 if (!fs.existsSync(logDir)) {
@@ -62,6 +65,7 @@ const ipc = ipcMain;
 const appState = {
 	isTimerRunning: true,
 	categories: [],
+	selectedCategories: [], // New: tracks which categories are selected for filtering
 	showAllTasks: false,
 	taskbarHeight: 60,
 	currentlySelectedScreenIndex: 0,
@@ -99,6 +103,8 @@ const windowManager = createWindowManager({
 	createKeyWindow: createKeyBrowserWindow,
 	createNotificationsWindow: createNotificationsBrowserWindow,
 	createReminderWindow: createReminderBrowserWindow,
+	createDeleteConfirmWindow: createDeleteConfirmBrowserWindow,
+	createCalendarWindow: createCalendarBrowserWindow,
 });
 
 const commandsController = createCommandsController({
@@ -110,6 +116,7 @@ const commandsController = createCommandsController({
 let tasksController;
 
 let win = null;
+let pendingDeleteTasks = [];
 
 const getTaskWindow = () => windowManager.getEditWindow();
 
@@ -130,6 +137,28 @@ const forwardToRenderer = (channel, payload) => {
 	}
 };
 
+const requestTaskDeletion = (tasks = []) => {
+	const normalized = (tasks ?? [])
+		.map((task) => ({
+			id: task?.id ?? task?.uuid ?? null,
+			title: task?.title ?? "",
+		}))
+		.filter((task) => task.id);
+
+	if (normalized.length === 0) {
+		return;
+	}
+
+	pendingDeleteTasks = normalized;
+
+	windowManager.openDeleteConfirmWindow({
+		tasks: pendingDeleteTasks,
+		onClose: () => {
+			pendingDeleteTasks = [];
+		},
+	});
+};
+
 const schedulesController = createSchedulesController({
 	sendEvent: (eventName, data) => sendEvent?.(eventName, data),
 	log: (...args) => console.log(...args),
@@ -146,6 +175,12 @@ const notificationsController = createNotificationsController({
 
 notificationsController.setMuted(appState.notificationsMuted);
 notificationsController.setReminderInterval(appState.notificationReminderIntervalMinutes);
+
+const calendarController = createCalendarController({
+	windowManager,
+	sendEvent: (eventName, data) => sendEvent?.(eventName, data),
+	schedulesController,
+});
 
 const scheduleCompletedTasksRefresh = () => {
 	setTimeout(() => {
@@ -225,19 +260,20 @@ const showMainMenu = () =>
 		win,
 		appState,
 		createCompletedTasksPopUp,
-	createCustomCommandsWindow,
-	createHelpWindow,
-	toggleAlwaysOnTop,
-	notificationReminderIntervalMinutes: appState.notificationReminderIntervalMinutes,
-	setNotificationReminderInterval: (minutes) => {
-		appState.notificationReminderIntervalMinutes = minutes;
-		notificationsController.setReminderInterval(minutes);
-	},
-	notificationsMuted: appState.notificationsMuted,
-	setNotificationsMuted: (value) => {
-		appState.notificationsMuted = Boolean(value);
-		notificationsController.setMuted(appState.notificationsMuted);
-	},
+		createCustomCommandsWindow,
+		createHelpWindow,
+		createCalendarWindow,
+		toggleAlwaysOnTop,
+		notificationReminderIntervalMinutes: appState.notificationReminderIntervalMinutes,
+		setNotificationReminderInterval: (minutes) => {
+			appState.notificationReminderIntervalMinutes = minutes;
+			notificationsController.setReminderInterval(minutes);
+		},
+		notificationsMuted: appState.notificationsMuted,
+		setNotificationsMuted: (value) => {
+			appState.notificationsMuted = Boolean(value);
+			notificationsController.setMuted(appState.notificationsMuted);
+		},
 	});
 
 const showTaskMenu = (task) =>
@@ -249,6 +285,7 @@ const showTaskMenu = (task) =>
 		openEditWindowForTask,
 		getTaskWindow,
 		createTaskSplitWindow,
+		requestTaskDeletion,
 	});
 
 const showLoginMenu = () =>
@@ -274,6 +311,7 @@ const {
 	getTaskbarWindow: () => windowManager.getTaskbarWindow(),
 	notificationsController,
 	schedulesController,
+	calendarController,
 });
 
 socketClient = createSocketClient({
@@ -313,7 +351,9 @@ registerIpcHandlers({
 	toggleAlwaysOnTop,
 	notificationsController,
 	schedulesController,
+	calendarController,
 	log: (...args) => console.log(...args),
+	requestTaskDeletion,
 });
 
 const getIsTimerRunning = () => appState.isTimerRunning;
@@ -373,6 +413,8 @@ app.whenReady().then(async () => {
 		windowManager.getAllCommandWindows().forEach((commandWin) => {
 			commandWin.webContents.openDevTools();
 		});
+		const calendarWindow = createCalendarWindow();
+		calendarWindow?.webContents.openDevTools();
 	});
 	globalShortcut.register("CommandOrControl+Shift+e", () => {
 		win?.webContents.send("request-current-task-data-for-edit");
@@ -563,6 +605,14 @@ function createCustomCommandsWindow() {
 		});
 		syncCustomCommandsWindow();
 		return window;
+	} catch (e) {
+		console.error(e);
+	}
+}
+
+function createCalendarWindow() {
+	try {
+		return windowManager.openCalendarWindow();
 	} catch (e) {
 		console.error(e);
 	}

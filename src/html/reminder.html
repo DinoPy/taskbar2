@@ -62,13 +62,21 @@
 			<section class="step" data-step="lead">
 				<p class="step-label">How long before should the task appear?</p>
 				<div class="lead-inputs">
-					<label class="lead-field">
-						<input type="number" min="0" max="168" step="1" value="0" data-input="lead-hours" inputmode="numeric" />
-						<span class="suffix">hours</span>
-					</label>
-					<label class="lead-field">
-						<input type="number" min="0" max="59" step="1" value="15" data-input="lead-minutes" inputmode="numeric" />
-						<span class="suffix">minutes</span>
+					<div class="lead-row">
+						<label class="lead-field">
+							<input type="number" min="0" max="168" step="1" value="0" data-input="lead-hours" inputmode="numeric" />
+							<span class="suffix">hours</span>
+						</label>
+						<label class="lead-field">
+							<input type="number" min="0" max="59" step="1" value="15" data-input="lead-minutes" inputmode="numeric" />
+							<span class="suffix">minutes</span>
+						</label>
+					</div>
+					<label class="lead-field category-field">
+						<select data-input="category" class="category-select">
+							<!-- Categories will be populated dynamically -->
+						</select>
+						<span class="suffix">category</span>
 					</label>
 				</div>
 				<p class="step-hint">Press Enter when you are happy with the lead time.</p>

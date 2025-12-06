@@ -31,20 +31,25 @@ const normalizeNotification = (raw) => {
 	const createdAt = parseTimestamp(raw.created_at ?? raw.createdAt) ?? Date.now();
 	const updatedAt = parseTimestamp(raw.updated_at ?? raw.updatedAt ?? raw.last_modified_at) ?? createdAt;
 	const lastModifiedAt = parseTimestamp(raw.last_modified_at) ?? updatedAt;
-	const snoozedUntil = parseTimestamp(raw.snoozed_until ?? raw.snoozedUntil);
+	const snoozedUntil = parseTimestamp(
+		raw.snooze_until ?? raw.snoozed_until ?? raw.snoozedUntil
+	);
 	const seenAt = parseTimestamp(raw.seen_at ?? raw.seenAt);
 	const archivedAt = parseTimestamp(raw.archived_at ?? raw.archivedAt);
 
 	const status = raw.status ?? (seenAt ? "seen" : "unseen");
 
-	const description = extractNullableString(raw.description) || extractNullableString(raw.body) || "";
+	const description =
+		extractNullableString(raw.description) ||
+		extractNullableString(raw.body) ||
+		"";
 	const actionUrl = extractNullableString(raw.action_url);
 	const actionText = extractNullableString(raw.action_text);
 
 	return {
 		...raw,
 		id,
-		title: raw.payload.title ??raw.title ?? raw.payload?.title ?? description ?? "",
+		title: raw.title ?? description ?? "",
 		description,
 		body: description,
 		status,
@@ -112,37 +117,46 @@ export function createNotificationsController({
 		});
 	};
 
-	const upsertNotifications = (list = []) => {
-		list.forEach((item) => {
-			const normalized = normalizeNotification(item);
-			if (!normalized) return;
-			state.notifications.set(normalized.id, normalized);
-		});
-		trimNotifications();
-	};
+		const upsertNotifications = (list = []) => {
+			list.forEach((item) => {
+				const normalized = normalizeNotification(item);
+				if (!normalized) return;
+				const existing = state.notifications.get(normalized.id);
+				const merged = existing && !normalized.snoozedUntil && existing.snoozedUntil
+					? { ...normalized, snoozedUntil: existing.snoozedUntil }
+					: normalized;
+				state.notifications.set(normalized.id, merged);
+			});
+			trimNotifications();
+		};
 
 	const getSnapshot = () => {
 		const sorted = getSortedNotifications();
 		const now = Date.now();
-		
+
 		// Helper to check if notification is currently snoozed
 		const isCurrentlySnoozed = (notification) => {
 			if (!notification.snoozedUntil) return false;
 			return now < notification.snoozedUntil;
 		};
-		
+
 		// Filter out snoozed notifications from unseen list
-		const unseen = sorted.filter((notification) => 
+		const unseen = sorted.filter((notification) =>
 			notification.status === "unseen" && !isCurrentlySnoozed(notification)
 		);
-		
-		// Filter out snoozed notifications from history
-		const historySource = sorted.filter((notification) =>
-			notification.status !== "unseen" && 
-			notification.status !== "archived" &&
-			!isCurrentlySnoozed(notification)
-		);
-		
+
+		// Include snoozed notifications in history even if they were previously unseen
+		const historySource = sorted.filter((notification) => {
+			const isSnoozed = isCurrentlySnoozed(notification);
+			if (notification.status === "archived") {
+				return false;
+			}
+			if (notification.status === "unseen" && !isSnoozed) {
+				return false;
+			}
+			return true;
+		});
+
 		const history = state.showHistory
 			? historySource.slice(0, state.historyVisibleCount)
 			: [];
@@ -513,7 +527,7 @@ export function createNotificationsController({
 	};
 
 	const requestSeenHistory = () => {
-		if (state.historyFetchInProgress || !state.historyHasMore) return;
+		if (state.historyFetchInProgress) return;
 		state.historyFetchInProgress = true;
 		const seenCount = getSortedNotifications().filter((notification) =>
 			notification.status !== "unseen" && notification.status !== "archived"
@@ -673,6 +687,7 @@ export function createNotificationsController({
 		setHistoryVisibility,
 		loadMoreHistory,
 		toggleWindow,
+		showWindow,
 		setWindowHeight,
 		repositionWindow,
 		markWindowHidden,

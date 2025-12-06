@@ -11,7 +11,7 @@ export const createKeyWindow = ({ url, onClose } = {}) => {
 		minimizable: true,
 		resizable: true,
 		show: true,
-		frame: true,
+		frame: false,
 		webPreferences: {
 			webgl: true,
 			nodeIntegration: true,

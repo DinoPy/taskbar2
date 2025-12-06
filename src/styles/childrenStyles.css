@@ -11,16 +11,17 @@ p {
 
 body {
 	margin: 0;
-	height: fit-content;
+	min-height: 100vh;
 	font-family: 'Nunito', sans-serif;
 
 	color: var(--color-text-secondary);
 	background-color: transparent;
 	overflow: hidden;
-
-	/* display: flex;
+	-webkit-app-region: drag;
+	display: flex;
 	flex-direction: column;
-	justify-content: space-between; */
+	align-items: stretch;
+
 }
 
 input,
@@ -39,6 +40,13 @@ select {
 	box-sizing: border-box;
 	vertical-align: middle;
 	height: var(--size-input-height);
+	-webkit-app-region: no-drag;
+}
+
+textarea {
+	min-height: 160px;
+	height: 160px;
+	resize: vertical;
 }
 
 select:focus,
@@ -72,6 +80,7 @@ textarea:focus {
 
 .time-input-container input {
     width: 60px;
+    -webkit-app-region: no-drag;
 }
 
 .time-input-container span {
@@ -110,10 +119,12 @@ textarea:focus {
 main {
 	padding: 10px 15px;
 	background-color: var(--color-primary);
-	height: 100%;
+	flex: 1;
+	min-height: 100%;
 	width: 100%;
 	border: var(--border-width) solid var(--color-primary-border);
 	border-radius: 10px;
+	-webkit-app-region: drag;
 
 	display: flex;
 	flex-direction: column;
@@ -139,6 +150,7 @@ main {
 	transition: all 0.3s;
 	cursor: pointer;
 	margin: 0 3px;
+	-webkit-app-region: no-drag;
 }
 
 .button:hover {
@@ -163,6 +175,7 @@ main {
 	margin: 10px;
 	cursor: pointer;
 	transition: background-color 0.2s ease-out;
+	-webkit-app-region: no-drag;
 }
 
 .submitBtn {
@@ -193,4 +206,9 @@ main {
 	background-color: var(--color-primary);
 	border-radius: 5px;
 	border: var(--border-width) solid var(--color-primary-border);
+	-webkit-app-region: no-drag;
+}
+
+dialog {
+	-webkit-app-region: no-drag;
 }

@@ -26,6 +26,8 @@ export let isSocketConnected = false;
 let isTimerRunning = true;
 let lastCategorySelected = 'none';
 let showAllTasks = false;
+let selectedCategories = []; // Empty means show all categories
+let visualTaskOrder = []; // Stores task IDs in their visual display order
 
 function updateNotificationsBadge(count) {
 	if (!notificationsBadge || !notificationsBtn) return;
@@ -152,7 +154,7 @@ function createTaskFromDataList(t) {
 		isActive: t.is_active,
 		toggledFocusAt: t.toggled_at.Int64,
 		priority: t.priority.Int32,
-		due_at: t.due_at.Time,
+		due_at: t.due_at.Time && t.due_at.Time !== "0001-01-01T00:00:00Z" ? t.due_at.Time : null,
 		show_before_due_time: t.show_before_due_time.Int32,
 		last_modified_at: t.last_modified_at.Int64,
 		completedTasks,
@@ -201,7 +203,7 @@ ipc.on("resume-tasks", (e, data) => {
 	}
 
 	// Apply visibility filter to all tasks after resume
-	updateTaskVisibility();
+	renderTasksByCategory();
 	tasks_compl_or_del_while_nocon = [];
 })
 
@@ -217,8 +219,7 @@ ipc.on("refresh_tasks", (e, data) => {
 	}
 
 	// Apply visibility filter to all tasks after refresh
-	updateTaskVisibility();
-	taskIndexUpdater(tasks);
+	renderTasksByCategory();
 })
 
 // -------------- FROM RELATED APP ----------------- //
@@ -266,7 +267,7 @@ ipc.on("new_task_from_relative", (e, data) => {
 		console.log("Showing duplicated task");
 	}
 	
-	taskIndexUpdater(tasks);
+	renderTasksByCategory();
 })
 
 
@@ -291,20 +292,41 @@ ipc.on("related_task_deleted", (e, data) => {
 })
 
 ipc.on("related_task_edited", (e, data) => {
+	if (!tasks.hasOwnProperty(data.id)) {
+		return; // Task doesn't exist, skip
+	}
+	
 	tasks[data.id].updateTitle(data.title);
 	tasks[data.id].updateDescription(data.description);
 	tasks[data.id].updateCategory(data.category, true);
 	tasks[data.id].updateTags(data.tags);
 	
-	// Update visibility after property changes
-	const shouldShow = shouldShowTask(tasks[data.id]);
-	if (shouldShow) {
-		tasks[data.id].show();
-	} else {
-		tasks[data.id].hide();
+	// Extract and update priority if valid
+	if (data.priority !== undefined) {
+		const priority = data.priority?.Int32 !== undefined && data.priority?.Valid 
+			? data.priority.Int32 
+			: (typeof data.priority === 'number' ? data.priority : null);
+		tasks[data.id].updatePriority(priority, true);
 	}
 	
-	taskIndexUpdater(tasks)
+	// Extract and update due_at if valid
+	if (data.due_at !== undefined) {
+		const dueAt = data.due_at?.Time && data.due_at?.Valid && data.due_at.Time !== "0001-01-01T00:00:00Z"
+			? data.due_at.Time
+			: (typeof data.due_at === 'string' ? data.due_at : null);
+		tasks[data.id].updateDueAt(dueAt, true);
+	}
+	
+	// Extract and update show_before_due_time - match pattern from createTaskFromDataList and new_task_from_relative
+	if (data.show_before_due_time !== undefined) {
+		const showBefore = data.show_before_due_time?.Int32 !== undefined
+			? data.show_before_due_time.Int32
+			: (typeof data.show_before_due_time === 'number' ? data.show_before_due_time : 0);
+		tasks[data.id].updateShowBeforeDueTime(showBefore, true);
+	}
+	
+	// Update visibility after property changes
+	renderTasksByCategory();
 })
 
 // ---------- CRUD HELPERS ----------- //
@@ -339,12 +361,7 @@ ipc.on('msg-redirected-to-parent', (e, data) => {
 		});
 		
 		// Update visibility after property changes
-		const shouldShow = shouldShowTask(tasks[data.id]);
-		if (shouldShow) {
-			tasks[data.id].show();
-		} else {
-			tasks[data.id].hide();
-		}
+		renderTasksByCategory();
 	} else {
 		ipc.send("task_edit", {
 			category: data.category,
@@ -365,7 +382,7 @@ ipc.on('deleteTask', (e, data) => {
 	tasks[data.id].destroySelfFromDOM();
 	ipc.send("task_delete", { id: tasks[data.id].id });
 	delete tasks[data.id];
-	taskIndexUpdater(tasks);
+	renderTasksByCategory();
 
 	if (!isSocketConnected)
 		tasks_compl_or_del_while_nocon.push(data.id);
@@ -379,17 +396,23 @@ ipc.on('completeTask', (e, data) => {
 
 	if (!isSocketConnected)
 		tasks_compl_or_del_while_nocon.push(data.id);
-	taskIndexUpdater(tasks);
+	renderTasksByCategory();
 });
 
 ipc.on('update-task-category', (e, data) => {
 	tasks[data.id].updateCategory(data.newCategory);
 	lastCategorySelected = data.newCategory;
+	renderTasksByCategory();
 });
 
 ipc.on('toggle-show-all-tasks', (e, data) => {
 	showAllTasks = data.showAllTasks;
 	updateTaskVisibility();
+});
+
+ipc.on('update-category-filter', (e, data) => {
+	selectedCategories = data.selectedCategories || [];
+	renderTasksByCategory();
 });
 
 // Function to check if a task should be visible based on due date
@@ -420,18 +443,74 @@ function shouldShowTask(task) {
 	return shouldShow;
 }
 
+// Function to render tasks grouped by category
+export function renderTasksByCategory() {
+	const taskContainer = document.querySelector('.taskContainer');
+	taskContainer.innerHTML = ''; // Clear existing tasks
+	
+	// Determine which categories to show
+	const categoriesToShow = selectedCategories.length === 0 
+		? [...new Set(Object.values(tasks).map(t => t.category))] 
+		: selectedCategories;
+	
+	// Sort categories alphabetically
+	categoriesToShow.sort();
+	
+	categoriesToShow.forEach((category, categoryIndex) => {
+		// Get tasks for this category
+		const categoryTasks = Object.values(tasks).filter(
+			task => task.category === category && shouldShowTask(task)
+		);
+		
+		// Only proceed if there are visible tasks in this category
+		if (categoryTasks.length === 0) return;
+		
+		// Add category label before tasks (only if we have tasks to show)
+		const categoryLabel = document.createElement('div');
+		categoryLabel.className = 'category-separator';
+		categoryLabel.textContent = category;
+		taskContainer.appendChild(categoryLabel);
+		
+		// Sort tasks by due date urgency (closest due date first)
+		categoryTasks.sort((a, b) => {
+			// Tasks without due dates go last
+			const aDue = a.due_at && a.due_at !== "0001-01-01T00:00:00Z" 
+				? new Date(a.due_at).getTime() 
+				: Infinity;
+			const bDue = b.due_at && b.due_at !== "0001-01-01T00:00:00Z"
+				? new Date(b.due_at).getTime()
+				: Infinity;
+			return aDue - bDue;
+		});
+		
+		// Create category group wrapper
+		const groupWrapper = document.createElement('div');
+		groupWrapper.className = 'category-group';
+		groupWrapper.dataset.category = category;
+		
+		// Add tasks to the group
+		categoryTasks.forEach(task => {
+			task.show(); // Explicitly show the task
+			groupWrapper.appendChild(task.taskEl);
+		});
+		
+		taskContainer.appendChild(groupWrapper);
+	});
+	
+	// Track the visual order of tasks for command execution
+	visualTaskOrder = [];
+	const allVisibleTasks = Array.from(taskContainer.querySelectorAll('.task'));
+	allVisibleTasks.forEach(taskEl => {
+		visualTaskOrder.push(taskEl.id);
+	});
+
+	// Update task indices
+	taskIndexUpdater(tasks, visualTaskOrder);
+}
+
 // Function to update task visibility based on the showAllTasks flag
 function updateTaskVisibility() {
-	for (let id in tasks) {
-		const task = tasks[id];
-		const shouldShow = shouldShowTask(task);
-		
-		if (shouldShow) {
-			task.show();
-		} else {
-			task.hide();
-		}
-	}
+	renderTasksByCategory();
 }
 
 // Timer to check task visibility every 30 seconds
@@ -477,15 +556,16 @@ ipc.on("complete_current_task", () => {
 		if (!tasks[t].isFocused)
 			continue;
 
-		tasks[t].removeFocus();
+		tasks[t].removeFocus(true);
 		tasks[t].addToCompletedTaskList();
 		tasks[t].destroySelfFromDOM();
 		delete tasks[t];
 
-		taskIndexUpdater(tasks);
-
 		if (!isSocketConnected)
-			tasks_compl_or_del_while_nocon.push(data.id);
+			tasks_compl_or_del_while_nocon.push(t);
+		
+		renderTasksByCategory();
+		break;
 	}
 
 })
@@ -694,10 +774,7 @@ function addTask(title) {
 	tasks[newId].addTaskListeners();
 	
 	// Apply visibility filter to new task
-	const shouldShow = shouldShowTask(tasks[newId]);
-	if (!shouldShow) {
-		tasks[newId].hide();
-	}
+	renderTasksByCategory();
 	
 	return newId
 }
@@ -782,6 +859,11 @@ const parseCommand = (input) => {
 		return { type: 'always_on_top' };
 	}
 
+	// Calendar command
+	if (trimmed === 'calendar') {
+		return { type: 'open_calendar' };
+	}
+
 	if (trimmed === 'notif') {
 		return { type: 'toggle_notifications' };
 	}
@@ -816,7 +898,7 @@ const parseCommand = (input) => {
 };
 
 const executeCommand = (command) => {
-	const taskKeys = Object.keys(tasks);
+	const taskKeys = visualTaskOrder.length > 0 ? visualTaskOrder : Object.keys(tasks);
 	
 	switch (command.type) {
 		case 'switch':
@@ -865,8 +947,13 @@ const executeCommand = (command) => {
 				const taskData = tasks[taskId];
 				if (taskData) {
 					console.log(`Command: Deleting task ${command.index} (ID: ${taskId})`);
-					ipc.send("delete-task", { id: taskId });
-					return { success: true, message: `Deleting task ${command.index} (${command.confirmation} confirmations)` };
+					ipc.send("request-task-delete", {
+						tasks: [{
+							id: taskId,
+							title: taskData.title,
+						}],
+					});
+					return { success: true, message: `Confirm deletion for task ${command.index}` };
 				}
 				return { success: false, message: `Task ${command.index} not found` };
 			}
@@ -933,6 +1020,10 @@ const executeCommand = (command) => {
 		case 'open_reminder':
 			ipc.send('open-reminder-window');
 			return { success: true, message: "Opening reminder window" };
+
+		case 'open_calendar':
+			ipc.send('open-calendar-window');
+			return { success: true, message: "Opening calendar window" };
 			
 		case 'invalid':
 			return { success: false, message: `Invalid command: ${command.input}` };
@@ -960,12 +1051,16 @@ const getCommandSuggestions = (input) => {
 		{ command: 'notif', description: 'toggle notifications window' },
 		{ command: 'remind', description: 'create reminder/task' },
 		{ command: 'sw0d', description: 'screen 0 down' },
-		{ command: 'sw0u', description: 'screen 0 up' }
+		{ command: 'sw0u', description: 'screen 0 up' },
+		{ command: 'calendar', description: 'open calendar window' }
 	];
 	}
 
 	if ('notif'.startsWith(trimmed)) {
 		suggestions.push({ command: 'notif', description: 'toggle notifications window' });
+	}
+	if ('calendar'.startsWith(trimmed)) {
+		suggestions.push({ command: 'calendar', description: 'open calendar window' });
 	}
 
 	// Filter commands that start with the input
@@ -980,7 +1075,8 @@ const getCommandSuggestions = (input) => {
 		{ command: 'aot', description: 'toggle always on top', pattern: /^aot$/ },
 		{ command: 'sp', description: 'split task', pattern: /^sp(\d+)$/ },
 		{ command: 'sw', description: 'switch screen', pattern: /^sw(\d+)([du])$/ },
-		{ command: 'remind', description: 'create reminder/task', pattern: /^remind$/ }
+		{ command: 'remind', description: 'create reminder/task', pattern: /^remind$/ },
+		{ command: 'calendar', description: 'open calendar window', pattern: /^calendar$/ }
 	];
 	
 	// Handle all command types with consistent logic
@@ -1043,6 +1139,8 @@ const getCommandSuggestions = (input) => {
 		suggestions.push({ command: 'aot', description: 'toggle always on top' });
 	} else if (trimmed === 'remind') {
 		suggestions.push({ command: 'remind', description: 'create reminder/task' });
+	} else if (trimmed === 'calendar') {
+		suggestions.push({ command: 'calendar', description: 'open calendar window' });
 	} else {
 		// Find matching commands for other cases
 		for (const cmd of allCommands) {
@@ -1075,6 +1173,8 @@ const getCommandSuggestions = (input) => {
 						suggestions.push({ command: trimmed, description: 'toggle always on top' });
 					} else if (trimmed === 'remind') {
 						suggestions.push({ command: trimmed, description: 'create reminder/task' });
+					} else if (trimmed === 'calendar') {
+						suggestions.push({ command: trimmed, description: 'open calendar window' });
 					}
 				} else {
 					// Partial match - collect command names only
@@ -1096,6 +1196,8 @@ const getCommandSuggestions = (input) => {
 						suggestions.push({ command: 'aot', description: 'toggle always on top' });
 					} else if (cmd.command === 'remind') {
 						suggestions.push({ command: 'remind', description: 'create reminder/task' });
+					} else if (cmd.command === 'calendar') {
+						suggestions.push({ command: 'calendar', description: 'open calendar window' });
 					} else if (cmd.command === 'sp') {
 						suggestions.push({ command: 'sp1, sp2, sp3...', description: 'split task' });
 					} else if (cmd.command === 'sw') {
@@ -1144,7 +1246,7 @@ const updateCommandHelp = (input) => {
 const handleTaskChangeSearch = () => {
 	searchContainer.style.display = "flex";
 	searchInput.focus();
-	searchInput.placeholder = "s1, e2, c3, d4, ddd5, ec, sat, sw0d, remind...";
+	searchInput.placeholder = "s1, e2, c3, d4, ddd5, ec, sat, sw0d, remind, calendar...";
 
 	const commandHelp = document.querySelector('.commandHelp');
 	
@@ -1176,7 +1278,7 @@ const handleTaskChangeSearch = () => {
 		setTimeout(() => {
 			searchInput.blur();
 			searchInput.value = "";
-			searchInput.placeholder = "s1, e2, c3, d4, ddd5, ec, sat, sw0d, remind...";
+			searchInput.placeholder = "s1, e2, c3, d4, ddd5, ec, sat, sw0d, remind, calendar...";
 			searchInput.style.backgroundColor = '';
 			searchInput.style.color = '';
 			searchContainer.style.display = "none";

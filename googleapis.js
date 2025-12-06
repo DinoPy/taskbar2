@@ -2,12 +2,23 @@ import { google } from "googleapis";
 import fs from "fs";
 import path from "path";
 import { config } from "./src/main/config.js";
+
+// Load build-time environment variables
+let buildEnv = {};
+try {
+  const { buildEnv: env } = await import('./src/main/build-env.js');
+  buildEnv = env;
+} catch (e) {
+  // Build env not available, will use process.env
+  console.log('Build environment not available, using process.env');
+}
+
 const userInfo = {};
 
 const getSecretGoogleCreds = () => {
     const {
-        GOOGLE_CLIENT_ID,
-        GOOGLE_CLIENT_SECRET,
+        GOOGLE_CLIENT_ID = buildEnv.GOOGLE_CLIENT_ID,
+        GOOGLE_CLIENT_SECRET = buildEnv.GOOGLE_CLIENT_SECRET,
     } = process.env;
 
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET) {

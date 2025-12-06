@@ -26,14 +26,15 @@
 
 body {
 	margin: 0;
-	padding: 32px 24px;
+	padding: 80px 52px;
 	background: transparent;
 	font-family: var(--font);
 	color: var(--text);
+	overflow: hidden;
 }
 
 .reminder-shell {
-	width: min(560px, 100%);
+	width: min(520px, 100%);
 	margin: 0 auto;
 	display: flex;
 	flex-direction: column;
@@ -175,7 +176,8 @@ body {
 }
 
 input[type="text"],
-input[type="number"] {
+input[type="number"],
+select {
 	width: 100%;
 	border-radius: 12px;
 	border: 1px solid var(--input-border);
@@ -189,15 +191,36 @@ input[type="number"] {
 }
 
 input[type="text"]:focus,
-input[type="number"]:focus {
+input[type="number"]:focus,
+select:focus {
 	border-color: var(--input-border-focus);
 	box-shadow: 0 0 0 3px rgba(122, 155, 255, 0.25);
 }
 
 input[type="text"].invalid,
-input[type="number"].invalid {
+input[type="number"].invalid,
+select.invalid {
 	border-color: var(--danger);
 	box-shadow: 0 0 0 2px rgba(255, 111, 125, 0.35);
+}
+
+.category-field {
+	background: rgba(24, 28, 40, 0.82);
+}
+
+.category-select {
+	background: transparent;
+	border: none;
+	padding: 0;
+	width: auto;
+	flex: 1;
+}
+
+.category-select option {
+	background: var(--input-bg);
+	color: var(--text);
+	max-height: 200px;
+	overflow-y: auto;
 }
 
 .type-options {
@@ -324,6 +347,13 @@ input[type="number"].invalid {
 }
 
 .lead-inputs {
+	display: flex;
+	flex-direction: column;
+	gap: 12px;
+	align-items: stretch;
+}
+
+.lead-row {
 	display: flex;
 	gap: 12px;
 	align-items: center;

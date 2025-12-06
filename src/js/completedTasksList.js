@@ -162,7 +162,7 @@ const createTaskListElements = (data, tableBody) => {
 					ipc.send("toggle_given_task_edit", {
 						id: t.id,
 						title: t.title,
-						description: t.descripiton,
+						description: t.description,
 						category: t.category,
 						tags: t.tags,
 					})
@@ -178,7 +178,7 @@ const createTaskListElements = (data, tableBody) => {
 					ipc.send("duplicate_completed_task", {
 						id: t.id,
 						title: t.title,
-						description: t.descripiton,
+						description: t.description,
 						category: t.category,
 						tags: t.tags,
 						duration: t.duration
@@ -195,7 +195,7 @@ const createTaskListElements = (data, tableBody) => {
 					ipc.send("split_completed_task", {
 						id: t.id,
 						title: t.title,
-						description: t.descripiton,
+						description: t.description,
 						category: t.category,
 						tags: t.tags,
 						duration: t.duration
