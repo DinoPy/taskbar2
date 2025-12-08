@@ -37,6 +37,8 @@ export function createReminderWindow({
 		transparent: true,
 		skipTaskbar: true,
 		alwaysOnTop: true,
+		roundedCorners: false,
+		hasShadow: false,
 		// vibrancy: process.platform === "darwin" ? "popover" : undefined,
 		// visualEffectState: "followWindow",
 		title: "Create Reminder",

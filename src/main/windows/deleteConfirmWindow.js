@@ -1,4 +1,4 @@
-import { BrowserWindow, screen } from "electron";
+import { BrowserWindow, screen, ipcMain } from "electron";
 
 const WINDOW_WIDTH = 640;
 const WINDOW_HEIGHT = 320;
@@ -21,6 +21,7 @@ export function createDeleteConfirmWindow({
 		alwaysOnTop: true,
 		show: false,
 		frame: false,
+		hasShadow: false,
 		transparent: true,
 		skipTaskbar: true,
 		webPreferences: {
@@ -33,9 +34,17 @@ export function createDeleteConfirmWindow({
 	win.loadFile("src/html/deleteConfirm.html");
 	win.setMenuBarVisibility(false);
 
+	const handleResizeRequest = (_, payload) => {
+		if (!payload?.height) return;
+		const targetHeight = Math.min(Math.max(payload.height, 240), 640);
+		win.setSize(WINDOW_WIDTH, targetHeight);
+	};
+
 	const sendData = () => {
 		win.webContents.send("delete-confirm-data", { tasks });
 	};
+
+	ipcMain.on("delete-confirm-resize", handleResizeRequest);
 
 	win.webContents.once("did-finish-load", () => {
 		sendData();
@@ -44,7 +53,8 @@ export function createDeleteConfirmWindow({
 	});
 
 	win.on("closed", () => {
-		onClose?.();
+		ipcMain.removeListener("delete-confirm-resize", handleResizeRequest);
+ 		onClose?.();
 	});
 
 	return win;

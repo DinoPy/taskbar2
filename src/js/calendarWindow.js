@@ -579,6 +579,9 @@ const createEventsFromDates = (dates, schedule) => {
 	const title = resolveScheduleTitle(schedule);
 	// Default duration 1h
 	const durationMinutes = 60;
+	const rawKind =
+		(schedule?.kind ?? schedule?.Kind ?? schedule?.type ?? schedule?.Type ?? "").toString().toLowerCase() ||
+		null;
 
 	return dates.map((date) => ({
 		id: `${schedule?.id ?? "unnamed"}-${date.getTime()}`,
@@ -589,6 +592,7 @@ const createEventsFromDates = (dates, schedule) => {
 		}),
 		schedule,
 		type: "schedule",
+		scheduleKind: rawKind,
 		timestamp: date.getTime(),
 		start: date,
 		duration: durationMinutes
@@ -701,7 +705,13 @@ function renderEvents(eventsByDate) {
 			const startMin = eventItem.start.getMinutes();
 			const top = (startHour + startMin / 60) * SLOT_HEIGHT;
 			const baseHeight = (eventItem.duration / 60) * SLOT_HEIGHT;
-			const height = eventItem.type === "reminder" ? Math.max(14, Math.min(baseHeight, 20)) : baseHeight;
+			const isReminderScheduleEvent =
+				eventItem.type === "schedule" &&
+				(eventItem.scheduleKind ?? "").toString().toLowerCase() === "reminder";
+			const height =
+				eventItem.type === "reminder" || isReminderScheduleEvent
+					? Math.max(14, Math.min(baseHeight, 20))
+					: baseHeight;
 
 			el.style.top = `${top}px`;
 			el.style.height = `${height}px`;

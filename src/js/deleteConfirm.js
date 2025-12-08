@@ -14,10 +14,12 @@ const renderTasks = (tasks = []) => {
 		summaryEl.textContent = "No tasks selected for deletion.";
 		listEl.innerHTML = "";
 		confirmBtn.disabled = true;
+		confirmBtn.blur();
 		return;
 	}
 
 	confirmBtn.disabled = false;
+	confirmBtn.focus({ preventScroll: true });
 
 	if (currentTasks.length === 1) {
 		summaryEl.textContent = `You're about to delete "${currentTasks[0].title || "Untitled task"}".`;
@@ -31,6 +33,12 @@ const renderTasks = (tasks = []) => {
 		item.textContent = task.title || `Task ${task.id}`;
 		listEl.appendChild(item);
 	});
+	adjustWindowSize();
+};
+
+const adjustWindowSize = () => {
+	const height = document.documentElement.scrollHeight + 24;
+	ipcRenderer.send("delete-confirm-resize", { height });
 };
 
 ipcRenderer.on("delete-confirm-data", (_event, payload) => {

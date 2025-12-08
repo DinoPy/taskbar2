@@ -130,7 +130,7 @@ export class Task {
         noActiveTaskWarning,
         category,
         isActive = false,
-        description = "no description",
+        description = "",
         tags = [],
         duration = 0,
         toggledFocusAt = 0,
@@ -509,7 +509,7 @@ export class Task {
         };
 
         formatTask (type, isCompleted) {
-            const formatedDescription = '"' + this.description.replaceAll(',', '') + '"';
+        const formatedDescription = this.description ?? "";
             const formatedCompletedAt = new Date().toISOString();
             const formatedDuration =
                 this.formatTaskDuration(Math.ceil(this.duration / 1000));

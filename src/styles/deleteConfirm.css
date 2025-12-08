@@ -95,3 +95,9 @@ body {
 .confirm-button:active {
 	transform: scale(0.97);
 }
+
+.confirm-button:focus-visible {
+	outline: 2px solid var(--color-status-error);
+	outline-offset: 3px;
+	box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+}

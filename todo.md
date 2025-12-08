@@ -14,9 +14,9 @@
 
 # EDIT
     ## Incomplete
+    ## Completed
         - The description window adds a double quotation mark (") for and removes the quotations and commas within, check if this is necessary and remove if not. We don't want the quotations keep showing.
         - Update the default description as well, it can be an empty string.
-    ## Completed
 
 # DELETE
     ## Incomplete
