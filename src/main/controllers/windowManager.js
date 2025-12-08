@@ -10,6 +10,7 @@ export function createWindowManager({
 	createNotificationsWindow,
 	createReminderWindow,
 	createDeleteConfirmWindow,
+	createCompletionConfirmWindow,
 	createCalendarWindow,
 }) {
 	const state = {
@@ -22,6 +23,7 @@ export function createWindowManager({
 		kenban: null,
 		notifications: null,
 		reminder: null,
+		completion: null,
 		deleteConfirm: null,
 		calendar: null,
 		commandWindows: new Map(),
@@ -47,6 +49,27 @@ export function createWindowManager({
 				state.taskbar = null;
 			});
 			return state.taskbar;
+		},
+
+		openCompletionConfirmWindow(options = {}) {
+			if (state.completion && !state.completion.isDestroyed()) {
+				state.completion.focus();
+				return state.completion;
+			}
+			state.completion = createCompletionConfirmWindow({
+				...options,
+				onClose: () => {
+					state.completion = null;
+					options?.onClose?.();
+				},
+			});
+			return state.completion;
+		},
+
+		closeCompletionConfirmWindow() {
+			if (state.completion && !state.completion.isDestroyed()) {
+				state.completion.close();
+			}
 		},
 
 		getTaskbarWindow() {
@@ -104,6 +127,10 @@ export function createWindowManager({
 
 		getCompletedTasksWindow() {
 			return state.completed;
+		},
+
+		getCompletionConfirmWindow() {
+			return state.completion;
 		},
 
 		openHelpWindow() {

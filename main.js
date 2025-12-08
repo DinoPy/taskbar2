@@ -19,6 +19,7 @@ import { createNotificationsWindow as createNotificationsBrowserWindow } from ".
 import { createReminderWindow as createReminderBrowserWindow } from "./src/main/windows/reminderWindow.js";
 import { createDeleteConfirmWindow as createDeleteConfirmBrowserWindow } from "./src/main/windows/deleteConfirmWindow.js";
 import { createCalendarWindow as createCalendarBrowserWindow } from "./src/main/windows/calendarWindow.js";
+import { createCompletionConfirmWindow as createCompletionConfirmBrowserWindow } from "./src/main/windows/completionConfirmWindow.js";
 import {
 	showMainContextMenu,
 	showTaskContextMenu,
@@ -81,6 +82,7 @@ const appState = {
 	},
 	notificationReminderIntervalMinutes: 0,
 	notificationsMuted: false,
+	confirmCompletionBeforeComplete: true,
 };
 
 app.setName("Task yourself");
@@ -104,6 +106,7 @@ const windowManager = createWindowManager({
 	createNotificationsWindow: createNotificationsBrowserWindow,
 	createReminderWindow: createReminderBrowserWindow,
 	createDeleteConfirmWindow: createDeleteConfirmBrowserWindow,
+	createCompletionConfirmWindow: createCompletionConfirmBrowserWindow,
 	createCalendarWindow: createCalendarBrowserWindow,
 });
 
@@ -117,6 +120,7 @@ let tasksController;
 
 let win = null;
 let pendingDeleteTasks = [];
+let pendingCompletionTask = null;
 
 const getTaskWindow = () => windowManager.getEditWindow();
 
@@ -155,6 +159,23 @@ const requestTaskDeletion = (tasks = []) => {
 		tasks: pendingDeleteTasks,
 		onClose: () => {
 			pendingDeleteTasks = [];
+		},
+	});
+};
+
+const requestTaskCompletionConfirmation = (task) => {
+	if (!task) return;
+	const existingWindow = windowManager.getCompletionConfirmWindow?.();
+	if (existingWindow && !existingWindow.isDestroyed()) {
+		pendingCompletionTask = task;
+		existingWindow.focus();
+		return;
+	}
+	pendingCompletionTask = task;
+	windowManager.openCompletionConfirmWindow({
+		task,
+		onClose: () => {
+			pendingCompletionTask = null;
 		},
 	});
 };
@@ -286,6 +307,7 @@ const showTaskMenu = (task) =>
 		getTaskWindow,
 		createTaskSplitWindow,
 		requestTaskDeletion,
+		requestTaskCompletionConfirmation,
 	});
 
 const showLoginMenu = () =>
@@ -354,6 +376,23 @@ registerIpcHandlers({
 	calendarController,
 	log: (...args) => console.log(...args),
 	requestTaskDeletion,
+});
+
+ipc.on("completion-confirmation-confirmed", () => {
+	if (pendingCompletionTask) {
+		if (appState.openTaskProps?.id === pendingCompletionTask.id) {
+			windowManager.closeEditWindow();
+			appState.openTaskProps = null;
+		}
+		tasksController.completeTask(pendingCompletionTask);
+		pendingCompletionTask = null;
+	}
+	windowManager.closeCompletionConfirmWindow();
+});
+
+ipc.on("completion-confirmation-cancelled", () => {
+	pendingCompletionTask = null;
+	windowManager.closeCompletionConfirmWindow();
 });
 
 const getIsTimerRunning = () => appState.isTimerRunning;

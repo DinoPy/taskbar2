@@ -56,6 +56,18 @@ export function showMainContextMenu({
 		})
 	);
 
+	menu.append(
+		new MenuItem({
+			label: "Ask completion confirmation",
+			toolTip: "Prompt before tasks are marked complete",
+			type: "checkbox",
+			checked: appState.confirmCompletionBeforeComplete,
+			click: () => {
+				appState.confirmCompletionBeforeComplete = !appState.confirmCompletionBeforeComplete;
+			},
+		})
+	);
+
 	// Separator
 	menu.append(new MenuItem({ type: 'separator' }));
 
@@ -231,6 +243,7 @@ export function showTaskContextMenu({
 	getTaskWindow,
 	createTaskSplitWindow,
 	requestTaskDeletion,
+	requestTaskCompletionConfirmation,
 }) {
 	const menu = new Menu();
 
@@ -258,8 +271,15 @@ export function showTaskContextMenu({
 			label: "Complete",
 			click: () => {
 				const editWindow = getTaskWindow();
-				if (editWindow && appState.openTaskProps?.id === task.id) editWindow.close();
-				tasksController.completeTask(task);
+				if (editWindow && appState.openTaskProps?.id === task.id) {
+					editWindow.close();
+				}
+				appState.openTaskProps = null;
+				if (appState.confirmCompletionBeforeComplete && requestTaskCompletionConfirmation) {
+					requestTaskCompletionConfirmation(task);
+				} else {
+					tasksController.completeTask(task);
+				}
 			},
 		})
 	);

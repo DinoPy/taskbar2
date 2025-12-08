@@ -41,10 +41,22 @@ export function createDeleteConfirmWindow({
 	};
 
 	const sendData = () => {
-		win.webContents.send("delete-confirm-data", { tasks });
+		win.webContents.send("confirm-dialog-data", {
+			config: {
+				title: "Delete task?",
+				summary: tasks.length === 1
+					? `You're about to delete "${tasks[0].title || "Untitled task"}".`
+					: `You're about to delete ${tasks.length} tasks.`,
+				confirmLabel: "Delete",
+				cancelLabel: "Cancel",
+				confirmEvent: "delete-confirmation-confirmed",
+				cancelEvent: "delete-confirmation-cancelled",
+			},
+			tasks,
+		});
 	};
 
-	ipcMain.on("delete-confirm-resize", handleResizeRequest);
+	ipcMain.on("confirm-dialog-resize", handleResizeRequest);
 
 	win.webContents.once("did-finish-load", () => {
 		sendData();

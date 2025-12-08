@@ -20,9 +20,9 @@
 
 # DELETE
     ## Incomplete
+    ## Complete
         - Make the confirmation pop-up be focused when shown, and the confirmation button be outlined, or the cancel button?
         - The confirmation pop-up has a fixed height, long title tasks won't fit and will cause scrolling to show. Add dynamic height.
-    ## Complete
 
 # COMPLETED
     ## Incomplete
