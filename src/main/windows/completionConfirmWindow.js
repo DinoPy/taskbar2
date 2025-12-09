@@ -3,7 +3,10 @@ import { BrowserWindow, screen, ipcMain } from "electron";
 const WINDOW_WIDTH = 640;
 const WINDOW_HEIGHT = 320;
 
-export function createCompletionConfirmWindow({ task, onClose } = {}) {
+export function createCompletionConfirmWindow({
+	task,
+	onClose,
+} = {}) {
 	const cursorPosition = screen.getCursorScreenPoint();
 	const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
 
@@ -31,12 +34,20 @@ export function createCompletionConfirmWindow({ task, onClose } = {}) {
 	win.loadFile("src/html/deleteConfirm.html");
 	win.setMenuBarVisibility(false);
 
-	const sendData = () => {
+	const handleResizeRequest = (_, payload) => {
+		if (!payload?.height) return;
+		const targetHeight = Math.min(Math.max(payload.height, 240), 640);
+		win.setSize(WINDOW_WIDTH, targetHeight);
+	};
+
+	ipcMain.on("confirm-dialog-resize", handleResizeRequest);
+
+	const sendTask = () => {
 		if (!task) return;
 		win.webContents.send("confirm-dialog-data", {
 			config: {
 				title: "Complete task?",
-				summary: `Are you done with "${task.title || "the task"}"? Make sure you did not forget anything.`,
+				summary: "Are you sure you're done with this task? Make sure you didn’t forget anything.",
 				confirmLabel: "Yes, I'm done",
 				cancelLabel: "Cancel",
 				confirmEvent: "completion-confirmation-confirmed",
@@ -46,16 +57,8 @@ export function createCompletionConfirmWindow({ task, onClose } = {}) {
 		});
 	};
 
-	const handleResizeRequest = (_, payload) => {
-		if (!payload?.height) return;
-		const targetHeight = Math.min(Math.max(payload.height, 240), 640);
-		win.setSize(WINDOW_WIDTH, targetHeight);
-	};
-
-	ipcMain.on("confirm-dialog-resize", handleResizeRequest);
-
 	win.webContents.once("did-finish-load", () => {
-		sendData();
+		sendTask();
 		win.show();
 		win.focus();
 	});

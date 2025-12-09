@@ -21,6 +21,8 @@ export function registerIpcHandlers({
     calendarController,
     log,
     requestTaskDeletion,
+    requestTaskCompletionConfirmation,
+    openCalendarWindow,
 }) {
     const logger = log ?? console.log;
 
@@ -98,6 +100,25 @@ export function registerIpcHandlers({
         requestTaskDeletion?.(tasks.filter(Boolean));
     });
 
+
+    ipc.on("request-task-completion", (_, payload) => {
+        if (!payload) return;
+        const candidateTasks = Array.isArray(payload?.tasks)
+            ? payload.tasks
+            : payload?.task
+                ? [payload.task]
+                : [payload];
+        candidateTasks
+            .filter((task) => task && task.id)
+            .forEach((task) => {
+                if (appState.confirmCompletionBeforeComplete && requestTaskCompletionConfirmation) {
+                    requestTaskCompletionConfirmation(task);
+                } else {
+                    tasksController.completeTask(task);
+                }
+            });
+    });
+
     ipc.on("delete-confirmation-confirmed", (_, data) => {
         const tasks = Array.isArray(data?.tasks) ? data.tasks : [];
         const ids = tasks
@@ -132,7 +153,7 @@ export function registerIpcHandlers({
     });
 
     ipc.on("open-calendar-window", () => {
-        windowManager.openCalendarWindow();
+        openCalendarWindow?.();
     });
 
     ipc.on("toggle-show-all-tasks", () => {

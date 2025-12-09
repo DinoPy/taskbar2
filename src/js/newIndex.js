@@ -29,6 +29,14 @@ let showAllTasks = false;
 let selectedCategories = []; // Empty means show all categories
 let visualTaskOrder = []; // Stores task IDs in their visual display order
 
+const requestTaskCompletionForInstance = (taskInstance) => {
+	if (!taskInstance) return false;
+	ipc.send("request-task-completion", {
+		task: taskInstance.formatTask("Object", false),
+	});
+	return true;
+};
+
 function updateNotificationsBadge(count) {
 	if (!notificationsBadge || !notificationsBtn) return;
 	const total = Number.isFinite(count) ? count : parseInt(count, 10) || 0;
@@ -553,22 +561,13 @@ ipc.on("request-current-task-data-for-edit", () => {
 
 ipc.on("complete_current_task", () => {
 	for (let t in tasks) {
-		if (!tasks[t].isFocused)
-			continue;
+		if (!tasks[t].isFocused) continue;
 
 		tasks[t].removeFocus(true);
-		tasks[t].addToCompletedTaskList();
-		tasks[t].destroySelfFromDOM();
-		delete tasks[t];
-
-		if (!isSocketConnected)
-			tasks_compl_or_del_while_nocon.push(t);
-		
-		renderTasksByCategory();
+		requestTaskCompletionForInstance(tasks[t]);
 		break;
 	}
-
-})
+});
 
 // ------------------ END OF HELPERS ------------------- //
 
@@ -965,8 +964,7 @@ const executeCommand = (command) => {
 				const taskData = tasks[taskId];
 				if (taskData) {
 					console.log(`Command: Completing task ${command.index} (ID: ${taskId})`);
-					// Send the task data for completion using the correct IPC event
-					ipc.send("complete-task", { id: taskId });
+					requestTaskCompletionForInstance(taskData);
 					return { success: true, message: `Completing task ${command.index}` };
 				}
 				return { success: false, message: `Task ${command.index} not found` };

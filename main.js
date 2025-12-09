@@ -283,7 +283,7 @@ const showMainMenu = () =>
 		createCompletedTasksPopUp,
 		createCustomCommandsWindow,
 		createHelpWindow,
-		createCalendarWindow,
+		createCalendarWindow: openCalendarWindowOnFocusedScreen,
 		toggleAlwaysOnTop,
 		notificationReminderIntervalMinutes: appState.notificationReminderIntervalMinutes,
 		setNotificationReminderInterval: (minutes) => {
@@ -376,6 +376,8 @@ registerIpcHandlers({
 	calendarController,
 	log: (...args) => console.log(...args),
 	requestTaskDeletion,
+	requestTaskCompletionConfirmation,
+	openCalendarWindow: openCalendarWindowOnFocusedScreen,
 });
 
 ipc.on("completion-confirmation-confirmed", () => {
@@ -452,7 +454,7 @@ app.whenReady().then(async () => {
 		windowManager.getAllCommandWindows().forEach((commandWin) => {
 			commandWin.webContents.openDevTools();
 		});
-		const calendarWindow = createCalendarWindow();
+		const calendarWindow = openCalendarWindowOnFocusedScreen();
 		calendarWindow?.webContents.openDevTools();
 	});
 	globalShortcut.register("CommandOrControl+Shift+e", () => {
@@ -649,9 +651,18 @@ function createCustomCommandsWindow() {
 	}
 }
 
-function createCalendarWindow() {
+function openCalendarWindowOnFocusedScreen(options = {}) {
+	const displays = screen.getAllDisplays();
+	const requestedIndex = Number.isInteger(options.screenIndex)
+		? options.screenIndex
+		: appState.currentlySelectedScreenIndex ?? 0;
+	const maxIndex = Math.max(displays.length - 1, 0);
+	const normalizedIndex = Math.min(Math.max(requestedIndex, 0), maxIndex);
 	try {
-		return windowManager.openCalendarWindow();
+		return windowManager.openCalendarWindow({
+			...options,
+			screenIndex: normalizedIndex,
+		});
 	} catch (e) {
 		console.error(e);
 	}

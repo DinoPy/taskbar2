@@ -31,7 +31,9 @@
 
 # CALENDAR
     ## Incomplete
-        - Make calendar window show on the focused screen.∑v∑d
+        - Add a grab bar so the calendar window can be moved around. 
+        - Let's do something about events that overpopulate the calendar such as those that occur every 30 minutes, maybe we can hide these somehow, or not display them or add a filter.
+        - Make calendar window show on the focused screen.
         - Make the reminders only show as a line that can be clicked.
         - Add a pop-up window with details about the event when clicked.
             - Show either in details pop-up or directly on calendar the type of event.

@@ -1,4 +1,4 @@
-import { isSocketConnected, tasks_compl_or_del_while_nocon, tasks, renderTasksByCategory} from "./newIndex.js";
+import { isSocketConnected, tasks_compl_or_del_while_nocon, tasks } from "./newIndex.js";
 const { ipcRenderer } = window.require('electron');
 const ipc = ipcRenderer;
 
@@ -411,25 +411,23 @@ export class Task {
         };
 
         addTaskListeners () {
-            this.taskEl.addEventListener('mousedown', (e) => {
-                e.preventDefault();
-                // which gets the button that's pressed on the mouse 1 being right click
-                if (e.which === 1) {
-                    console.log(isSocketConnected);
-                    if (this.isFocused) this.removeFocus();
-                    else this.addFocus();
-                } else if (e.which === 2) {
-                    this.removeFocus(true);
-                    this.addToCompletedTaskList();
-                    this.destroySelfFromDOM();
-                    delete tasks[this.id];
-
-                    renderTasksByCategory();
-                } else if (e.which === 3) {
-                    this.openCtxMenu();
-                    e.stopPropagation();
-                }
-            });
+        this.taskEl.addEventListener('mousedown', (e) => {
+            e.preventDefault();
+            // which gets the button that's pressed on the mouse 1 being right click
+            if (e.which === 1) {
+                console.log(isSocketConnected);
+                if (this.isFocused) this.removeFocus();
+                else this.addFocus();
+            } else if (e.which === 2) {
+                this.removeFocus(true);
+                ipc.send("request-task-completion", {
+                    task: this.formatTask('Object', false),
+                });
+            } else if (e.which === 3) {
+                this.openCtxMenu();
+                e.stopPropagation();
+            }
+        });
         };
 
         setTaskElUp () {
