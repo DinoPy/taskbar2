@@ -98,6 +98,7 @@ textarea:focus {
     cursor: pointer;
     transition: var(--transition-normal);
     color: var(--color-text-primary);
+    -webkit-app-region: no-drag;
 }
 
 .tags-item:hover {

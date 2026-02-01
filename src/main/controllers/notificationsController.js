@@ -11,9 +11,38 @@ const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
 const parseTimestamp = (value) => {
 	if (!value) return null;
-	if (typeof value === "number") return value;
-	const parsed = Date.parse(value);
-	return Number.isNaN(parsed) ? null : parsed;
+
+	// Handle sql.NullTime format: { Valid: true, Time: "2024-01-15T10:30:00Z" }
+	if (typeof value === "object" && value !== null) {
+		if ("Valid" in value && "Time" in value) {
+			if (!value.Valid) return null;
+			return parseTimestamp(value.Time);
+		}
+		// Handle Date objects
+		if (value instanceof Date) {
+			const time = value.getTime();
+			return Number.isNaN(time) ? null : time;
+		}
+	}
+
+	if (typeof value === "number") {
+		if (!Number.isFinite(value) || value <= 0) return null;
+		// Handle both seconds and milliseconds:
+		// - Values > 1e12 are likely milliseconds (after ~2001)
+		// - Values between 1e9 and 1e12 are likely seconds (2001-2033)
+		return value > 1e12 ? value : value > 1e9 ? value * 1000 : null;
+	}
+	if (typeof value === "string") {
+		const trimmed = value.trim();
+		if (trimmed.length === 0) return null;
+		const numeric = Number(trimmed);
+		if (!Number.isNaN(numeric) && numeric > 0) {
+			return numeric > 1e12 ? numeric : numeric > 1e9 ? numeric * 1000 : null;
+		}
+		const parsed = Date.parse(trimmed);
+		return Number.isNaN(parsed) ? null : parsed;
+	}
+	return null;
 };
 
 const extractNullableString = (field) => {
@@ -83,6 +112,16 @@ export function createNotificationsController({
 		historyVisibleCount: HISTORY_BATCH_SIZE,
 		historyHasMore: false,
 		historyFetchInProgress: false,
+		// Snoozed tab state
+		showSnoozed: false,
+		snoozedVisibleCount: HISTORY_BATCH_SIZE,
+		snoozedHasMore: false,
+		snoozedFetchInProgress: false,
+		// Archived tab state
+		showArchived: false,
+		archivedVisibleCount: HISTORY_BATCH_SIZE,
+		archivedHasMore: false,
+		archivedFetchInProgress: false,
 		reminderIntervalMs: 0,
 		reminderTimeout: null,
 		visibilityMode: "hidden", // hidden | auto | manual
@@ -145,13 +184,15 @@ export function createNotificationsController({
 			notification.status === "unseen" && !isCurrentlySnoozed(notification)
 		);
 
-		// Include snoozed notifications in history even if they were previously unseen
+		// History: exclude snoozed and archived notifications
 		const historySource = sorted.filter((notification) => {
-			const isSnoozed = isCurrentlySnoozed(notification);
 			if (notification.status === "archived") {
 				return false;
 			}
-			if (notification.status === "unseen" && !isSnoozed) {
+			if (isCurrentlySnoozed(notification)) {
+				return false;
+			}
+			if (notification.status === "unseen") {
 				return false;
 			}
 			return true;
@@ -161,6 +202,21 @@ export function createNotificationsController({
 			? historySource.slice(0, state.historyVisibleCount)
 			: [];
 		const hasMoreHistory = state.showHistory && (state.historyHasMore || historySource.length > history.length);
+
+		// Snoozed: notifications that are currently snoozed
+		const snoozedSource = sorted.filter((notification) => isCurrentlySnoozed(notification));
+		const snoozed = state.showSnoozed
+			? snoozedSource.slice(0, state.snoozedVisibleCount)
+			: [];
+		const hasMoreSnoozed = state.showSnoozed && (state.snoozedHasMore || snoozedSource.length > snoozed.length);
+
+		// Archived: notifications with status "archived"
+		const archivedSource = sorted.filter((notification) => notification.status === "archived");
+		const archived = state.showArchived
+			? archivedSource.slice(0, state.archivedVisibleCount)
+			: [];
+		const hasMoreArchived = state.showArchived && (state.archivedHasMore || archivedSource.length > archived.length);
+
 		const unreadCount = Number.isInteger(state.unseenCount)
 			? Math.max(0, state.unseenCount)
 			: unseen.length;
@@ -170,9 +226,15 @@ export function createNotificationsController({
 		return {
 			unseen,
 			history,
+			snoozed,
+			archived,
 			schedules,
 			showHistory: state.showHistory,
+			showSnoozed: state.showSnoozed,
+			showArchived: state.showArchived,
 			hasMoreHistory,
+			hasMoreSnoozed,
+			hasMoreArchived,
 			visibilityMode: state.visibilityMode,
 			unreadCount,
 		};
@@ -526,18 +588,49 @@ export function createNotificationsController({
 		sendEvent?.("notification_snooze", payload);
 	};
 
+	const archiveNotification = (id) => {
+		if (!id) return;
+
+		const existing = state.notifications.get(id);
+		if (!existing) return;
+
+		// Update locally
+		const updated = {
+			...existing,
+			status: "archived",
+			isArchived: true,
+			archivedAt: Date.now(),
+		};
+		state.notifications.set(id, updated);
+
+		if (existing.status === "unseen") {
+			state.unseenCount = Math.max(0, state.unseenCount - 1);
+		}
+
+		broadcastSnapshot();
+		maybeHideWindow();
+		updateReminderTimer();
+
+		// Send to server
+		sendEvent?.("notification_archive", { notification_id: id });
+	};
+
 	const requestSeenHistory = () => {
 		if (state.historyFetchInProgress) return;
 		state.historyFetchInProgress = true;
-		const seenCount = getSortedNotifications().filter((notification) =>
-			notification.status !== "unseen" && notification.status !== "archived"
-		).length;
+		const now = Date.now();
+		const seenCount = getSortedNotifications().filter((notification) => {
+			if (notification.status === "unseen" || notification.status === "archived") return false;
+			// Exclude currently snoozed from history count
+			if (notification.snoozedUntil && now < notification.snoozedUntil) return false;
+			return true;
+		}).length;
 
 		sendEvent?.("notifications_fetch", {
 			offset: seenCount,
 			limit: HISTORY_BATCH_SIZE,
 			statuses: ["seen"],
-			include_snoozed: true,
+			include_snoozed: false,
 		});
 	};
 
@@ -556,6 +649,65 @@ export function createNotificationsController({
 		requestSeenHistory();
 	};
 
+	const requestSnoozedHistory = () => {
+		if (state.snoozedFetchInProgress) return;
+		state.snoozedFetchInProgress = true;
+		const snoozedCount = getSortedNotifications().filter((notification) => {
+			if (!notification.snoozedUntil) return false;
+			return Date.now() < notification.snoozedUntil;
+		}).length;
+
+		sendEvent?.("notifications_fetch", {
+			offset: snoozedCount,
+			limit: HISTORY_BATCH_SIZE,
+			only_snoozed: true,
+		});
+	};
+
+	const requestArchivedHistory = () => {
+		if (state.archivedFetchInProgress) return;
+		state.archivedFetchInProgress = true;
+		const archivedCount = getSortedNotifications().filter((notification) =>
+			notification.status === "archived"
+		).length;
+
+		sendEvent?.("notifications_fetch", {
+			offset: archivedCount,
+			limit: HISTORY_BATCH_SIZE,
+			statuses: ["archived"],
+		});
+	};
+
+	const setSnoozedVisibility = (show) => {
+		if (state.showSnoozed === show) return;
+		state.showSnoozed = show;
+		broadcastSnapshot();
+		if (show) {
+			requestSnoozedHistory();
+		}
+	};
+
+	const setArchivedVisibility = (show) => {
+		if (state.showArchived === show) return;
+		state.showArchived = show;
+		broadcastSnapshot();
+		if (show) {
+			requestArchivedHistory();
+		}
+	};
+
+	const loadMoreSnoozed = () => {
+		state.snoozedVisibleCount += HISTORY_BATCH_SIZE;
+		broadcastSnapshot();
+		requestSnoozedHistory();
+	};
+
+	const loadMoreArchived = () => {
+		state.archivedVisibleCount += HISTORY_BATCH_SIZE;
+		broadcastSnapshot();
+		requestArchivedHistory();
+	};
+
 	const bootstrap = ({ notifications = [], unseenCount }) => {
 		state.notifications.clear();
 		upsertNotifications(notifications);
@@ -570,10 +722,19 @@ export function createNotificationsController({
 		updateReminderTimer();
 	};
 
-	const handleNotificationsBatch = ({ notifications = [], has_more = false }) => {
+	const handleNotificationsBatch = ({ notifications = [], has_more = false, fetch_type }) => {
 		upsertNotifications(notifications);
-		state.historyHasMore = Boolean(has_more);
-		state.historyFetchInProgress = false;
+		// Determine which fetch type completed based on fetch_type or which fetch was in progress
+		if (fetch_type === "snoozed" || state.snoozedFetchInProgress) {
+			state.snoozedHasMore = Boolean(has_more);
+			state.snoozedFetchInProgress = false;
+		} else if (fetch_type === "archived" || state.archivedFetchInProgress) {
+			state.archivedHasMore = Boolean(has_more);
+			state.archivedFetchInProgress = false;
+		} else {
+			state.historyHasMore = Boolean(has_more);
+			state.historyFetchInProgress = false;
+		}
 		broadcastSnapshot();
 		updateReminderTimer();
 	};
@@ -601,7 +762,10 @@ export function createNotificationsController({
 		const normalized = normalizeNotification(notification);
 		if (!normalized) return;
 		const previous = state.notifications.get(normalized.id);
-		state.notifications.delete(normalized.id);
+		// Keep notification in state with archived status instead of deleting
+		normalized.status = "archived";
+		normalized.isArchived = true;
+		state.notifications.set(normalized.id, normalized);
 		if (previous?.status === "unseen") {
 			state.unseenCount = Math.max(0, state.unseenCount - 1);
 		}
@@ -684,8 +848,13 @@ export function createNotificationsController({
 		acknowledgeNotification,
 		acknowledgeAll,
 		snoozeNotification,
+		archiveNotification,
 		setHistoryVisibility,
 		loadMoreHistory,
+		setSnoozedVisibility,
+		loadMoreSnoozed,
+		setArchivedVisibility,
+		loadMoreArchived,
 		toggleWindow,
 		showWindow,
 		setWindowHeight,

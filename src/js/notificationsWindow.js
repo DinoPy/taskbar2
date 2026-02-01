@@ -6,12 +6,14 @@ const LOAD_MORE_THRESHOLD = 12;
 const rootEl = document.querySelector(".notifications-root");
 const subtitleEl = document.querySelector(".notifications-subtitle");
 const unseenListEl = document.getElementById("unseenList");
+const unseenScrollEl = document.querySelector(".unseen-scroll");
 const historyListEl = document.getElementById("historyList");
 const historyScrollEl = document.querySelector(".history-scroll");
 const historyLoadingEl = document.getElementById("historyLoading");
 const toggleHistoryBtn = document.querySelector('[data-action="toggle-history"]');
 const unseenEmptyState = document.querySelector('[data-empty="unseen"]');
 const historyEmptyState = document.querySelector('[data-empty="history"]');
+const schedulesScrollEl = document.querySelector(".schedules-scroll");
 
 // Tab elements
 const tabButtons = document.querySelectorAll(".tab-btn");
@@ -19,12 +21,34 @@ const tabContents = document.querySelectorAll(".tab-content");
 const schedulesListEl = document.getElementById("schedulesList");
 const schedulesEmptyState = document.querySelector('[data-empty="schedules"]');
 
+// Snoozed tab elements
+const snoozedListEl = document.getElementById("snoozedList");
+const snoozedScrollEl = document.querySelector(".snoozed-scroll");
+const snoozedLoadingEl = document.getElementById("snoozedLoading");
+const snoozedEmptyState = document.querySelector('[data-empty="snoozed"]');
+
+// Archived tab elements
+const archivedListEl = document.getElementById("archivedList");
+const archivedScrollEl = document.querySelector(".archived-scroll");
+const archivedLoadingEl = document.getElementById("archivedLoading");
+const archivedEmptyState = document.querySelector('[data-empty="archived"]');
+
 const state = {
 	activeTab: "unseen",
 	showHistory: false,
 	hasMoreHistory: false,
 	loadingMore: false,
 	lastHistoryLength: 0,
+	// Snoozed tab state
+	showSnoozed: false,
+	hasMoreSnoozed: false,
+	loadingMoreSnoozed: false,
+	lastSnoozedLength: 0,
+	// Archived tab state
+	showArchived: false,
+	hasMoreArchived: false,
+	loadingMoreArchived: false,
+	lastArchivedLength: 0,
 	mode: "hidden",
 	suppressAutoSwitch: false,
 };
@@ -95,6 +119,13 @@ const openReminderMenu = (button) => {
 
 	button.parentElement?.appendChild(menu);
 	activeReminderMenu = menu;
+
+	// Check if menu would overflow bottom of window and position above if needed
+	const menuRect = menu.getBoundingClientRect();
+	const windowHeight = window.innerHeight;
+	if (menuRect.bottom > windowHeight) {
+		menu.classList.add("position-above");
+	}
 };
 
 const openCustomReminderForm = (id) => {
@@ -283,6 +314,17 @@ const createNotificationItem = (notification, { isUnseen }) => {
 	remindBtn.innerHTML = `<img src="../images/clock.svg" alt="Remind later" class="icon" />`;
 	actions.appendChild(remindBtn);
 
+	// Add archive button (for non-archived notifications)
+	if (notification.status !== "archived") {
+		const archiveBtn = document.createElement("button");
+		archiveBtn.className = "hover-btn icon-btn";
+		archiveBtn.dataset.action = "archive";
+		archiveBtn.dataset.id = notification.id;
+		archiveBtn.title = "Archive";
+		archiveBtn.innerHTML = `<img src="../images/archive.svg" alt="Archive" class="icon" />`;
+		actions.appendChild(archiveBtn);
+	}
+
 	li.appendChild(actions);
 
 	return li;
@@ -294,7 +336,7 @@ const clearList = (target) => {
 	}
 };
 
-const updateEmptyStates = ({ unseenCount, historyCount }) => {
+const updateEmptyStates = ({ unseenCount, historyCount, snoozedCount, archivedCount }) => {
 	if (unseenEmptyState) {
 		unseenEmptyState.classList.toggle("is-visible", unseenCount === 0);
 	}
@@ -302,6 +344,16 @@ const updateEmptyStates = ({ unseenCount, historyCount }) => {
 	if (historyEmptyState) {
 		const shouldShow = state.showHistory && historyCount === 0;
 		historyEmptyState.classList.toggle("is-visible", shouldShow);
+	}
+
+	if (snoozedEmptyState) {
+		const shouldShow = state.showSnoozed && snoozedCount === 0;
+		snoozedEmptyState.classList.toggle("is-visible", shouldShow);
+	}
+
+	if (archivedEmptyState) {
+		const shouldShow = state.showArchived && archivedCount === 0;
+		archivedEmptyState.classList.toggle("is-visible", shouldShow);
 	}
 };
 
@@ -319,20 +371,30 @@ const updateSubtitle = (unseenCount) => {
 // Tab switching
 const switchTab = (tabName) => {
 	state.activeTab = tabName;
-	
+
 	tabButtons.forEach((btn) => {
 		btn.classList.toggle("active", btn.dataset.tab === tabName);
 	});
-	
+
 	tabContents.forEach((content) => {
 		content.classList.toggle("active", content.dataset.tabContent === tabName);
 	});
-	
+
 	// Load history on first view
 	if (tabName === "history" && !state.showHistory) {
 		ipcRenderer.send("notifications-history-visibility", { show: true });
 	}
-	
+
+	// Load snoozed on first view
+	if (tabName === "snoozed" && !state.showSnoozed) {
+		ipcRenderer.send("notifications-snoozed-visibility", { show: true });
+	}
+
+	// Load archived on first view
+	if (tabName === "archived" && !state.showArchived) {
+		ipcRenderer.send("notifications-archived-visibility", { show: true });
+	}
+
 	resizeWindow();
 };
 
@@ -444,12 +506,16 @@ const resizeWindow = () => {
 const renderNotifications = (payload) => {
 	const unseen = payload.unseen ?? [];
 	const history = payload.history ?? [];
+	const snoozed = payload.snoozed ?? [];
+	const archived = payload.archived ?? [];
 	const schedules = payload.schedules ?? [];
 
 	closeReminderMenu();
 
 	state.mode = payload.visibilityMode ?? "hidden";
 	state.showHistory = Boolean(payload.showHistory);
+	state.showSnoozed = Boolean(payload.showSnoozed);
+	state.showArchived = Boolean(payload.showArchived);
 
 	// Auto-switch tabs based on context
 	if (!state.suppressAutoSwitch) {
@@ -467,19 +533,47 @@ const renderNotifications = (payload) => {
 		}
 	}
 
+	// History loading state
 	if (!state.loadingMore || history.length > state.lastHistoryLength) {
 		state.loadingMore = false;
 	}
-
 	state.hasMoreHistory = Boolean(payload.hasMoreHistory);
 	state.lastHistoryLength = history.length;
 
+	// Snoozed loading state
+	if (!state.loadingMoreSnoozed || snoozed.length > state.lastSnoozedLength) {
+		state.loadingMoreSnoozed = false;
+	}
+	state.hasMoreSnoozed = Boolean(payload.hasMoreSnoozed);
+	state.lastSnoozedLength = snoozed.length;
+
+	// Archived loading state
+	if (!state.loadingMoreArchived || archived.length > state.lastArchivedLength) {
+		state.loadingMoreArchived = false;
+	}
+	state.hasMoreArchived = Boolean(payload.hasMoreArchived);
+	state.lastArchivedLength = archived.length;
+
+	// Render unseen
 	clearList(unseenListEl);
 	appendNotifications(unseenListEl, unseen, { isUnseen: true });
 
+	// Render history
 	clearList(historyListEl);
 	if (state.showHistory) {
 		appendNotifications(historyListEl, history, { isUnseen: false });
+	}
+
+	// Render snoozed
+	clearList(snoozedListEl);
+	if (state.showSnoozed) {
+		appendNotifications(snoozedListEl, snoozed, { isUnseen: false });
+	}
+
+	// Render archived
+	clearList(archivedListEl);
+	if (state.showArchived) {
+		appendNotifications(archivedListEl, archived, { isUnseen: false });
 	}
 
 	renderSchedules(schedules);
@@ -487,6 +581,8 @@ const renderNotifications = (payload) => {
 	updateEmptyStates({
 		unseenCount: unseen.length,
 		historyCount: history.length,
+		snoozedCount: snoozed.length,
+		archivedCount: archived.length,
 	});
 	updateSubtitle(unseen.length);
 
@@ -497,6 +593,22 @@ const renderNotifications = (payload) => {
 
 	historyScrollEl.classList.toggle("hidden", !state.showHistory);
 	historyLoadingEl.classList.toggle("is-visible", state.loadingMore);
+
+	// Update snoozed loading indicator
+	if (snoozedScrollEl) {
+		snoozedScrollEl.classList.toggle("hidden", !state.showSnoozed);
+	}
+	if (snoozedLoadingEl) {
+		snoozedLoadingEl.classList.toggle("is-visible", state.loadingMoreSnoozed);
+	}
+
+	// Update archived loading indicator
+	if (archivedScrollEl) {
+		archivedScrollEl.classList.toggle("hidden", !state.showArchived);
+	}
+	if (archivedLoadingEl) {
+		archivedLoadingEl.classList.toggle("is-visible", state.loadingMoreArchived);
+	}
 
 	state.suppressAutoSwitch = false;
 
@@ -563,6 +675,12 @@ rootEl?.addEventListener("click", (event) => {
 			ipcRenderer.send("schedule-delete", { id });
 			break;
 		}
+		case "archive": {
+			if (!id) return;
+			ipcRenderer.send("notifications-archive", { id });
+			closeReminderMenu();
+			break;
+		}
 		default:
 			break;
 	}
@@ -578,6 +696,34 @@ if (historyScrollEl) {
 			state.suppressAutoSwitch = true;
 			historyLoadingEl.classList.add("is-visible");
 			ipcRenderer.send("notifications-load-more");
+		}
+	});
+}
+
+if (snoozedScrollEl) {
+	snoozedScrollEl.addEventListener("scroll", () => {
+		closeReminderMenu();
+		if (!state.showSnoozed || !state.hasMoreSnoozed || state.loadingMoreSnoozed) return;
+		const { scrollTop, clientHeight, scrollHeight } = snoozedScrollEl;
+		if (scrollHeight - (scrollTop + clientHeight) <= LOAD_MORE_THRESHOLD) {
+			state.loadingMoreSnoozed = true;
+			state.suppressAutoSwitch = true;
+			if (snoozedLoadingEl) snoozedLoadingEl.classList.add("is-visible");
+			ipcRenderer.send("notifications-load-more-snoozed");
+		}
+	});
+}
+
+if (archivedScrollEl) {
+	archivedScrollEl.addEventListener("scroll", () => {
+		closeReminderMenu();
+		if (!state.showArchived || !state.hasMoreArchived || state.loadingMoreArchived) return;
+		const { scrollTop, clientHeight, scrollHeight } = archivedScrollEl;
+		if (scrollHeight - (scrollTop + clientHeight) <= LOAD_MORE_THRESHOLD) {
+			state.loadingMoreArchived = true;
+			state.suppressAutoSwitch = true;
+			if (archivedLoadingEl) archivedLoadingEl.classList.add("is-visible");
+			ipcRenderer.send("notifications-load-more-archived");
 		}
 	});
 }

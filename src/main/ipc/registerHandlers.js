@@ -193,6 +193,27 @@ export function registerIpcHandlers({
         notificationsController?.loadMoreHistory?.();
     });
 
+    ipc.on("notifications-snoozed-visibility", (_, data) => {
+        notificationsController?.setSnoozedVisibility?.(Boolean(data?.show));
+    });
+
+    ipc.on("notifications-archived-visibility", (_, data) => {
+        notificationsController?.setArchivedVisibility?.(Boolean(data?.show));
+    });
+
+    ipc.on("notifications-load-more-snoozed", () => {
+        notificationsController?.loadMoreSnoozed?.();
+    });
+
+    ipc.on("notifications-load-more-archived", () => {
+        notificationsController?.loadMoreArchived?.();
+    });
+
+    ipc.on("notifications-archive", (_, data) => {
+        if (!data?.id) return;
+        notificationsController?.archiveNotification?.(String(data.id));
+    });
+
     ipc.on("open-reminder-window", () => {
         const win = windowManager.openReminderWindow({
             screenIndex: appState.currentlySelectedScreenIndex ?? 0,

@@ -1,6 +1,6 @@
 import { BrowserWindow } from "electron";
 
-const DEFAULT_WIDTH = 360;
+const DEFAULT_WIDTH = 420;
 
 export function createNotificationsWindow({
 	x = 0,

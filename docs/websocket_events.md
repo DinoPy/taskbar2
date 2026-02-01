@@ -361,14 +361,20 @@ Both events expect the full command set as a single string (often JSON).
   "data": {
     "offset": 0,                           // default 0
     "limit": 10,                           // default 10, max 100
-    "statuses": ["unseen","snoozed"],      // optional
+    "statuses": ["unseen","seen"],         // optional
     "notification_types": ["reminder"],    // optional
     "priorities": ["high"],                // optional
     "include_snoozed": true,               // optional
+    "only_snoozed": false,                 // optional
     "expired_only": false                  // optional
   }
 }
 ```
+
+Notes:
+- History tab uses `statuses: ["seen"]`.
+- Archived tab uses `statuses: ["archived"]`.
+- Snoozed tab uses `only_snoozed: true` (and can set `include_snoozed: true`).
 
 **Response (`notifications_batch`):**
 
@@ -495,8 +501,7 @@ Field semantics follow the `Schedule` struct. `kind` must be either `task` or
     "show_before_minutes": 15,           // optional
     "notify_offsets_min": [2880,1440],   // optional, defaults applied when omitted
     "muted_offsets_min": [0],            // optional
-    "category": "Work",                  // optional, defaults to "Life"
-    "common_language": "daily at 9am"    // optional textual description provided by the client
+    "category": "Work"                   // optional, defaults to "Life"
   }
 }
 ```
@@ -665,3 +670,4 @@ for the scheduler to materialize them in `tasks`.
   unhandled error occurs; reconnect logic should retry the `connect` flow.
 - Maintain an idle timeout shorter than 60 s to ensure `pong` responses stay in
   flight, otherwise the backend will close the connection.
+

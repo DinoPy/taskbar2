@@ -28,17 +28,21 @@
 			<button class="tab-btn active" data-tab="unseen">New</button>
 			<button class="tab-btn" data-tab="history">History</button>
 			<button class="tab-btn" data-tab="schedules">Schedules</button>
+			<button class="tab-btn" data-tab="snoozed">Snoozed</button>
+			<button class="tab-btn" data-tab="archived">Archived</button>
 		</nav>
 
 		<!-- Unseen Tab -->
 		<section class="tab-content active" data-tab-content="unseen">
-			<ul class="notifications-list" id="unseenList"></ul>
-			<p class="empty-state" data-empty="unseen">You're all caught up</p>
+			<div class="tab-scroll unseen-scroll">
+				<ul class="notifications-list" id="unseenList"></ul>
+				<p class="empty-state" data-empty="unseen">You're all caught up</p>
+			</div>
 		</section>
 
 		<!-- History Tab -->
 		<section class="tab-content" data-tab-content="history">
-			<div class="history-scroll">
+			<div class="tab-scroll history-scroll">
 				<ul class="notifications-list" id="historyList"></ul>
 				<p class="empty-state" data-empty="history">Nothing viewed recently</p>
 				<p class="loading-indicator" id="historyLoading">Loading more…</p>
@@ -47,8 +51,28 @@
 
 		<!-- Schedules Tab -->
 		<section class="tab-content" data-tab-content="schedules">
-			<ul class="schedules-list" id="schedulesList"></ul>
-			<p class="empty-state" data-empty="schedules">No active schedules</p>
+			<div class="tab-scroll schedules-scroll">
+				<ul class="schedules-list" id="schedulesList"></ul>
+				<p class="empty-state" data-empty="schedules">No active schedules</p>
+			</div>
+		</section>
+
+		<!-- Snoozed Tab -->
+		<section class="tab-content" data-tab-content="snoozed">
+			<div class="tab-scroll snoozed-scroll">
+				<ul class="notifications-list" id="snoozedList"></ul>
+				<p class="empty-state" data-empty="snoozed">No snoozed notifications</p>
+				<p class="loading-indicator" id="snoozedLoading">Loading more…</p>
+			</div>
+		</section>
+
+		<!-- Archived Tab -->
+		<section class="tab-content" data-tab-content="archived">
+			<div class="tab-scroll archived-scroll">
+				<ul class="notifications-list" id="archivedList"></ul>
+				<p class="empty-state" data-empty="archived">No archived notifications</p>
+				<p class="loading-indicator" id="archivedLoading">Loading more…</p>
+			</div>
 		</section>
 	</div>
 </body>
