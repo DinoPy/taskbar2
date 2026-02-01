@@ -42,6 +42,7 @@ body {
     justify-content: space-between;
     gap: 8px;
     flex-shrink: 0;
+    -webkit-app-region: drag;
 }
 
 .calendar-controls button,
@@ -54,6 +55,7 @@ body {
     cursor: pointer;
     font-size: 14px;
     transition: background 0.2s ease;
+    -webkit-app-region: no-drag;
 }
 
 .calendar-controls button:hover,
@@ -62,6 +64,7 @@ body {
 }
 
 .calendar-title {
+    -webkit-app-region: drag;
     font-size: 16px;
     font-weight: 600;
     flex: 1;

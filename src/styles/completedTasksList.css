@@ -25,6 +25,22 @@ body {
 	justify-content: space-between; */
 }
 
+.window-header {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--spacing-md);
+    -webkit-app-region: drag;
+    margin-bottom: var(--spacing-md);
+}
+
+.window-header h1 {
+    margin: 0;
+    font-size: 1.75rem;
+    color: var(--color-text-primary);
+}
+
 .tableContainer {
     flex: 1;
     overflow-y: auto;
@@ -62,8 +78,6 @@ body::-webkit-scrollbar {
 }
 
 #closeBtn {
-    position: absolute;
-    right: 1rem;
 	background-color: inherit;
 	fill: var(--color-text-secondary);
 	color: var(--color-text-secondary);
@@ -71,10 +85,10 @@ body::-webkit-scrollbar {
 	height: 34px;
 	width: 34px;
 	border: none;
-
 	transition: all 0.3s;
 	cursor: pointer;
-	margin: 0 3px;
+	margin: 0;
+	-webkit-app-region: no-drag;
 }
 
 #closeBtn:hover {

@@ -337,10 +337,15 @@ const switchTab = (tabName) => {
 };
 
 // Schedule item creation
-const createScheduleItem = (schedule) => {
+const createScheduleItem = (schedule, isInstant = false) => {
 	const li = document.createElement("li");
 	li.className = "schedule-item";
 	li.dataset.id = schedule.id;
+
+	// Add active/inactive class for instant schedules
+	if (isInstant) {
+		li.classList.add(schedule.active ? "is-active" : "is-inactive");
+	}
 
 	const info = document.createElement("div");
 	info.className = "schedule-info";
@@ -348,6 +353,14 @@ const createScheduleItem = (schedule) => {
 	const title = document.createElement("p");
 	title.className = "schedule-title";
 	title.textContent = schedule.title || "Untitled schedule";
+
+	// Add status badge for instant schedules
+	if (isInstant) {
+		const status = document.createElement("span");
+		status.className = `schedule-status ${schedule.active ? "active" : "inactive"}`;
+		status.textContent = schedule.active ? "Pending" : "Consumed";
+		title.appendChild(status);
+	}
 
 	// Create recurrence rule element with date/time included
 	const rrule = document.createElement("p");
@@ -391,19 +404,19 @@ const renderSchedules = (schedules = []) => {
 		schedulesListEl.appendChild(instantHeader);
 		
 		oneTimeSchedules.forEach((schedule) => {
-			schedulesListEl.appendChild(createScheduleItem(schedule));
+			schedulesListEl.appendChild(createScheduleItem(schedule, true));
 		});
 	}
-	
+
 	// Render recurring schedules section
 	if (recurringSchedules.length > 0) {
 		const recurringHeader = document.createElement("li");
 		recurringHeader.className = "schedule-section-header";
 		recurringHeader.textContent = "Recurring";
 		schedulesListEl.appendChild(recurringHeader);
-		
+
 		recurringSchedules.forEach((schedule) => {
-			schedulesListEl.appendChild(createScheduleItem(schedule));
+			schedulesListEl.appendChild(createScheduleItem(schedule, false));
 		});
 	}
 	

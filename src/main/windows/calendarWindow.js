@@ -2,6 +2,8 @@ import { BrowserWindow, screen } from "electron";
 
 const BASE_WIDTH = 1280;
 const BASE_HEIGHT = 820;
+const DEFAULT_WIDTH = Math.round(BASE_WIDTH * 1.2);
+const DEFAULT_HEIGHT = Math.round(BASE_HEIGHT * 1.1);
 
 export function createCalendarWindow({ screenIndex, onClose } = {}) {
 	const allDisplays = screen.getAllDisplays();
@@ -17,10 +19,11 @@ export function createCalendarWindow({ screenIndex, onClose } = {}) {
 	const win = new BrowserWindow({
 		x: initialX,
 		y: initialY,
-		width: BASE_WIDTH,
-		height: BASE_HEIGHT,
+		width: DEFAULT_WIDTH,
+		height: DEFAULT_HEIGHT,
 		minWidth: 900,
 		minHeight: 550,
+		movable: true,
 		show: true,
 		frame: false,
 		resizable: true,

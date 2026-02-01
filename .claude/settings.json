@@ -1,0 +1,13 @@
+{
+	"permissions": {
+		"allow": [
+			"Read(<cwd>/**)",
+			"Edit(<cwd>/**)"
+		],
+		"deny": [
+			"Read(~/**)",
+			"Read(../**)",
+			"Edit(//etc/**)"
+		]
+	}
+}
