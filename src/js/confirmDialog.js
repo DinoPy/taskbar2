@@ -1,4 +1,5 @@
 const { ipcRenderer } = window.require("electron");
+import { setupFuzzyFinder } from './helpers.js';
 
 let currentConfig = {
 	title: "Confirm action",
@@ -10,6 +11,7 @@ let currentConfig = {
 };
 let currentTasks = [];
 let currentTags = [];
+let availableTags = [];
 
 const headingEl = document.querySelector(".confirm-card h1");
 const summaryEl = document.getElementById("deleteConfirmSummary");
@@ -108,6 +110,7 @@ const applyConfig = (config = {}) => {
 ipcRenderer.on("confirm-dialog-data", (_, payload) => {
 	if (!payload) return;
 	applyConfig(payload.config);
+	availableTags = payload.allTags || [];
 	renderTasks(Array.isArray(payload.tasks) ? payload.tasks : []);
 });
 
@@ -125,16 +128,26 @@ cancelBtn?.addEventListener("click", () => {
 
 tagsAddBtn?.addEventListener("click", addTag);
 
-tagsInput?.addEventListener("keydown", (e) => {
-	if (e.key === "Enter") {
-		e.preventDefault();
-		addTag();
-	}
-});
+
 
 window.addEventListener("keydown", (event) => {
 	if (event.key === "Escape") {
 		event.preventDefault();
 		ipcRenderer.send(currentConfig.cancelEvent);
 	}
+});
+
+setupFuzzyFinder({
+	inputElement: tagsInput,
+	containerElement: document.querySelector(".tags-input-container"),
+	getAllTags: () => availableTags,
+	onSelectTag: (tag) => {
+		if (tag && !currentTags.includes(tag)) {
+			currentTags.push(tag);
+			renderTags();
+			resizeWindow();
+		}
+	},
+	getExcludedTags: () => currentTags,
+	onCustomEnter: addTag,
 });

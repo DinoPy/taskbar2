@@ -174,3 +174,39 @@ body {
 .tags-add-btn:hover {
 	background: rgba(255, 255, 255, 0.18);
 }
+
+/* Fuzzy Finder Suggestions */
+.suggestions-list {
+	position: absolute;
+	background-color: var(--color-dropdown-delete-bg);
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	border-radius: 4px;
+	max-height: 150px;
+	overflow-y: auto;
+	z-index: 1000;
+	min-width: 200px;
+	display: none;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+}
+
+.suggestions-list.visible {
+	display: block;
+}
+
+.suggestion-item {
+	padding: 8px 12px;
+	cursor: pointer;
+	color: var(--color-dropdown-delete-text);
+	font-size: var(--font-size-sm);
+	border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.suggestion-item:last-child {
+	border-bottom: none;
+}
+
+.suggestion-item:hover,
+.suggestion-item.selected {
+	background-color: var(--color-dropdown-delete-hover);
+	color: white;
+}

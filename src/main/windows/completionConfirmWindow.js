@@ -5,6 +5,7 @@ const WINDOW_HEIGHT = 320;
 
 export function createCompletionConfirmWindow({
 	task,
+	allTags = [],
 	onClose,
 } = {}) {
 	const cursorPosition = screen.getCursorScreenPoint();
@@ -54,6 +55,7 @@ export function createCompletionConfirmWindow({
 				cancelEvent: "completion-confirmation-cancelled",
 			},
 			tasks: [task],
+			allTags,
 		});
 	};
 

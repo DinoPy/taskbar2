@@ -83,6 +83,7 @@ const appState = {
 	notificationReminderIntervalMinutes: 0,
 	notificationsMuted: false,
 	confirmCompletionBeforeComplete: true,
+	tags: [],
 };
 
 app.setName("Task yourself");
@@ -174,6 +175,7 @@ const requestTaskCompletionConfirmation = (task) => {
 	pendingCompletionTask = task;
 	windowManager.openCompletionConfirmWindow({
 		task,
+		allTags: appState.tags,
 		onClose: () => {
 			pendingCompletionTask = null;
 		},
@@ -210,7 +212,7 @@ const scheduleCompletedTasksRefresh = () => {
 };
 
 const openEditWindowForTask = (data) => {
-	createEditWindow({ ...data, categories: appState.categories });
+	createEditWindow({ ...data, categories: appState.categories, allTags: appState.tags });
 	windowManager.getEditWindow()?.focus();
 };
 
@@ -422,8 +424,8 @@ const createTaskbarWindowInstance = () => {
 		getIsTimerRunning,
 		onCloseApp: handleCloseAppRequest,
 		onShowTaskContextMenu: showTaskMenu,
-	onShowGeneralContextMenu: showMainMenu,
-	onShowLoginContextMenu: showLoginMenu,
+		onShowGeneralContextMenu: showMainMenu,
+		onShowLoginContextMenu: showLoginMenu,
 	});
 	notificationsController.broadcastSnapshot();
 	return win;
@@ -455,7 +457,7 @@ app.whenReady().then(async () => {
 		windowManager.getTaskSplitWindow()?.webContents.openDevTools();
 		windowManager.getNotificationsWindow()?.webContents.openDevTools();
 		windowManager.getReminderWindow()?.webContents.openDevTools();
-		
+
 		// Open dev tools for all command windows
 		windowManager.getAllCommandWindows().forEach((commandWin) => {
 			commandWin.webContents.openDevTools();
@@ -560,8 +562,8 @@ const doAuthentication = () => {
 			if (userInfo.hasOwnProperty("id")) {
 				win.webContents.send("user-logged-in", userInfo);
 				socketConnect(userInfo);
-	}
-});
+			}
+		});
 
 }
 process.on('uncaughtException', (err) => {

@@ -31,11 +31,11 @@
 
 # MAIN WINDOW
     ## Incomplete
+        - De considerat ideea de a avea un mini edit window? dar nu stiu daca merge si daca e optim, ideea fiind sa sumonez un mini edit doar ptr tag sau categorii sau due date.
         - De facut un pop-up care sa puna un due date la un taks, gen d3, apare common lanaguage reader, scriem o data si o ora si enter.
         - Maybe - add a fulfill button to a reminder that would create a task and toggle it on so it can be done?
         - Add a way to export these tasks? 
         - Add a command that takes categories separated by comma, lowercase them and compares them to the registered categories. This command will display the categories listed - basically a written toggle for context menu "filter by category".
-        - Add a fuzzy finder based on task name.
         - Add commands to scroll the bar left and right such as "sl" and "sr" - which maybe scroll half of viewport
         - The context menu item for what categories to display won't repopulate correctly once the OS resumes. We can select 1 item, after resume it will show 'All categories' selected even if that's incorrect.
         - Let's make it so when we click on all categories when already selected, it will deselect that option and select the other. Maybe we can add some presets separated by a breakline for work, projects and other.
@@ -44,6 +44,7 @@
         - Check on why the electron.window.focus doesn't work, looks like the app may be focused temporarily and unfocused
     ## Completed
         - On on complete pop up, let's add a tag list under heading "any last tags?". This way it is more likely to add missing tags but it should also display the current tags.
+        - Add a fuzzy finder based on task name.
 
 # EDIT
     ## Incomplete

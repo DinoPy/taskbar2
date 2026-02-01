@@ -1,33 +1,50 @@
 /* CSS Custom Properties - Design System */
 :root {
-    box-sizing: content-box;
+	box-sizing: content-box;
 	/* ===========================================
 	   SYSTEMATIC OKLCH COLOR SYSTEM
 	   =========================================== */
-	
+
 	/* Base Color Parameters */
-	--hue-primary: 80;                    /* Green hue */
-	--hue-secondary: 100;                 /* Yellow-green hue */
-	--hue-accent: 20;                     /* Orange-red hue */
-	--hue-accent-light: 30;               /* Orange hue */
-	--hue-accent-dark: 15;                /* Red-orange hue */
-	
+	--hue-primary: 80;
+	/* Green hue */
+	--hue-secondary: 100;
+	/* Yellow-green hue */
+	--hue-accent: 20;
+	/* Orange-red hue */
+	--hue-accent-light: 30;
+	/* Orange hue */
+	--hue-accent-dark: 15;
+	/* Red-orange hue */
+
 	/* Lightness Scale */
-	--lightness-darkest: 0.25;            /* Very dark */
-	--lightness-darker: 0.35;             /* Dark */
-	--lightness-dark: 0.45;               /* Medium-dark */
-	--lightness-medium: 0.55;             /* Medium */
-	--lightness-light: 0.75;               /* Light */
-	--lightness-lighter: 0.90;            /* Very light */
-	--lightness-lightest: 0.95;           /* Almost white */
-	
+	--lightness-darkest: 0.25;
+	/* Very dark */
+	--lightness-darker: 0.35;
+	/* Dark */
+	--lightness-dark: 0.45;
+	/* Medium-dark */
+	--lightness-medium: 0.55;
+	/* Medium */
+	--lightness-light: 0.75;
+	/* Light */
+	--lightness-lighter: 0.90;
+	/* Very light */
+	--lightness-lightest: 0.95;
+	/* Almost white */
+
 	/* Chroma Scale */
-	--chroma-high: 0.15;                  /* High saturation */
-	--chroma-medium: 0.10;                /* Medium saturation */
-	--chroma-low: 0.05;                   /* Low saturation */
-	--chroma-minimal: 0.02;               /* Minimal saturation */
-	--chroma-intense: 0.20;               /* Very high saturation */
-	
+	--chroma-high: 0.15;
+	/* High saturation */
+	--chroma-medium: 0.10;
+	/* Medium saturation */
+	--chroma-low: 0.05;
+	/* Low saturation */
+	--chroma-minimal: 0.02;
+	/* Minimal saturation */
+	--chroma-intense: 0.20;
+	/* Very high saturation */
+
 	/* Generated Background Colors */
 	--color-bg-root: oklch(var(--lightness-darkest) var(--chroma-medium) var(--hue-primary));
 	--color-bg-primary: oklch(var(--lightness-lighter) var(--chroma-low) var(--hue-primary));
@@ -35,20 +52,20 @@
 	--color-bg-tertiary: oklch(var(--lightness-medium) var(--chroma-medium) var(--hue-primary));
 	--color-bg-elevated: oklch(var(--lightness-lightest) var(--chroma-minimal) var(--hue-primary));
 	--color-bg-hover: oklch(var(--lightness-dark) var(--chroma-high) var(--hue-primary));
-	
+
 	/* Generated Border Colors */
 	--color-border-primary: oklch(var(--lightness-medium) var(--chroma-medium) var(--hue-primary));
 	--color-border-secondary: oklch(var(--lightness-dark) var(--chroma-high) var(--hue-primary));
 	--color-border-focus: oklch(var(--lightness-darker) var(--chroma-high) var(--hue-accent));
 	--color-border-table: oklch(0.97 0.01 79.9 / 0.7);
-	
+
 	/* Generated Text Colors */
 	--color-text-primary: oklch(var(--lightness-darkest) var(--chroma-medium) var(--hue-primary));
 	--color-text-secondary: oklch(var(--lightness-darker) var(--chroma-medium) var(--hue-primary));
 	--color-text-tertiary: oklch(var(--lightness-dark) var(--chroma-high) var(--hue-primary));
 	--color-text-white: oklch(var(--lightness-lightest) var(--chroma-minimal) var(--hue-primary));
 	--color-text-warning: oklch(var(--lightness-darker) var(--chroma-high) var(--hue-accent));
-	
+
 	/* Generated Accent Colors */
 	--color-accent-primary: oklch(var(--lightness-medium) var(--chroma-intense) var(--hue-accent));
 	--color-accent-hover: oklch(var(--lightness-dark) var(--chroma-intense) var(--hue-accent));
@@ -56,66 +73,81 @@
 	--color-accent-light: oklch(var(--lightness-light) var(--chroma-intense) var(--hue-accent-light));
 	--color-accent-subtle: oklch(var(--lightness-lighter) var(--chroma-medium) var(--hue-accent-light));
 	--color-accent-dark: oklch(var(--lightness-darkest) var(--chroma-intense) var(--hue-accent-dark));
-	
+
 	/* Component Colors */
-	--color-task-bg: var(--color-bg-elevated);        /* Very light orange - regular tasks */
+	--color-task-bg: var(--color-bg-elevated);
+	/* Very light orange - regular tasks */
 	--color-task-border: var(--color-border-primary);
-	--color-task-active-bg: var(--color-accent-primary);  /* Dark orange - accent/active task */
+	--color-task-active-bg: var(--color-accent-primary);
+	/* Dark orange - accent/active task */
 	--color-task-active-border: var(--color-accent-hover);
-	
+
 	/* Input Colors */
 	--color-input-bg: var(--color-bg-elevated);
 	--color-input-border: var(--color-border-primary);
 	--color-input-outline: var(--color-border-focus);
-	
+
 	/* Button Colors */
 	--color-button-primary: var(--color-accent-primary);
 	--color-button-primary-hover: var(--color-accent-hover);
 	--color-button-primary-active: var(--color-accent-active);
 	--color-button-secondary: var(--color-bg-tertiary);
 	--color-button-secondary-hover: var(--color-border-secondary);
-	
+
 	/* Hover Colors */
 	--color-hover-subtle: var(--color-bg-hover);
-	
+
 	/* Status Colors - Orange Theme */
-	--color-status-error: #dc2626;         /* Red-orange - errors */
-	--color-status-success: #16a34a;       /* Green - success (contrast) */
-	--color-status-warning: #ea580c;       /* Dark orange - warnings */
-	--color-status-info: #f97316;         /* Bright orange - info */
-	
+	--color-status-error: #dc2626;
+	/* Red-orange - errors */
+	--color-status-success: #16a34a;
+	/* Green - success (contrast) */
+	--color-status-warning: #ea580c;
+	/* Dark orange - warnings */
+	--color-status-info: #f97316;
+	/* Bright orange - info */
+
 	/* Backward Compatibility - Legacy Variables */
 	--color-primary: var(--color-bg-primary);
 	--color-primary-border: var(--color-border-primary);
-	
+
 	/* Root Background Variable */
 	--color-bg-base: var(--color-bg-root);
-	
+
 	/* Urgency Colors */
 	--color-urgency-low: #4CAF50;
 	--color-urgency-medium: #FFC107;
 	--color-urgency-medium-high: #FF9800;
 	--color-urgency-high: #FF5722;
 	--color-urgency-critical: #F44336;
-	
+
 	/* Neon Colors */
 	--color-neon-red: #ff0000;
 	--color-neon-orange-red: #ff4500;
 	--color-neon-dark-orange: #ff8c00;
 	--color-neon-orange: #ffa500;
 	--color-neon-yellow: #ffff00;
-	
+
+	/* Dropdown Colors */
+	--color-dropdown-edit-bg: var(--color-bg-elevated);
+	--color-dropdown-edit-text: var(--color-text-primary);
+	--color-dropdown-edit-hover: var(--color-bg-tertiary);
+
+	--color-dropdown-delete-bg: var(--color-bg-root);
+	--color-dropdown-delete-text: var(--color-text-white);
+	--color-dropdown-delete-hover: rgba(255, 255, 255, 0.1);
+
 	/* ===========================================
 	   SPACING
 	   =========================================== */
-	
+
 	/* Base Spacing Scale */
 	--spacing-xs: 4px;
 	--spacing-sm: 8px;
 	--spacing-md: 16px;
 	--spacing-lg: 24px;
 	--spacing-xl: 32px;
-	
+
 	/* Component Spacing */
 	--spacing-task-padding: var(--spacing-xs) 6px;
 	--spacing-task-gap: var(--spacing-xs);
@@ -130,11 +162,11 @@
 	--spacing-input-margin-left: 5px;
 	--spacing-user-padding: 5px 0 5px 10px;
 	--spacing-search-margin-right: 280px;
-	
+
 	/* ===========================================
 	   SIZES
 	   =========================================== */
-	
+
 	/* Layout Sizes */
 	--size-taskbar-height: 60px;
 	--size-task-height: 86%;
@@ -142,7 +174,7 @@
 	--size-task-min-width: 60px;
 	--size-timer-width: 255px;
 	--size-timer-min-width: 300px;
-	
+
 	/* Component Sizes */
 	--size-button-height: 40px;
 	--size-button-width: 34px;
@@ -152,7 +184,7 @@
 	--size-timer-height: 70%;
 	--size-countdown-height: 80%;
 	--size-title-max-height: calc(var(--title-line-clamp) * var(--line-height-title));
-	
+
 	/* Urgency Sizes */
 	--size-urgency-border-width: 4px;
 	--size-urgency-corner-size: var(--spacing-md);
@@ -161,11 +193,11 @@
 	--size-urgency-corner-bottom: 0px;
 	--size-urgency-corner-right: var(--spacing-md);
 	--size-urgency-corner-border-radius: 10px;
-	
+
 	/* ===========================================
 	   TYPOGRAPHY
 	   =========================================== */
-	
+
 	/* Font Sizes */
 	--font-size-xs: 10px;
 	--font-size-sm: 12px;
@@ -175,7 +207,7 @@
 	--font-size-2xl: 18px;
 	--font-size-3xl: 20px;
 	--font-size-4xl: 24px;
-	
+
 	/* Component Font Sizes */
 	--font-size-category: var(--font-size-xs);
 	--font-size-timer: var(--font-size-xs);
@@ -186,63 +218,63 @@
 	--font-size-body: var(--font-size-md);
 	--font-size-small: var(--font-size-sm);
 	--font-size-warning: var(--font-size-4xl);
-	
+
 	/* Font Weights */
 	--font-weight-normal: 400;
 	--font-weight-medium: 500;
 	--font-weight-semibold: 600;
 	--font-weight-bold: 700;
-	
+
 	/* Line Heights */
 	--line-height-tight: 0.8;
 	--line-height-normal: 1.4;
 	--line-height-title: 0.85;
-	
+
 	/* Typography Utilities */
 	--title-line-clamp: 3;
-	
+
 	/* ===========================================
 	   BORDERS
 	   =========================================== */
-	
+
 	/* Border Widths */
 	--border-width: 1px;
 	--border-width-active: 3px;
-	
+
 	/* Border Radius */
 	--border-radius-sm: 1px;
 	--border-radius-md: 5px;
 	--border-radius-lg: 8px;
 	--border-radius-xl: 10px;
 	--border-radius-button: 100%;
-	
+
 	/* ===========================================
 	   SHADOWS
 	   =========================================== */
-	
+
 	--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
 	--shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
 	--shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
-	
+
 	/* ===========================================
 	   ANIMATIONS & TRANSITIONS
 	   =========================================== */
-	
+
 	/* Animation Durations */
 	--animation-bounce-duration: 1s;
 	--animation-neon-duration: 2s;
 	--animation-border-spin-duration: 2.5s;
 	--animation-transition: 0.3s;
 	--animation-background-transition: 250ms;
-	
+
 	/* Transitions */
 	--transition-fast: 0.15s ease;
 	--transition-normal: 0.3s ease;
 	--transition-slow: 0.5s ease;
-	
+
 	/* ===========================================
 	   Z-INDEX
 	   =========================================== */
-	
+
 	--z-index-search: 10;
 }

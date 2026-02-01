@@ -33,6 +33,18 @@ export function createSocketHandlers({
 			appState.selectedCategories = []; // Show all categories by default
 		}
 
+		let tags = data.tags;
+		if (typeof tags === "string") {
+			try {
+				tags = JSON.parse(tags);
+			} catch {
+				tags = [];
+			}
+		}
+		if (Array.isArray(tags)) {
+			appState.tags = tags;
+		}
+
 		let notifications = data.notifications;
 		if (typeof notifications === "string") {
 			try {

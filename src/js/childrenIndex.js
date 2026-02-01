@@ -1,10 +1,11 @@
-import { parseString } from './helpers.js';
+import { parseString, setupFuzzyFinder } from './helpers.js';
 const { ipcRenderer } = window.require('electron');
 const ipc = ipcRenderer;
 
 let ID;
 let category;
 let tags = [];
+let availableTags = [];
 let priority = null;
 let due_at = null;
 let show_before_due_time = null;
@@ -41,6 +42,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
 	// Don't automatically set a default value when user focuses on empty due date field
 	// This prevents accidentally setting a due date when user just wants to see the field
+
+	setupFuzzyFinder({
+		inputElement: tagsInput,
+		containerElement: document.querySelector(".tags-container"),
+		getAllTags: () => availableTags,
+		onSelectTag: (tag) => {
+			if (!tags.includes(tag)) {
+				tags.push(tag);
+				createTagElement(tag);
+			}
+		},
+		getExcludedTags: () => tags,
+	});
 })
 
 console.log(containerEl);
@@ -94,6 +108,8 @@ ipc.on('data-from-parent', (e, data) => {
 		showBeforeDueHoursInput.value = '';
 		showBeforeDueMinutesInput.value = '';
 	}
+
+	availableTags = data.allTags || [];
 
 	if (data.tags.length === 0)
 		return;
@@ -194,7 +210,7 @@ function handleSubmit() {
 
 	// Get values from form inputs
 	const priorityValue = priorityInput.value ? parseInt(priorityInput.value) : null;
-	
+
 	// Only process due date if it was actually changed
 	let dueAtValue = null;
 	if (dueAtInput.value) {
