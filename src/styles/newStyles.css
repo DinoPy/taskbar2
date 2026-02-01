@@ -609,3 +609,61 @@ body:hover .noActiveTaskWarning {
     background: var(--color-primary-border);
     border-radius: 2px;
 }
+
+/* Fuzzy Finder - Light theme, positioned like searchContainer */
+.fuzzyFinderContainer {
+    z-index: var(--z-index-search);
+    position: absolute;
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: flex-end;
+    height: 90%;
+    padding: 10px;
+    right: calc(var(--size-timer-width) + 70px);
+    background-color: var(--color-primary);
+}
+
+.fuzzyFinderContainer.active {
+    display: flex;
+}
+
+.fuzzyFinderInput {
+    background-color: var(--color-input-bg);
+    border: var(--border-width) solid var(--color-input-border);
+    outline: var(--color-input-outline);
+    height: var(--size-search-input-height);
+    border-radius: var(--border-radius-md);
+    padding: var(--spacing-input-padding);
+    font-family: 'Nunito', sans-serif;
+    width: 200px;
+    color: var(--color-text-primary);
+}
+
+.fuzzyFinderInput:focus {
+    border-color: var(--color-accent-primary);
+}
+
+.fuzzyFinderInput::placeholder {
+    color: var(--color-text-secondary);
+}
+
+/* Task selection highlight during fuzzy search */
+.task.fuzzy-selected {
+    outline: 3px solid var(--color-accent-primary);
+    outline-offset: 2px;
+}
+
+/* Hidden tasks during fuzzy filter */
+.task.fuzzy-hidden {
+    display: none !important;
+}
+
+/* Hidden category groups during fuzzy filter */
+.category-group.fuzzy-empty {
+    display: none !important;
+}
+
+.category-separator.fuzzy-hidden {
+    display: none !important;
+}

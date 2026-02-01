@@ -398,6 +398,10 @@ ipc.on('deleteTask', (e, data) => {
 
 ipc.on('completeTask', (e, data) => {
 	tasks[data.id].removeFocus(true);
+	// Update tags if provided (from completion confirmation dialog)
+	if (data.tags) {
+		tasks[data.id].tags = data.tags;
+	}
 	tasks[data.id].addToCompletedTaskList();
 	tasks[data.id].destroySelfFromDOM();
 	delete tasks[data.id];
@@ -1295,3 +1299,208 @@ const handleTaskChangeSearch = () => {
 ipc.on("task_switch_trigger", (e, data) => {
 	handleTaskChangeSearch()
 })
+
+// ===== Fuzzy Finder =====
+const fuzzyFinderContainer = document.getElementById("fuzzyFinderContainer");
+const fuzzyFinderInput = document.getElementById("fuzzyFinderInput");
+
+let fuzzyFinderActive = false;
+let fuzzySelectedTaskId = null;
+let fuzzyVisibleTasks = []; // Stores visible task IDs in order during fuzzy search
+
+// Simple fuzzy match function - returns score (higher = better match)
+const fuzzyMatch = (pattern, str) => {
+    pattern = pattern.toLowerCase();
+    str = str.toLowerCase();
+
+    let patternIdx = 0;
+    let score = 0;
+    let lastMatchIdx = -1;
+
+    for (let i = 0; i < str.length && patternIdx < pattern.length; i++) {
+        if (str[i] === pattern[patternIdx]) {
+            score += 1;
+            // Bonus for consecutive matches
+            if (lastMatchIdx === i - 1) score += 2;
+            // Bonus for matching at start or after space
+            if (i === 0 || str[i - 1] === ' ') score += 3;
+            lastMatchIdx = i;
+            patternIdx++;
+        }
+    }
+
+    // Return score only if all pattern chars matched
+    return patternIdx === pattern.length ? score : 0;
+};
+
+// Filter actual tasks by showing/hiding them
+const applyFuzzyFilter = (query) => {
+    const allTasks = Object.values(tasks);
+    let visibleTasks = [];
+
+    if (!query.trim()) {
+        // Show all tasks
+        allTasks.forEach(task => {
+            task.taskEl.classList.remove('fuzzy-hidden');
+            visibleTasks.push({ task, score: 1 });
+        });
+    } else {
+        allTasks.forEach(task => {
+            const score = fuzzyMatch(query, task.title);
+            if (score > 0) {
+                task.taskEl.classList.remove('fuzzy-hidden');
+                visibleTasks.push({ task, score });
+            } else {
+                task.taskEl.classList.add('fuzzy-hidden');
+            }
+        });
+        // Sort by score descending
+        visibleTasks.sort((a, b) => b.score - a.score);
+    }
+
+    // Update category group visibility
+    const categoryGroups = document.querySelectorAll('.category-group');
+    const categorySeparators = document.querySelectorAll('.category-separator');
+
+    categoryGroups.forEach((group, index) => {
+        const visibleTasksInGroup = group.querySelectorAll('.task:not(.fuzzy-hidden)');
+        if (visibleTasksInGroup.length === 0) {
+            group.classList.add('fuzzy-empty');
+            // Also hide the corresponding separator
+            if (categorySeparators[index]) {
+                categorySeparators[index].classList.add('fuzzy-hidden');
+            }
+        } else {
+            group.classList.remove('fuzzy-empty');
+            if (categorySeparators[index]) {
+                categorySeparators[index].classList.remove('fuzzy-hidden');
+            }
+        }
+    });
+
+    // Store visible task IDs in score order for navigation
+    fuzzyVisibleTasks = visibleTasks.map(v => v.task.id);
+
+    return visibleTasks.map(v => v.task);
+};
+
+// Update selection highlight on task elements
+const updateFuzzySelection = (taskId) => {
+    // Remove previous selection
+    document.querySelector('.task.fuzzy-selected')?.classList.remove('fuzzy-selected');
+
+    // Add new selection
+    if (taskId && tasks[taskId]) {
+        tasks[taskId].taskEl.classList.add('fuzzy-selected');
+        tasks[taskId].taskEl.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+    fuzzySelectedTaskId = taskId;
+};
+
+// Navigate to next/previous visible task
+const navigateFuzzySelection = (direction) => {
+    if (fuzzyVisibleTasks.length === 0) return;
+
+    const currentIndex = fuzzyVisibleTasks.indexOf(fuzzySelectedTaskId);
+    let newIndex;
+
+    if (currentIndex === -1) {
+        // No current selection, select first
+        newIndex = 0;
+    } else if (direction === 'next') {
+        // Right arrow - next task
+        newIndex = (currentIndex + 1) % fuzzyVisibleTasks.length;
+    } else {
+        // Left arrow - previous task
+        newIndex = (currentIndex - 1 + fuzzyVisibleTasks.length) % fuzzyVisibleTasks.length;
+    }
+
+    updateFuzzySelection(fuzzyVisibleTasks[newIndex]);
+};
+
+const toggleFuzzyTask = (task) => {
+    if (task.isFocused) {
+        task.removeFocus();
+    } else {
+        task.addFocus();
+    }
+    closeFuzzyFinder();
+};
+
+const openFuzzyTaskContextMenu = (task) => {
+    task.openCtxMenu();
+    closeFuzzyFinder();
+};
+
+const openFuzzyFinder = () => {
+    fuzzyFinderActive = true;
+    fuzzyFinderContainer.classList.add('active');
+    fuzzyFinderInput.value = '';
+
+    // Show all tasks initially, select first one
+    const visibleTasks = applyFuzzyFilter('');
+    if (visibleTasks.length > 0) {
+        updateFuzzySelection(visibleTasks[0].id);
+    }
+    fuzzyFinderInput.focus();
+};
+
+const closeFuzzyFinder = () => {
+    fuzzyFinderActive = false;
+    fuzzyFinderContainer.classList.remove('active');
+    fuzzyFinderInput.blur();
+
+    // Remove all fuzzy classes from tasks
+    Object.values(tasks).forEach(task => {
+        task.taskEl.classList.remove('fuzzy-hidden', 'fuzzy-selected');
+    });
+
+    // Remove fuzzy classes from category elements
+    document.querySelectorAll('.category-group').forEach(group => {
+        group.classList.remove('fuzzy-empty');
+    });
+    document.querySelectorAll('.category-separator').forEach(sep => {
+        sep.classList.remove('fuzzy-hidden');
+    });
+
+    fuzzySelectedTaskId = null;
+    fuzzyVisibleTasks = [];
+};
+
+// Event listeners
+fuzzyFinderInput?.addEventListener("input", () => {
+    const visibleTasks = applyFuzzyFilter(fuzzyFinderInput.value);
+    // Auto-select first matching task
+    if (visibleTasks.length > 0) {
+        updateFuzzySelection(visibleTasks[0].id);
+    } else {
+        updateFuzzySelection(null);
+    }
+});
+
+fuzzyFinderInput?.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") {
+        e.preventDefault();
+        navigateFuzzySelection('next');
+    } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        navigateFuzzySelection('prev');
+    } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (fuzzySelectedTaskId && tasks[fuzzySelectedTaskId]) {
+            if (e.metaKey || e.ctrlKey) {
+                openFuzzyTaskContextMenu(tasks[fuzzySelectedTaskId]);
+            } else {
+                toggleFuzzyTask(tasks[fuzzySelectedTaskId]);
+            }
+        }
+    } else if (e.key === "Escape") {
+        e.preventDefault();
+        closeFuzzyFinder();
+    }
+});
+
+// IPC listener for global shortcut
+ipc.on("open-fuzzy-finder", () => {
+    openFuzzyFinder();
+});
