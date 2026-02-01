@@ -9,6 +9,7 @@ let currentConfig = {
 	cancelEvent: "confirmation-cancelled",
 };
 let currentTasks = [];
+let currentTags = [];
 
 const headingEl = document.querySelector(".confirm-card h1");
 const summaryEl = document.getElementById("deleteConfirmSummary");
@@ -16,9 +17,41 @@ const listEl = document.getElementById("deleteConfirmList");
 const confirmBtn = document.getElementById("deleteConfirmBtn");
 const cancelBtn = document.getElementById("deleteCancelBtn");
 
+const tagsSection = document.getElementById("tagsSection");
+const tagsList = document.getElementById("tagsList");
+const tagsInput = document.getElementById("tagsInput");
+const tagsAddBtn = document.getElementById("tagsAddBtn");
+
 const resizeWindow = () => {
 	const height = document.documentElement.scrollHeight + 28;
 	ipcRenderer.send("confirm-dialog-resize", { height });
+};
+
+const renderTags = () => {
+	if (!tagsList) return;
+	tagsList.innerHTML = "";
+	currentTags.forEach((tag, index) => {
+		const tagEl = document.createElement("span");
+		tagEl.className = "tag-item";
+		tagEl.textContent = tag;
+		tagEl.addEventListener("click", () => {
+			currentTags.splice(index, 1);
+			renderTags();
+			resizeWindow();
+		});
+		tagsList.appendChild(tagEl);
+	});
+};
+
+const addTag = () => {
+	if (!tagsInput) return;
+	const value = tagsInput.value.trim();
+	if (value && !currentTags.includes(value)) {
+		currentTags.push(value);
+		tagsInput.value = "";
+		renderTags();
+		resizeWindow();
+	}
 };
 
 const renderTasks = (tasks = []) => {
@@ -45,6 +78,18 @@ const renderTasks = (tasks = []) => {
 		listEl.appendChild(item);
 	});
 
+	// Initialize tags from first task (completion is single-task)
+	currentTags = [...(currentTasks[0]?.tags || [])];
+
+	// Only show tags section for completion (not delete)
+	const isCompletion = currentConfig.confirmEvent === "completion-confirmation-confirmed";
+	if (tagsSection) {
+		tagsSection.style.display = isCompletion ? "block" : "none";
+	}
+	if (isCompletion) {
+		renderTags();
+	}
+
 	confirmBtn.disabled = false;
 	confirmBtn.focus({ preventScroll: true });
 	resizeWindow();
@@ -68,11 +113,23 @@ ipcRenderer.on("confirm-dialog-data", (_, payload) => {
 
 confirmBtn?.addEventListener("click", () => {
 	if (confirmBtn.disabled) return;
-	ipcRenderer.send(currentConfig.confirmEvent, { tasks: currentTasks });
+	ipcRenderer.send(currentConfig.confirmEvent, {
+		tasks: currentTasks,
+		tags: currentTags,
+	});
 });
 
 cancelBtn?.addEventListener("click", () => {
 	ipcRenderer.send(currentConfig.cancelEvent);
+});
+
+tagsAddBtn?.addEventListener("click", addTag);
+
+tagsInput?.addEventListener("keydown", (e) => {
+	if (e.key === "Enter") {
+		e.preventDefault();
+		addTag();
+	}
 });
 
 window.addEventListener("keydown", (event) => {

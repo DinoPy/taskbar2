@@ -8,32 +8,6 @@
 - ALL: Add a duration for all tasks when created from schedule or any other location.
     - We should consider how we can display tasks on the calendar as well without overlapping with the occurence that created the task.
 
-- Poate de facut si o lista de ce urmeaza sa se intample? desi asta ar exista in varianta corectata de instant schedules.
-- Do something to highlight the larger tasks that are yet to be done, I was thinking of adding another row to the taskbar with larger tasks that can stay there indefinite, maybe smaller times ones can be linked?
-- Add a search on the calendar as well, based on tasks.
-- Make the snoozed notification update on the schedule as well (so update the occurence?). Not sure about this one because I may want to see when the thing was originally due, maybe add a list of objects to the notification to mark all the snoozes with a count?
-- I should adjust the calendar not to show by color what type of event we have but rather by a symbol --- to think about this because the issue with the calendar is larger, going too far ahead changes the content colors completely even though they reference the same thing. This may be fixed through the other ideas related to the calendar.
-- Think about a way to display all the tasks on the calendar and not only the occurences. 
-- Review the tasks due timing and consider a way to add properties so it looks like google events with intervals.
-- The calendar should have filters.
-- Maybe different forms such as week, two weeks, month?
-- Add a way to export these tasks? 
-- Maybe connect with a calendar and share the events if possible, but selective events.
-- Add a feature under completed that allows to select and do mass actions such as adding a tag to all selected tasks.
-- Alarms for due tasks? Also connecting the app notifications with slack? Google? So the presence and notifications are all over?
-- Maybe - add a fulfill button to a reminder that would create a task and toggle it on so it can be done?
-- Add a general logger similar to what hi Bob has that does async work on another database + access via web, protected?
-- Save the screen serial and if reconnected, resume the taskbar to the location selected last. So for every screen we will save some coordinates.
-- We can make a separate calendar tab that will show what task was active at that time. We can take the creation and toggle times + duration between each toggle and populate an entire day with events. Splitting tasks may break this behaviour - or we can use the order of splitting tasks and do the end date of the first task at creation date + duration? To think about this and edge cases.
-- I am thinking of a list of due tasks for today and following period that will show similar to completed tasks combined with notifications. I don't know how we can achieve this but it may require not to create the tasks directly or with x time before. Let's think of this, and see if it would bring enough value.
-- Check on why the electron.window.focus doesn't work, looks like the app may be focused temporarily and unfocused
-- Let's add reminders for tasks, r1 to show the remind screen without the first page?
-- Add an option to recommend tags based on the title and category.
-- Add some kind of warning for the tasks not having tags, mostly all of the should have tags.
-- Add option to add tags in reminder that creates tags.
-- Add tags in notifications, or categories so they can be better filtered. Once the variable is added we can add filters and sort to the notification window.
-- On on complete pop up, let's add a tag list under heading "any last tags?". This way it is more likely to add missing tags but it should also display the current tags.
-- Fix tags that can't be deleted on desktop.
 - In order to double record reminders/tasks let's add something to copy  the list of tasks that were recorded as reminders
 
 
@@ -42,22 +16,39 @@
 
 - To look into how to use biometrics to access the app, may be a cool idea? :))) but may also slow the user so if added it should be toggleable.
 
+# NEW FEATURES
+    ## Incomplete
+        - Add some kind of warning for the tasks not having tags, mostly all of the should have tags.
+        - Add an option to recommend tags based on the title and category.
+        - I am thinking of a list of due tasks for today and following period that will show similar to completed tasks combined with notifications. I don't know how we can achieve this but it may require not to create the tasks directly or with x time before. Let's think of this, and see if it would bring enough value.
+        - We can make a separate calendar tab that will show what task was active at that time. We can take the creation and toggle times + duration between each toggle and populate an entire day with events. Splitting tasks may break this behaviour - or we can use the order of splitting tasks and do the end date of the first task at creation date + duration? To think about this and edge cases.
+        - Poate de facut si o lista de ce urmeaza sa se intample? desi asta ar exista in varianta corectata de instant schedules.
+        - Do something to highlight the larger tasks that are yet to be done, I was thinking of adding another row to the taskbar with larger tasks that can stay there indefinite, maybe smaller times ones can be linked?
+        - Add a search on the calendar as well, based on tasks.
+        - Add a general logger similar to what hi Bob has that does async work on another database + access via web, protected?
+    ## Complete
 
 
 # MAIN WINDOW
     ## Incomplete
         - De facut un pop-up care sa puna un due date la un taks, gen d3, apare common lanaguage reader, scriem o data si o ora si enter.
+        - Maybe - add a fulfill button to a reminder that would create a task and toggle it on so it can be done?
+        - Add a way to export these tasks? 
         - Add a command that takes categories separated by comma, lowercase them and compares them to the registered categories. This command will display the categories listed - basically a written toggle for context menu "filter by category".
         - Add a fuzzy finder based on task name.
         - Add commands to scroll the bar left and right such as "sl" and "sr" - which maybe scroll half of viewport
         - The context menu item for what categories to display won't repopulate correctly once the OS resumes. We can select 1 item, after resume it will show 'All categories' selected even if that's incorrect.
         - Let's make it so when we click on all categories when already selected, it will deselect that option and select the other. Maybe we can add some presets separated by a breakline for work, projects and other.
         - Ensure the taskbar returns to the position it was at when the display is reconnected or the OS resumes.
+            - Save the screen serial and if reconnected, resume the taskbar to the location selected last. So for every screen we will save some coordinates.
+        - Check on why the electron.window.focus doesn't work, looks like the app may be focused temporarily and unfocused
     ## Completed
+        - On on complete pop up, let's add a tag list under heading "any last tags?". This way it is more likely to add missing tags but it should also display the current tags.
 
 # EDIT
     ## Incomplete
         - Fix the title input so the outline doesn't go away after changing the inputs via tab or I think pressing enter?
+        - Fix tags that can't be deleted on desktop.
     ## Completed
         - The description window adds a double quotation mark (") for and removes the quotations and commas within, check if this is necessary and remove if not. We don't want the quotations keep showing.
         - Update the default description as well, it can be an empty string.
@@ -70,6 +61,7 @@
 
 # COMPLETED
     ## Incomplete
+        - Add a feature under completed that allows to select and do mass actions such as adding a tag to all selected tasks.
         - maybe add a context toggle for when completing tasks to show a confirmation window, maybe a custom one with are you sure that everything related to this task is now done?
     ## Complete
 
@@ -86,6 +78,12 @@
         - Let's do something about events that overpopulate the calendar such as those that occur every 30 minutes, maybe we can hide these somehow, or not display them or add a filter.
         - Add an option to edit the occurence, schedule, notification, whatever the item is.
         - Think of a way to maybe populate the recurring events in the calendar so they can be deleted, the current example is drink & register water that comes every 30 to be deleted at 11:30 not to affect the stomach ability to disolve
+        - I should adjust the calendar not to show by color what type of event we have but rather by a symbol --- to think about this because the issue with the calendar is larger, going too far ahead changes the content colors completely even though they reference the same thing. This may be fixed through the other ideas related to the calendar.
+        - Think about a way to display all the tasks on the calendar and not only the occurences. 
+        - Review the tasks due timing and consider a way to add properties so it looks like google events with intervals.
+        - The calendar should have filters.
+        - Maybe different forms such as week, two weeks, month?
+        - Maybe connect with a calendar and share the events if possible, but selective events.
     ## Completed
         - Make the reminders only show as a line that can be clicked.
         - Add a grab bar so the calendar window can be moved around. 
@@ -98,6 +96,9 @@
     ## Ideas
         - Reconsider the design, currently it looks kind of weird, I am not satisfied, not sure what is the desired output but that can be explored.
     ## Incomplete
+        - Add option to add tags in reminder that creates tasks.
+        - Let's add reminders for tasks, r1 to show the remind screen without the first page?
+        - Make the snoozed notification update on the schedule as well (so update the occurence?). Not sure about this one because I may want to see when the thing was originally due, maybe add a list of objects to the notification to mark all the snoozes with a count?
         - See what happens to reminders set for one day in the future why they don't have a due date, example  meeting primary set today (19 nov) at 15:30 for tomorrow at 4:00, does not have a due date
         - Look into how schedules, occurrences, notifications relate and how we can make the schedules especially instant ones display in schedules tab even after they are ran, but if they are ran we need to be able to delete schedule and related items
         - Let's make the reminder add pop-up show in a drop down options for reminders, it will be a multi-select defaulted to none.
@@ -112,6 +113,8 @@
         - Let's think of a different way to handle reminder, maybe we can get an AI to parse the remaining tasks and their due date and important to read a custom motivational message, we also need something for due tasks because reminders are spammed until seen but for due tasks we have nothing.
         - Should I add a notification asking from time to time to review the active tasks?
     ## Incomplete
+        - Add tags in notifications, or categories so they can be better filtered. Once the variable is added we can add filters and sort to the notification window.
+        - Alarms for due tasks? Also connecting the app notifications with slack? Google? So the presence and notifications are all over?
         - Let's add an alarm for reminders that ring until acknowledged or snoozed or converted to normal reminders. Maybe we can do alarm types
         - Make it so the instant notifications listed in the notification window be ordered by their due date. It should also show the consumption status. After revamping the scheduler, we are planning on generating the events with 90 days ahead. From these events we will create the tasks when the time comes (48h before or less). When we edit the recuring schedule it should ask to also edit the emited occurences, when editing an occurence on the calendar it should ask if we edit only the current one or the rest, same with deletion. 
         - Fix out of screen dropdown options that can't be used. -> When usingpressing on the snooze button, the dropdown menu shows below the reminder, if there is only a single reminder, the container is stretched.

@@ -88,7 +88,7 @@ const appState = {
 app.setName("Task yourself");
 app.setAppUserModelId(app.name);
 
-const RESERVED_COMMAND_KEYS = ["Space", "n", "j", "e", "k", "c", "s", "y", "z"];
+const RESERVED_COMMAND_KEYS = ["Space", "n", "j", "e", "k", "c", "s", "y", "z", "f"];
 
 let socketClient;
 let socketConnect;
@@ -222,6 +222,7 @@ const handleTaskComplete = async (data) => {
 			duration: data.duration,
 			completed_at: data.completed_at,
 			last_modified_at: +new Date(),
+			tags: data.tags || [],
 		});
 	} catch (error) {
 		forwardToRenderer("post-task-error", JSON.stringify(error));
@@ -380,13 +381,18 @@ registerIpcHandlers({
 	openCalendarWindow: openCalendarWindowOnFocusedScreen,
 });
 
-ipc.on("completion-confirmation-confirmed", () => {
+ipc.on("completion-confirmation-confirmed", (_, payload) => {
 	if (pendingCompletionTask) {
 		if (appState.openTaskProps?.id === pendingCompletionTask.id) {
 			windowManager.closeEditWindow();
 			appState.openTaskProps = null;
 		}
-		tasksController.completeTask(pendingCompletionTask);
+		// Merge updated tags into task before completing
+		const taskWithTags = {
+			...pendingCompletionTask,
+			tags: payload?.tags || pendingCompletionTask.tags || [],
+		};
+		tasksController.completeTask(taskWithTags);
 		pendingCompletionTask = null;
 	}
 	windowManager.closeCompletionConfirmWindow();
@@ -476,6 +482,10 @@ app.whenReady().then(async () => {
 	});
 	globalShortcut.register("CommandOrControl+Shift+z", () => {
 		createCustomCommandsWindow();
+	});
+	globalShortcut.register("CommandOrControl+Shift+f", () => {
+		win?.show();
+		win?.webContents.send("open-fuzzy-finder");
 	});
 
 	try {

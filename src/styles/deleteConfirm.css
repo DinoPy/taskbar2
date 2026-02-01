@@ -101,3 +101,76 @@ body {
 	outline-offset: 3px;
 	box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
 }
+
+/* Tags section */
+.tags-section {
+	display: none;
+	margin-top: var(--spacing-md);
+}
+
+.tags-label {
+	font-size: var(--font-size-md);
+	color: rgba(255, 255, 255, 0.72);
+	margin: 0 0 var(--spacing-sm) 0;
+}
+
+.tags-list {
+	display: flex;
+	flex-wrap: wrap;
+	gap: var(--spacing-xs);
+	margin-bottom: var(--spacing-sm);
+	min-height: 28px;
+}
+
+.tag-item {
+	display: inline-flex;
+	align-items: center;
+	padding: 4px 10px;
+	background: rgba(255, 255, 255, 0.1);
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	border-radius: 14px;
+	font-size: var(--font-size-sm);
+	color: rgba(255, 255, 255, 0.9);
+	cursor: pointer;
+	transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.tag-item:hover {
+	background: rgba(255, 100, 100, 0.25);
+	border-color: rgba(255, 100, 100, 0.4);
+}
+
+.tags-input-container {
+	display: flex;
+	gap: var(--spacing-xs);
+}
+
+.tags-input {
+	flex: 1;
+	padding: var(--spacing-xs) var(--spacing-sm);
+	background: rgba(255, 255, 255, 0.06);
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	border-radius: 6px;
+	color: var(--color-text-white);
+	font-size: var(--font-size-sm);
+}
+
+.tags-input:focus {
+	outline: none;
+	border-color: rgba(255, 255, 255, 0.3);
+}
+
+.tags-add-btn {
+	padding: var(--spacing-xs) var(--spacing-md);
+	background: rgba(255, 255, 255, 0.1);
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	border-radius: 6px;
+	color: var(--color-text-white);
+	font-size: var(--font-size-sm);
+	cursor: pointer;
+	transition: background 0.15s ease;
+}
+
+.tags-add-btn:hover {
+	background: rgba(255, 255, 255, 0.18);
+}
