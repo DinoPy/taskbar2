@@ -3,8 +3,8 @@
  * Converts natural language text into RRule recurrence patterns
  */
 
-import * as chrono from 'https://cdn.skypack.dev/chrono-node@2.9.0?min';
-import { RRule } from 'https://cdn.skypack.dev/rrule@2.8.1?min';
+const chrono = window.require('chrono-node');
+const { RRule } = window.require('rrule');
 
 // Configuration constants
 export const ZONE = 'Europe/Bucharest';

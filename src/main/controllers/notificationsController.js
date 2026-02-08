@@ -579,7 +579,7 @@ export function createNotificationsController({
 		if (until) {
 			const untilDate = new Date(until);
 			if (!Number.isNaN(untilDate.getTime())) {
-				payload.snooze_until = Math.round(untilDate.getTime() / 1000);
+				payload.snooze_until = untilDate.getTime();
 			}
 		} else if (Number.isFinite(minutes)) {
 			payload.snooze_minutes = Math.max(0, Math.round(minutes));

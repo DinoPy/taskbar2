@@ -1,7 +1,7 @@
 import { BrowserWindow, screen, ipcMain } from "electron";
 
-const WINDOW_WIDTH = 640;
-const WINDOW_HEIGHT = 320;
+const WINDOW_WIDTH = 840;
+const WINDOW_HEIGHT = 480;
 
 export function createDeleteConfirmWindow({
 	tasks = [],

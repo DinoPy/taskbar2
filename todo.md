@@ -15,6 +15,11 @@
 - Also look into how we can log in with an email specifically for events purposes so we can do crud on events. but also sync what's on calendar with what's local. Maybe selectively? sync this category with this email?
 
 - To look into how to use biometrics to access the app, may be a cool idea? :))) but may also slow the user so if added it should be toggleable.
+- For the task templates we can create schedules when they'll be created.. We can have more schedules for the same template.
+- Let's also update the reminder to add tags, categories and others.
+- Think of a way to ensure that I see all hi bob changes so I can schedule for them, especially for actions that require documents
+- Think of a way to do task lists, I would like lists that can be templateised, customizes per instance (before triggering) and during instance. These lists can be scheduled, maybe we can get a new window to quickly trigger them, maybe also customize them from the same window. Very very important to think of use cases, how we'll track this task list, how do we ensure we don't disregard or delay, how we keep it updated, maybe how we can get logs for them?
+- Regarding new notifications, if I have new notifications that are pushed back (ignored) how do I know which notifications are newer, we know the order but they don't pop in the eye.
 
 # NEW FEATURES
     ## Incomplete
@@ -97,6 +102,7 @@
     ## Ideas
         - Reconsider the design, currently it looks kind of weird, I am not satisfied, not sure what is the desired output but that can be explored.
     ## Incomplete
+        - Reminder window takes a good while to show up at times, find ways to optimise the trigger speed, I'd like it to show on screen right a way.
         - Add option to add tags in reminder that creates tasks.
         - Let's add reminders for tasks, r1 to show the remind screen without the first page?
         - Make the snoozed notification update on the schedule as well (so update the occurence?). Not sure about this one because I may want to see when the thing was originally due, maybe add a list of objects to the notification to mark all the snoozes with a count?

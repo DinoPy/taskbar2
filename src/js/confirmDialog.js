@@ -25,7 +25,13 @@ const tagsInput = document.getElementById("tagsInput");
 const tagsAddBtn = document.getElementById("tagsAddBtn");
 
 const resizeWindow = () => {
-	const height = document.documentElement.scrollHeight + 28;
+	const card = document.querySelector(".confirm-card");
+	if (!card) return;
+	const bodyStyle = window.getComputedStyle(document.body);
+	const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
+	const cardHeight = card.scrollHeight;
+	const shadowBuffer = 20; // Account for box-shadow blur and spread
+	const height = bodyPadding + cardHeight + shadowBuffer;
 	ipcRenderer.send("confirm-dialog-resize", { height });
 };
 

@@ -83,7 +83,12 @@ const closeReminderMenu = () => {
 
 const parseCustomReminderInput = (input) => {
 	if (!input) return null;
-	const selected = new Date(input);
+	const [datePart, timePart] = input.split("T");
+	if (!datePart || !timePart) return null;
+	const [year, month, day] = datePart.split("-").map(Number);
+	const [hour, minute] = timePart.split(":").map(Number);
+	if (!year || !month || !day || hour === undefined || minute === undefined) return null;
+	const selected = new Date(year, month - 1, day, hour, minute, 0, 0);
 	if (Number.isNaN(selected.getTime())) return null;
 	const diffMs = selected.getTime() - Date.now();
 	if (diffMs <= 0) return null;
@@ -166,7 +171,13 @@ const openCustomReminderForm = (id) => {
 		event.preventDefault();
 		const minutes = parseCustomReminderInput(input.value);
 		if (!minutes) return;
-		ipcRenderer.send("notifications-snooze", { id, minutes, until: input.value });
+		// Convert datetime-local to UTC ISO string for proper timezone handling
+		const [datePart, timePart] = input.value.split("T");
+		const [year, month, day] = datePart.split("-").map(Number);
+		const [hour, minute] = timePart.split(":").map(Number);
+		const localDate = new Date(year, month - 1, day, hour, minute, 0, 0);
+		const isoString = localDate.toISOString();
+		ipcRenderer.send("notifications-snooze", { id, minutes, until: isoString });
 		closeReminderMenu();
 	});
 };
