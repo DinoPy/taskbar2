@@ -20,6 +20,7 @@ import { createReminderWindow as createReminderBrowserWindow } from "./src/main/
 import { createDeleteConfirmWindow as createDeleteConfirmBrowserWindow } from "./src/main/windows/deleteConfirmWindow.js";
 import { createCalendarWindow as createCalendarBrowserWindow } from "./src/main/windows/calendarWindow.js";
 import { createCompletionConfirmWindow as createCompletionConfirmBrowserWindow } from "./src/main/windows/completionConfirmWindow.js";
+import { createAddDueWindow as createAddDueBrowserWindow } from "./src/main/windows/addDueWindow.js";
 import {
 	showMainContextMenu,
 	showTaskContextMenu,
@@ -109,6 +110,7 @@ const windowManager = createWindowManager({
 	createDeleteConfirmWindow: createDeleteConfirmBrowserWindow,
 	createCompletionConfirmWindow: createCompletionConfirmBrowserWindow,
 	createCalendarWindow: createCalendarBrowserWindow,
+	createAddDueWindow: createAddDueBrowserWindow,
 });
 
 const commandsController = createCommandsController({
@@ -413,6 +415,7 @@ const handleCloseAppRequest = () => {
 	windowManager.closeTaskSplitWindow();
 	windowManager.closeNotificationsWindow();
 	windowManager.closeReminderWindow();
+	windowManager.closeAddDueWindow();
 	windowManager.getTaskbarWindow()?.close();
 };
 

@@ -829,6 +829,12 @@ const parseCommand = (input) => {
 		return { type: 'edit', index: parseInt(match[1]) };
 	}
 	
+	// Add due command: ad1, ad2, etc.
+	if (trimmed.match(/^ad(\d+)$/)) {
+		const match = trimmed.match(/^ad(\d+)$/);
+		return { type: 'add_due', index: parseInt(match[1]) };
+	}
+
 	// Duplicate command: d1, d2, dd1, dd2, etc. (single or double d)
 	if (trimmed.match(/^d{1,2}\d+$/)) {
 		const match = trimmed.match(/^d{1,2}(\d+)$/);
@@ -975,6 +981,19 @@ const executeCommand = (command) => {
 			}
 			return { success: false, message: `Invalid task index: ${command.index}` };
 			
+		case 'add_due':
+			if (command.index > 0 && command.index <= taskKeys.length) {
+				const taskId = taskKeys[command.index - 1];
+				const taskData = tasks[taskId];
+				if (taskData) {
+					console.log(`Command: Adding due date to task ${command.index} (ID: ${taskId})`);
+					ipc.send("open-add-due-window", taskData.formatTask('Object'));
+					return { success: true, message: `Adding due date to task ${command.index}` };
+				}
+				return { success: false, message: `Task ${command.index} not found` };
+			}
+			return { success: false, message: `Invalid task index: ${command.index}` };
+
 		case 'show_all_tasks':
 			ipc.send("toggle-show-all-tasks");
 			return { success: true, message: "Toggled show all tasks" };
@@ -1048,6 +1067,7 @@ const getCommandSuggestions = (input) => {
 		{ command: 'c3', description: 'complete task 3' },
 		{ command: 'd4', description: 'duplicate task 4' },
 		{ command: 'ddd5', description: 'delete task 5' },
+		{ command: 'ad1', description: 'add due date to task 1' },
 		{ command: 'ec', description: 'edit current task' },
 		{ command: 'sat', description: 'show all tasks' },
 		{ command: 'notif', description: 'toggle notifications window' },
@@ -1075,6 +1095,7 @@ const getCommandSuggestions = (input) => {
 		{ command: 'sat', description: 'show all tasks', pattern: /^sat$/ },
 		{ command: 'ec', description: 'edit current task', pattern: /^ec$/ },
 		{ command: 'aot', description: 'toggle always on top', pattern: /^aot$/ },
+		{ command: 'ad', description: 'add due date', pattern: /^ad(\d+)$/ },
 		{ command: 'sp', description: 'split task', pattern: /^sp(\d+)$/ },
 		{ command: 'sw', description: 'switch screen', pattern: /^sw(\d+)([du])$/ },
 		{ command: 'remind', description: 'create reminder/task', pattern: /^remind$/ },
@@ -1082,7 +1103,14 @@ const getCommandSuggestions = (input) => {
 	];
 	
 	// Handle all command types with consistent logic
-	if (trimmed.startsWith('sw')) {
+	if (trimmed.startsWith('ad')) {
+		if (trimmed.match(/^ad\d+$/)) {
+			const match = trimmed.match(/^ad(\d+)$/);
+			suggestions.push({ command: trimmed, description: `add due date to task ${match[1]}` });
+		} else {
+			suggestions.push({ command: 'ad1, ad2, ad3...', description: 'add due date to task' });
+		}
+	} else if (trimmed.startsWith('sw')) {
 		suggestions.push({ command: 'sw_n_d/u', description: 'switch to screen n down/up' });
 	} else if (trimmed.startsWith('sp')) {
 		if (trimmed.match(/^sp\d+$/)) {

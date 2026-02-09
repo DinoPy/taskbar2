@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8" />
+	<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+	<title>Add Due Date</title>
+	<link rel="stylesheet" href="../styles/variables.css" />
+	<link rel="stylesheet" href="../styles/addDue.css" />
+	<script type="module" src="../js/addDueWindow.js" defer></script>
+</head>
+<body>
+	<div class="add-due-card">
+		<h2 class="add-due-title" id="taskTitle"></h2>
+
+		<label class="add-due-label" for="dateInput">Due date</label>
+		<input
+			type="text"
+			class="add-due-input"
+			id="dateInput"
+			placeholder="e.g. tomorrow at 3pm, next monday 9am"
+			autofocus
+		/>
+		<div class="add-due-preview" id="datePreview">&nbsp;</div>
+
+		<div class="add-due-show-before">
+			<label class="add-due-label">Show before</label>
+			<div class="add-due-show-before-fields">
+				<input type="number" class="add-due-number" id="showBeforeHours" value="6" min="0" />
+				<span class="add-due-unit">h</span>
+				<input type="number" class="add-due-number" id="showBeforeMinutes" value="0" min="0" max="59" />
+				<span class="add-due-unit">m</span>
+			</div>
+		</div>
+
+		<div class="add-due-actions">
+			<button class="add-due-btn cancel" id="cancelBtn">Cancel</button>
+			<button class="add-due-btn submit" id="submitBtn">Submit</button>
+		</div>
+	</div>
+</body>
+</html>

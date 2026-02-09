@@ -148,6 +148,21 @@ export function registerIpcHandlers({
         tasksController.deleteTask({ id: data.id });
     });
 
+    ipc.on("open-add-due-window", (_, taskData) => {
+        windowManager.openAddDueWindow({ task: taskData });
+    });
+
+    ipc.on("add-due-submit", (_, data) => {
+        if (data?.id) {
+            forwardToRenderer("msg-redirected-to-parent", data);
+        }
+        windowManager.closeAddDueWindow();
+    });
+
+    ipc.on("add-due-close", () => {
+        windowManager.closeAddDueWindow();
+    });
+
     ipc.on("open-task-split", (_, data) => {
         createTaskSplitWindow(data.taskData);
     });

@@ -12,6 +12,7 @@ export function createWindowManager({
 	createDeleteConfirmWindow,
 	createCompletionConfirmWindow,
 	createCalendarWindow,
+	createAddDueWindow,
 }) {
 	const state = {
 		taskbar: null,
@@ -25,6 +26,7 @@ export function createWindowManager({
 		reminder: null,
 		completion: null,
 		deleteConfirm: null,
+		addDue: null,
 		calendar: null,
 		commandWindows: new Map(),
 	};
@@ -279,6 +281,32 @@ export function createWindowManager({
 		closeDeleteConfirmWindow() {
 			if (state.deleteConfirm && !state.deleteConfirm.isDestroyed()) {
 				state.deleteConfirm.close();
+			}
+		},
+
+		openAddDueWindow(options = {}) {
+			if (state.addDue && !state.addDue.isDestroyed()) {
+				state.addDue.focus();
+				state.addDue.webContents.send("add-due-data", options?.task);
+				return state.addDue;
+			}
+			state.addDue = createAddDueWindow({
+				...options,
+				onClose: () => {
+					state.addDue = null;
+					options?.onClose?.();
+				},
+			});
+			return state.addDue;
+		},
+
+		getAddDueWindow() {
+			return state.addDue;
+		},
+
+		closeAddDueWindow() {
+			if (state.addDue && !state.addDue.isDestroyed()) {
+				state.addDue.close();
 			}
 		},
 
