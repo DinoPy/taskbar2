@@ -107,9 +107,30 @@ body::-webkit-scrollbar-thumb:hover {
 	grid-template-columns: 1fr auto;
 	background: rgba(255, 255, 255, 0.05);
 	border: 1px solid rgba(255, 255, 255, 0.1);
+	border-left-width: 4px;
 	border-radius: 10px;
 	padding: var(--spacing-sm);
 	gap: var(--spacing-sm);
+}
+
+.notifications-item.urgency-low {
+	border-left-color: rgba(76, 175, 80, 0.9);
+}
+
+.notifications-item.urgency-normal {
+	border-left-color: rgba(59, 130, 246, 0.9);
+}
+
+.notifications-item.urgency-high {
+	border-left-color: rgba(249, 115, 22, 0.95);
+}
+
+.notifications-item.urgency-max {
+	border-left-color: rgba(239, 68, 68, 0.95);
+}
+
+.notifications-item.urgency-ultimate {
+	border-left-color: rgba(220, 38, 38, 1);
 }
 
 .notifications-item.unseen {
@@ -121,6 +142,31 @@ body::-webkit-scrollbar-thumb:hover {
 	border-color: var(--color-accent-primary);
 	box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.2);
 	background: rgba(249, 115, 22, 0.05);
+}
+
+.notifications-item.unseen.urgency-low,
+.notifications-item.snoozed.urgency-low {
+	border-left-color: rgba(76, 175, 80, 0.9);
+}
+
+.notifications-item.unseen.urgency-normal,
+.notifications-item.snoozed.urgency-normal {
+	border-left-color: rgba(59, 130, 246, 0.9);
+}
+
+.notifications-item.unseen.urgency-high,
+.notifications-item.snoozed.urgency-high {
+	border-left-color: rgba(249, 115, 22, 0.95);
+}
+
+.notifications-item.unseen.urgency-max,
+.notifications-item.snoozed.urgency-max {
+	border-left-color: rgba(239, 68, 68, 0.95);
+}
+
+.notifications-item.unseen.urgency-ultimate,
+.notifications-item.snoozed.urgency-ultimate {
+	border-left-color: rgba(220, 38, 38, 1);
 }
 
 .notification-title {
@@ -171,6 +217,31 @@ body::-webkit-scrollbar-thumb:hover {
 	font-size: 10px;
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
+}
+
+.pill.urgency-pill.urgency-low {
+	background: rgba(76, 175, 80, 0.2);
+	color: rgba(185, 246, 202, 0.95);
+}
+
+.pill.urgency-pill.urgency-normal {
+	background: rgba(59, 130, 246, 0.2);
+	color: rgba(191, 219, 254, 0.95);
+}
+
+.pill.urgency-pill.urgency-high {
+	background: rgba(249, 115, 22, 0.2);
+	color: rgba(254, 215, 170, 0.95);
+}
+
+.pill.urgency-pill.urgency-max {
+	background: rgba(239, 68, 68, 0.2);
+	color: rgba(254, 202, 202, 0.95);
+}
+
+.pill.urgency-pill.urgency-ultimate {
+	background: rgba(220, 38, 38, 0.3);
+	color: rgba(255, 220, 220, 0.98);
 }
 
 .notification-snoozed-text {
@@ -240,9 +311,178 @@ body::-webkit-scrollbar-thumb:hover {
 	overflow-y: auto;
 }
 
+.reminder-urgency-picker {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	padding: 6px 8px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.reminder-urgency-label {
+	font-size: 10px;
+	color: rgba(255, 255, 255, 0.55);
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+
+.reminder-urgency-buttons {
+	display: grid;
+	grid-template-columns: repeat(2, minmax(0, 1fr));
+	gap: 4px;
+}
+
+.reminder-urgency-btn {
+	background: rgba(255, 255, 255, 0.04);
+	border: 1px solid rgba(255, 255, 255, 0.14);
+	border-radius: 6px;
+	padding: 5px 6px;
+	font-size: 10px;
+	font-weight: 600;
+	color: rgba(255, 255, 255, 0.8);
+	cursor: pointer;
+}
+
+.reminder-urgency-btn:hover {
+	background: rgba(255, 255, 255, 0.12);
+}
+
+.reminder-urgency-btn.active {
+	border-color: rgba(255, 255, 255, 0.4);
+	background: rgba(255, 255, 255, 0.18);
+	color: #fff;
+}
+
+.reminder-urgency-btn.urgency-low.active {
+	border-color: rgba(76, 175, 80, 0.9);
+}
+
+.reminder-urgency-btn.urgency-normal.active {
+	border-color: rgba(59, 130, 246, 0.9);
+}
+
+.reminder-urgency-btn.urgency-high.active {
+	border-color: rgba(249, 115, 22, 0.9);
+}
+
+.reminder-urgency-btn.urgency-max.active {
+	border-color: rgba(239, 68, 68, 0.9);
+}
+
+.reminder-urgency-btn.urgency-ultimate.active {
+	border-color: rgba(220, 38, 38, 1);
+	background: rgba(220, 38, 38, 0.22);
+}
+
 .reminder-menu.position-above {
 	top: auto;
 	bottom: calc(100% + 6px);
+}
+
+.schedule-delete-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(8, 12, 18, 0.62);
+	display: grid;
+	place-items: center;
+	z-index: 120;
+	padding: 12px;
+}
+
+.schedule-delete-dialog {
+	width: min(420px, 100%);
+	background: rgba(20, 26, 37, 0.98);
+	border: 1px solid rgba(255, 255, 255, 0.15);
+	border-radius: 12px;
+	box-shadow: 0 22px 36px rgba(0, 0, 0, 0.45);
+	padding: 14px 14px 12px;
+}
+
+.schedule-delete-dialog h3 {
+	margin: 0 0 8px;
+	font-size: 15px;
+	font-weight: 700;
+	color: rgba(255, 255, 255, 0.92);
+}
+
+.schedule-delete-summary {
+	margin: 0 0 10px;
+	font-size: 12px;
+	color: rgba(255, 255, 255, 0.75);
+}
+
+.schedule-delete-form {
+	display: flex;
+	flex-direction: column;
+	gap: 8px;
+}
+
+.schedule-delete-option {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 12px;
+	color: rgba(255, 255, 255, 0.86);
+}
+
+.schedule-delete-date-field {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+	font-size: 12px;
+	color: rgba(255, 255, 255, 0.8);
+	margin-top: 2px;
+}
+
+.schedule-delete-date-field input[type="datetime-local"] {
+	background: rgba(255, 255, 255, 0.07);
+	border: 1px solid rgba(255, 255, 255, 0.18);
+	border-radius: 6px;
+	padding: 6px 8px;
+	color: rgba(255, 255, 255, 0.9);
+	font-size: 12px;
+}
+
+.schedule-delete-validation {
+	margin: 2px 0 0;
+	font-size: 11px;
+	color: rgba(255, 132, 132, 0.98);
+}
+
+.schedule-delete-actions {
+	display: flex;
+	justify-content: flex-end;
+	gap: 8px;
+	margin-top: 4px;
+}
+
+.schedule-delete-cancel,
+.schedule-delete-confirm {
+	border-radius: 7px;
+	padding: 6px 10px;
+	font-size: 12px;
+	font-weight: 600;
+	cursor: pointer;
+}
+
+.schedule-delete-cancel {
+	border: 1px solid rgba(255, 255, 255, 0.22);
+	background: rgba(255, 255, 255, 0.06);
+	color: rgba(255, 255, 255, 0.9);
+}
+
+.schedule-delete-confirm {
+	border: 1px solid rgba(255, 109, 109, 0.45);
+	background: rgba(239, 68, 68, 0.2);
+	color: rgba(255, 190, 190, 0.98);
+}
+
+.schedule-delete-cancel:hover {
+	background: rgba(255, 255, 255, 0.12);
+}
+
+.schedule-delete-confirm:hover {
+	background: rgba(239, 68, 68, 0.3);
 }
 
 .reminder-menu::-webkit-scrollbar {

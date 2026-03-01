@@ -184,6 +184,19 @@
 - [ ] **Calendar not showing schedules or occurrences** - Fix calendar display, then ensure events created on UI based on schedules don't duplicate occurrences (check based on occurrence ID and occurs_at)
 - [ ] Fix app not moving back to preferred window on OS resume
 - [ ] Fix listener memory leak - `MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 11 closed listeners added to [WebContents]. MaxListeners is 10. Use emitter.setMaxListeners() to increase limit`
+```
+(node:84625) MaxListenersExceededWarning: Possible EventEmitter memory leak detected. 21 closed listeners added to [WebContents]. MaxListeners is 20. Use emitter.setMaxListeners() to increase limit
+    at genericNodeError (node:internal/errors:983:15)
+    at wrappedFn (node:internal/errors:537:14)
+    at _addListener (node:events:593:17)
+    at WebContents.addListener (node:events:611:10)
+    at WebContents.once (node:events:655:8)
+    at register (/Users/costindinoiu/Documents/Dev/Projects/js/taskbar2/node_modules/electron-localshortcut/index.js:218:7)
+    at /Users/costindinoiu/Documents/Dev/Projects/js/taskbar2/node_modules/electron-localshortcut/index.js:166:5
+    at Array.forEach (<anonymous>)
+    at Object.register (/Users/costindinoiu/Documents/Dev/Projects/js/taskbar2/node_modules/electron-localshortcut/index.js:164:15)
+    at BrowserWindow.registerLocalShortcuts (file:///Users/costindinoiu/Documents/Dev/Projects/js/taskbar2/src/main/windows/taskbarWindow.js:99:31)
+```
 - [ ] When a task is completed from another category, the category header still shows and the command input errors. When changing the category of a task it won't move from the current category box
 - [ ] See why sometimes the timer won't stop when toggling off a task
 

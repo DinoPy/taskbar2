@@ -1,7 +1,7 @@
 import { BrowserWindow, screen } from "electron";
 
 const WINDOW_WIDTH = 660;
-const WINDOW_HEIGHT = 670;
+const WINDOW_HEIGHT = 780;
 
 const clampIndex = (index, max) => {
 	if (!Number.isFinite(index)) return 0;

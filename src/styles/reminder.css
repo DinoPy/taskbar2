@@ -279,6 +279,33 @@ select.invalid {
 	gap: 12px;
 }
 
+.schedule-options {
+	display: flex;
+	flex-direction: column;
+	gap: 10px;
+	margin-top: 4px;
+}
+
+.schedule-option-field {
+	display: flex;
+	flex-direction: column;
+	gap: 6px;
+}
+
+.schedule-option-label {
+	font-size: 11px;
+	color: var(--text-muted);
+	text-transform: uppercase;
+	letter-spacing: 0.08em;
+}
+
+.schedule-option-field input[type="text"],
+.schedule-option-field select {
+	padding: 10px 12px;
+	font-size: 14px;
+	border-radius: 10px;
+}
+
 .schedule-status {
 	margin: 0;
 	font-size: 13px;

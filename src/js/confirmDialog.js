@@ -29,7 +29,7 @@ const resizeWindow = () => {
 	if (!card) return;
 	const bodyStyle = window.getComputedStyle(document.body);
 	const bodyPadding = parseFloat(bodyStyle.paddingTop) + parseFloat(bodyStyle.paddingBottom);
-	const cardHeight = card.scrollHeight;
+	const cardHeight = Math.ceil(card.getBoundingClientRect().height);
 	const shadowBuffer = 20; // Account for box-shadow blur and spread
 	const height = bodyPadding + cardHeight + shadowBuffer;
 	ipcRenderer.send("confirm-dialog-resize", { height });
@@ -45,7 +45,6 @@ const renderTags = () => {
 		tagEl.addEventListener("click", () => {
 			currentTags.splice(index, 1);
 			renderTags();
-			resizeWindow();
 		});
 		tagsList.appendChild(tagEl);
 	});
@@ -58,7 +57,6 @@ const addTag = () => {
 		currentTags.push(value);
 		tagsInput.value = "";
 		renderTags();
-		resizeWindow();
 	}
 };
 
@@ -70,7 +68,6 @@ const renderTasks = (tasks = []) => {
 		summaryEl.textContent = "No tasks selected.";
 		confirmBtn.disabled = true;
 		confirmBtn.blur();
-		resizeWindow();
 		return;
 	}
 
@@ -100,7 +97,6 @@ const renderTasks = (tasks = []) => {
 
 	confirmBtn.disabled = false;
 	confirmBtn.focus({ preventScroll: true });
-	resizeWindow();
 };
 
 const applyConfig = (config = {}) => {
@@ -118,6 +114,12 @@ ipcRenderer.on("confirm-dialog-data", (_, payload) => {
 	applyConfig(payload.config);
 	availableTags = payload.allTags || [];
 	renderTasks(Array.isArray(payload.tasks) ? payload.tasks : []);
+	// Wait for layout + ResizeObserver to fire, then signal the main process to show
+	requestAnimationFrame(() => {
+		requestAnimationFrame(() => {
+			ipcRenderer.send("confirm-dialog-ready");
+		});
+	});
 });
 
 confirmBtn?.addEventListener("click", () => {
@@ -151,9 +153,14 @@ setupFuzzyFinder({
 		if (tag && !currentTags.includes(tag)) {
 			currentTags.push(tag);
 			renderTags();
-			resizeWindow();
 		}
 	},
 	getExcludedTags: () => currentTags,
 	onCustomEnter: addTag,
 });
+
+// Automatically resize the window whenever the card's content changes size
+const cardEl = document.querySelector(".confirm-card");
+if (cardEl) {
+	new ResizeObserver(() => resizeWindow()).observe(cardEl);
+}

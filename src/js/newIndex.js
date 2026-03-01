@@ -794,22 +794,34 @@ window.tasks = tasks;
 
 // ------------ NO ACTIVE TASK WARNING ---------------//
 
+let noActiveTaskWarningTimeout = null;
+
+const hideNoActiveTaskWarning = () => {
+	clearTimeout(noActiveTaskWarningTimeout);
+	bodyEl.classList.remove('noActiveTaskBodyWarning');
+	noActiveTaskParagraph.classList.add('invisible');
+};
+
+const triggerNoActiveTaskWarning = () => {
+	clearTimeout(noActiveTaskWarningTimeout);
+	bodyEl.classList.add('noActiveTaskBodyWarning');
+	noActiveTaskParagraph.classList.remove('invisible');
+	noActiveTaskWarningTimeout = setTimeout(() => {
+		bodyEl.classList.remove('noActiveTaskBodyWarning');
+	}, 1000);
+};
+
 setInterval(() => {
 	const taskList = Object.keys(tasks);
-	const activeTasks = taskList.filter((i) => tasks[i].getIsFocusedStatus());
-	if (
-		activeTasks.length === 0 &&
-		barDetails.barStatus === 'active' &&
-		barDetails.isCountingDown
-	) {
-		let timeout;
-		clearTimeout(timeout);
-		bodyEl.classList.add('noActiveTaskBodyWarning');
-		noActiveTaskParagraph.classList.remove('invisible');
-		timeout = setTimeout(() => {
-			bodyEl.classList.remove('noActiveTaskBodyWarning');
-		}, 1000);
+	const hasActiveTask = taskList.some((taskId) => tasks[taskId].getIsFocusedStatus());
+	const hasAnyTask = taskList.length > 0;
+
+	if (!hasAnyTask || hasActiveTask) {
+		hideNoActiveTaskWarning();
+		return;
 	}
+
+	triggerNoActiveTaskWarning();
 }, 2500);
 
 

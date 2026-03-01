@@ -16,6 +16,60 @@
 				</div>
 				<div class="calendar-title" id="calendarWeekLabel">Loading…</div>
 				<button type="button" data-action="today" class="today-btn">Today</button>
+				<details class="calendar-filters" data-calendar-filters>
+					<summary>Filters</summary>
+						<div class="calendar-filters-panel">
+							<div class="calendar-filters-group">
+								<div class="calendar-filters-group-title">View</div>
+								<label class="calendar-filter-option">
+									<input type="checkbox" data-filter-hide-past />
+									<span>Hide past occurrences</span>
+								</label>
+							</div>
+							<div class="calendar-filters-group">
+								<div class="calendar-filters-group-title">Hide kinds</div>
+								<label class="calendar-filter-option">
+								<input type="checkbox" data-filter-kind="task" />
+								<span>Tasks</span>
+							</label>
+							<label class="calendar-filter-option">
+								<input type="checkbox" data-filter-kind="reminder" />
+								<span>Reminders</span>
+							</label>
+						</div>
+						<div class="calendar-filters-group">
+							<div class="calendar-filters-group-title">Hide states</div>
+							<label class="calendar-filter-option">
+								<input type="checkbox" data-filter-state="planned" />
+								<span>Planned</span>
+							</label>
+							<label class="calendar-filter-option">
+								<input type="checkbox" data-filter-state="canceled" />
+								<span>Canceled</span>
+							</label>
+							<label class="calendar-filter-option">
+								<input type="checkbox" data-filter-state="completed" />
+								<span>Completed</span>
+							</label>
+							<label class="calendar-filter-option">
+								<input type="checkbox" data-filter-state="skipped" />
+								<span>Skipped</span>
+							</label>
+							<label class="calendar-filter-option">
+								<input type="checkbox" data-filter-state="deleted" />
+								<span>Deleted</span>
+							</label>
+						</div>
+						<div class="calendar-filters-group">
+							<div class="calendar-filters-group-title">Hide schedules</div>
+							<div class="calendar-filters-schedules" data-filter-schedule-list></div>
+							<button type="button" class="calendar-filter-clear" data-action="clear-hidden-schedules">
+								Show all schedules
+							</button>
+						</div>
+						<div class="calendar-filters-updated" data-filter-updated-at></div>
+					</div>
+				</details>
 			</header>
 			<div class="calendar-grid-wrapper">
 				<div class="calendar-grid-header" aria-hidden="true">

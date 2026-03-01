@@ -14,6 +14,9 @@ const typeButtons = Array.from(document.querySelectorAll('[data-step="type"] [da
 const scheduleInput = document.querySelector('[data-input="schedule"]');
 const previewStatus = document.querySelector('[data-preview-status]');
 const previewCards = document.querySelector('[data-preview-cards]');
+const urgencySelect = document.querySelector('[data-input="urgency"]');
+const notifyOffsetsInput = document.querySelector('[data-input="notify-offsets"]');
+const mutedOffsetsInput = document.querySelector('[data-input="muted-offsets"]');
 const leadHoursInput = document.querySelector('[data-input="lead-hours"]');
 const leadMinutesInput = document.querySelector('[data-input="lead-minutes"]');
 const categorySelect = document.querySelector('[data-input="category"]');
@@ -47,6 +50,9 @@ const state = {
 	scheduleResult: null,
 	leadMinutes: 15,
 	category: "Life",
+	urgency: "normal",
+	notifyOffsetsMin: [],
+	mutedOffsetsMin: [],
 };
 
 const dateTimeFormatter = new Intl.DateTimeFormat("en-GB", {
@@ -74,6 +80,74 @@ const clamp = (value, { min = 0, max = Number.POSITIVE_INFINITY } = {}) => {
 	const numeric = Number(value);
 	if (!Number.isFinite(numeric)) return null;
 	return Math.min(Math.max(numeric, min), max);
+};
+
+const normalizeUrgency = (value, fallback = "normal") => {
+	const normalized = String(value ?? "")
+		.toLowerCase()
+		.trim();
+	if (normalized === "low") return "low";
+	if (normalized === "normal" || normalized === "medium") return "normal";
+	if (normalized === "high") return "high";
+	if (normalized === "max") return "max";
+	if (normalized === "ultimate" || normalized === "urgent") return "ultimate";
+	return fallback;
+};
+
+const parseOffsetMinutes = (rawValue) => {
+	if (!rawValue || typeof rawValue !== "string") return [];
+	const values = rawValue
+		.split(",")
+		.map((token) => token.trim())
+		.filter(Boolean)
+		.map((token) => Number(token))
+		.filter((token) => Number.isFinite(token) && token >= 0)
+		.map((token) => Math.round(token));
+
+	return [...new Set(values)];
+};
+
+const detectLocalTimeZone = () => {
+	try {
+		const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+		if (typeof zone === "string" && zone.trim().length > 0) {
+			return zone.trim();
+		}
+	} catch {
+		// Ignore and fallback.
+	}
+	return ZONE;
+};
+
+const toOffsetDateTimeString = (source) => {
+	if (!source) return null;
+	const date = source instanceof Date ? source : new Date(source);
+	if (Number.isNaN(date.getTime())) return null;
+
+	const pad = (value) => String(value).padStart(2, "0");
+	const year = date.getFullYear();
+	const month = pad(date.getMonth() + 1);
+	const day = pad(date.getDate());
+	const hour = pad(date.getHours());
+	const minute = pad(date.getMinutes());
+	const second = pad(date.getSeconds());
+	const offsetMinutes = -date.getTimezoneOffset();
+	const sign = offsetMinutes >= 0 ? "+" : "-";
+	const absoluteOffset = Math.abs(offsetMinutes);
+	const offsetHours = pad(Math.floor(absoluteOffset / 60));
+	const offsetMins = pad(absoluteOffset % 60);
+
+	return `${year}-${month}-${day}T${hour}:${minute}:${second}${sign}${offsetHours}:${offsetMins}`;
+};
+
+const deriveStartLocal = (scheduleResult) => {
+	if (!scheduleResult) return null;
+	const startSource =
+		scheduleResult?.instant?.iso ??
+		scheduleResult?.recurrence?.start ??
+		null;
+	if (!startSource) return null;
+	return toOffsetDateTimeString(startSource) ?? startSource;
 };
 
 const debounce = (fn, delay = 160) => {
@@ -440,23 +514,35 @@ const moveToStep = (direction) => {
 
 const submit = () => {
 	if (!validateCurrentStep({ showMessage: true })) return;
+	const normalizedUrgency = normalizeUrgency(urgencySelect?.value ?? state.urgency, "normal");
+	const notifyOffsetsMin = parseOffsetMinutes(notifyOffsetsInput?.value ?? "");
+	const mutedOffsetsMin = parseOffsetMinutes(mutedOffsetsInput?.value ?? "");
+	const startLocal = deriveStartLocal(state.scheduleResult);
+	const showBeforeMinutes = state.kind === "task" ? state.leadMinutes : 0;
+
+	state.urgency = normalizedUrgency;
+	state.notifyOffsetsMin = notifyOffsetsMin;
+	state.mutedOffsetsMin = mutedOffsetsMin;
+
 	const payload = {
 		title: state.title,
 		kind: state.kind,
+		tz: detectLocalTimeZone(),
+		start_local: startLocal,
+		urgency: normalizedUrgency,
+		notify_offsets_min: notifyOffsetsMin,
+		muted_offsets_min: mutedOffsetsMin,
 		scheduleInput: state.scheduleText,
 		schedule: {
 			instant: state.scheduleResult?.instant ?? null,
 			recurrence: state.scheduleResult?.recurrence ?? null,
 		},
-		show_before_minutes: state.leadMinutes,
+		show_before_minutes: showBeforeMinutes,
 		category: state.category,
 	};
 	const trimmedLanguage = (state.scheduleText ?? "").trim();
 	if (trimmedLanguage) {
 		payload.common_language = trimmedLanguage;
-	}
-	if (state.kind === "task") {
-		payload.show_before_minutes = state.leadMinutes;
 	}
 	ipcRenderer.send("reminder-submit", payload);
 	window.close();
@@ -573,6 +659,18 @@ categorySelect?.addEventListener("change", () => {
 	state.category = categorySelect.value;
 });
 
+urgencySelect?.addEventListener("change", () => {
+	state.urgency = normalizeUrgency(urgencySelect.value, "normal");
+});
+
+notifyOffsetsInput?.addEventListener("input", () => {
+	state.notifyOffsetsMin = parseOffsetMinutes(notifyOffsetsInput.value);
+});
+
+mutedOffsetsInput?.addEventListener("input", () => {
+	state.mutedOffsetsMin = parseOffsetMinutes(mutedOffsetsInput.value);
+});
+
 const debouncedSchedule = debounce(parseSchedule, 140);
 scheduleInput?.addEventListener("input", (event) => {
 	const value = event.target.value;
@@ -602,4 +700,13 @@ updateTypeSelection(state.kind);
 setActiveStep("title");
 normalizeLeadInputs();
 parseSchedule(scheduleInput?.value ?? "");
+if (urgencySelect) {
+	urgencySelect.value = state.urgency;
+}
+if (notifyOffsetsInput) {
+	notifyOffsetsInput.value = state.notifyOffsetsMin.join(", ");
+}
+if (mutedOffsetsInput) {
+	mutedOffsetsInput.value = state.mutedOffsetsMin.join(", ");
+}
 focusActiveStep();

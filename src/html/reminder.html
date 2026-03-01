@@ -56,6 +56,27 @@
 					<p class="schedule-status" data-preview-status>Start typing to see what we understand.</p>
 					<div class="schedule-cards" data-preview-cards></div>
 				</div>
+				<div class="schedule-options">
+					<label class="schedule-option-field">
+						<span class="schedule-option-label">Urgency</span>
+							<select data-input="urgency">
+								<option value="low">Low</option>
+								<option value="normal" selected>Normal</option>
+								<option value="high">High</option>
+								<option value="max">Max</option>
+								<option value="ultimate">Ultimate</option>
+							</select>
+					</label>
+					<label class="schedule-option-field">
+						<span class="schedule-option-label">Notify offsets (minutes)</span>
+						<input type="text" data-input="notify-offsets" autocomplete="off" spellcheck="false" placeholder="e.g. 15, 5" />
+					</label>
+					<label class="schedule-option-field">
+						<span class="schedule-option-label">Muted offsets (minutes)</span>
+						<input type="text" data-input="muted-offsets" autocomplete="off" spellcheck="false" placeholder="e.g. 0" />
+					</label>
+				</div>
+				<p class="step-hint">Offsets are comma-separated numbers. Leave blank for no extra offsets.</p>
 				<p class="step-error" data-error="schedule" hidden>We need a schedule we can understand.</p>
 			</section>
 

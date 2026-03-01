@@ -34,10 +34,25 @@ export function createDeleteConfirmWindow({
 	win.loadFile("src/html/deleteConfirm.html");
 	win.setMenuBarVisibility(false);
 
-	const handleResizeRequest = (_, payload) => {
+	let shown = false;
+
+	const showWindow = () => {
+		if (shown || win.isDestroyed()) return;
+		shown = true;
+		win.show();
+		win.focus();
+	};
+
+	const handleResizeRequest = (event, payload) => {
+		if (event.sender !== win.webContents) return;
 		if (!payload?.height) return;
-		const targetHeight = Math.min(Math.max(payload.height, 240), 640);
-		win.setSize(WINDOW_WIDTH, targetHeight);
+		const targetHeight = Math.min(Math.max(Math.ceil(payload.height), 240), 640);
+		win.setContentSize(WINDOW_WIDTH, targetHeight);
+	};
+
+	const handleReady = (event) => {
+		if (event.sender !== win.webContents) return;
+		showWindow();
 	};
 
 	const sendData = () => {
@@ -57,16 +72,19 @@ export function createDeleteConfirmWindow({
 	};
 
 	ipcMain.on("confirm-dialog-resize", handleResizeRequest);
+	ipcMain.on("confirm-dialog-ready", handleReady);
 
 	win.webContents.once("did-finish-load", () => {
 		sendData();
-		win.show();
-		win.focus();
 	});
 
+	// Fallback: show after 500ms if renderer never signals ready
+	setTimeout(showWindow, 500);
+
 	win.on("closed", () => {
-		ipcMain.removeListener("delete-confirm-resize", handleResizeRequest);
- 		onClose?.();
+		ipcMain.removeListener("confirm-dialog-resize", handleResizeRequest);
+		ipcMain.removeListener("confirm-dialog-ready", handleReady);
+		onClose?.();
 	});
 
 	return win;

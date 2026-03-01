@@ -48,8 +48,63 @@ const parseTimestamp = (value) => {
 const extractNullableString = (field) => {
 	if (!field) return "";
 	if (typeof field === "string") return field;
+	if (typeof field.String === "string") {
+		if (field.Valid === false) return "";
+		return field.String;
+	}
 	if (field.Valid && typeof field.String === "string") return field.String;
 	return "";
+};
+
+const normalizeUrgencyValue = (raw, fallback = "normal") => {
+	const value = extractNullableString(raw).toLowerCase().trim();
+	if (value === "low") return "low";
+	if (value === "normal" || value === "medium") return "normal";
+	if (value === "high") return "high";
+	if (value === "max") return "max";
+	if (value === "ultimate" || value === "urgent") return "ultimate";
+	return fallback;
+};
+
+const normalizePriorityValue = (raw, fallback = "normal") => {
+	const value = extractNullableString(raw).toLowerCase().trim();
+	if (value === "low") return "low";
+	if (value === "normal" || value === "medium") return "normal";
+	if (value === "high") return "high";
+	if (value === "urgent" || value === "max" || value === "ultimate") return "urgent";
+	return fallback;
+};
+
+const mapUrgencyToPriority = (urgency) => {
+	if (urgency === "low") return "low";
+	if (urgency === "high") return "high";
+	if (urgency === "max" || urgency === "ultimate") return "urgent";
+	return "normal";
+};
+
+const parseNotificationPayload = (rawPayload) => {
+	if (!rawPayload) return {};
+	if (typeof rawPayload === "string") {
+		try {
+			const parsed = JSON.parse(rawPayload);
+			return parsed && typeof parsed === "object" ? parsed : {};
+		} catch {
+			return {};
+		}
+	}
+	if (typeof rawPayload === "object") {
+		return rawPayload;
+	}
+	return {};
+};
+
+const deriveUiUrgency = ({ payloadUrgency, priority }) => {
+	if (payloadUrgency) return payloadUrgency;
+	if (priority === "urgent") return "ultimate";
+	if (priority === "low" || priority === "normal" || priority === "high") {
+		return priority;
+	}
+	return "normal";
 };
 
 const normalizeNotification = (raw) => {
@@ -74,6 +129,16 @@ const normalizeNotification = (raw) => {
 		"";
 	const actionUrl = extractNullableString(raw.action_url);
 	const actionText = extractNullableString(raw.action_text);
+	const payload = parseNotificationPayload(raw.payload);
+	const priority = normalizePriorityValue(raw.priority ?? raw.notification_priority, "normal");
+	const payloadUrgency = normalizeUrgencyValue(payload?.urgency, null);
+	if (payloadUrgency) {
+		payload.urgency = payloadUrgency;
+	}
+	const uiUrgency = deriveUiUrgency({
+		payloadUrgency,
+		priority,
+	});
 
 	return {
 		...raw,
@@ -82,7 +147,9 @@ const normalizeNotification = (raw) => {
 		description,
 		body: description,
 		status,
-		priority: raw.priority ?? "normal",
+		priority,
+		urgency: uiUrgency,
+		uiUrgency,
 		notificationType: raw.notification_type ?? raw.notificationType ?? null,
 		createdAt,
 		updatedAt,
@@ -92,7 +159,7 @@ const normalizeNotification = (raw) => {
 		archivedAt,
 		isUnseen: status === "unseen",
 		isArchived: status === "archived" || Boolean(archivedAt),
-		payload: raw.payload ?? {},
+		payload,
 		actionUrl,
 		actionText,
 	};
@@ -543,7 +610,7 @@ export function createNotificationsController({
 		updateReminderTimer();
 	};
 
-	const applySnoozeLocally = ({ id, minutes, until }) => {
+	const applySnoozeLocally = ({ id, minutes, until, urgency }) => {
 		const existing = state.notifications.get(id);
 		if (!existing) return;
 
@@ -554,6 +621,8 @@ export function createNotificationsController({
 			snoozedUntil = Date.now() + Math.max(0, minutes) * 60000;
 		}
 
+		const normalizedUrgency = normalizeUrgencyValue(urgency, null);
+
 		const updated = {
 			...existing,
 			status: "seen",
@@ -561,16 +630,26 @@ export function createNotificationsController({
 			snoozedUntil,
 			seenAt: existing.seenAt ?? Date.now(),
 		};
+		if (normalizedUrgency) {
+			updated.payload = {
+				...(existing.payload ?? {}),
+				urgency: normalizedUrgency,
+			};
+			updated.priority = mapUrgencyToPriority(normalizedUrgency);
+			updated.urgency = normalizedUrgency;
+			updated.uiUrgency = normalizedUrgency;
+		}
 		state.notifications.set(id, updated);
 		if (existing.status === "unseen") {
 			state.unseenCount = Math.max(0, state.unseenCount - 1);
 		}
 	};
 
-	const snoozeNotification = ({ id, minutes, until }) => {
+	const snoozeNotification = ({ id, minutes, until, urgency }) => {
 		if (!id) return;
+		const normalizedUrgency = normalizeUrgencyValue(urgency, null);
 
-		applySnoozeLocally({ id, minutes, until });
+		applySnoozeLocally({ id, minutes, until, urgency: normalizedUrgency });
 		broadcastSnapshot();
 		maybeHideWindow();
 		updateReminderTimer();
@@ -583,6 +662,9 @@ export function createNotificationsController({
 			}
 		} else if (Number.isFinite(minutes)) {
 			payload.snooze_minutes = Math.max(0, Math.round(minutes));
+		}
+		if (normalizedUrgency) {
+			payload.urgency = normalizedUrgency;
 		}
 
 		sendEvent?.("notification_snooze", payload);

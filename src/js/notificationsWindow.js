@@ -53,6 +53,9 @@ const state = {
 	suppressAutoSwitch: false,
 };
 
+const URGENCY_LEVELS = ["low", "normal", "high", "max", "ultimate"];
+const SCHEDULE_DELETE_AFTER_DATE_MODE = "schedule_and_future_occurrences_after_date";
+
 const REMINDER_OPTIONS = [
 	{ label: "15 min", minutes: 15 },
 	{ label: "30 min", minutes: 30 },
@@ -68,6 +71,51 @@ const REMINDER_OPTIONS = [
 let activeReminderMenu = null;
 let activeReminderButton = null;
 let activeCustomForm = null;
+let activeScheduleDeleteDialog = null;
+
+const normalizeUrgency = (value, fallback = "normal") => {
+	const normalized = String(value ?? "")
+		.toLowerCase()
+		.trim();
+	if (normalized === "low") return "low";
+	if (normalized === "normal" || normalized === "medium") return "normal";
+	if (normalized === "high") return "high";
+	if (normalized === "max") return "max";
+	if (normalized === "ultimate" || normalized === "urgent") return "ultimate";
+	return fallback;
+};
+
+const normalizePriority = (value, fallback = "normal") => {
+	const normalized = String(value ?? "")
+		.toLowerCase()
+		.trim();
+	if (normalized === "low") return "low";
+	if (normalized === "normal" || normalized === "medium") return "normal";
+	if (normalized === "high") return "high";
+	if (normalized === "urgent" || normalized === "max") return "urgent";
+	return fallback;
+};
+
+const resolveNotificationUrgency = (notification = {}) => {
+	const payloadUrgency = normalizeUrgency(notification?.payload?.urgency, null);
+	if (payloadUrgency) {
+		return payloadUrgency;
+	}
+
+	const mappedPriority = normalizePriority(notification?.priority, "normal");
+	if (mappedPriority === "urgent") {
+		return "ultimate";
+	}
+	return normalizeUrgency(mappedPriority, "normal");
+};
+
+const formatUrgencyLabel = (urgency) => {
+	if (urgency === "ultimate") return "ULTIMATE";
+	if (urgency === "max") return "MAX";
+	if (urgency === "high") return "HIGH";
+	if (urgency === "low") return "LOW";
+	return "NORMAL";
+};
 
 const closeReminderMenu = () => {
 	if (activeReminderMenu) {
@@ -107,6 +155,34 @@ const openReminderMenu = (button) => {
 
 	const menu = document.createElement("div");
 	menu.className = "reminder-menu";
+	const selectedUrgency = normalizeUrgency(button.dataset.urgency, "normal");
+	menu.dataset.selectedUrgency = selectedUrgency;
+
+	const urgencyPicker = document.createElement("div");
+	urgencyPicker.className = "reminder-urgency-picker";
+	const urgencyLabel = document.createElement("span");
+	urgencyLabel.className = "reminder-urgency-label";
+	urgencyLabel.textContent = "Snooze urgency";
+	urgencyPicker.appendChild(urgencyLabel);
+
+	const urgencyButtons = document.createElement("div");
+	urgencyButtons.className = "reminder-urgency-buttons";
+	URGENCY_LEVELS.forEach((urgencyLevel) => {
+		const urgencyBtn = document.createElement("button");
+		urgencyBtn.type = "button";
+		urgencyBtn.className = `reminder-urgency-btn urgency-${urgencyLevel}`;
+		urgencyBtn.dataset.action = "remind-urgency";
+		urgencyBtn.dataset.urgency = urgencyLevel;
+		urgencyBtn.dataset.id = button.dataset.id;
+		urgencyBtn.textContent = formatUrgencyLabel(urgencyLevel);
+		if (urgencyLevel === selectedUrgency) {
+			urgencyBtn.classList.add("active");
+		}
+		urgencyButtons.appendChild(urgencyBtn);
+	});
+	urgencyPicker.appendChild(urgencyButtons);
+	menu.appendChild(urgencyPicker);
+
 	REMINDER_OPTIONS.forEach((option) => {
 		const optionBtn = document.createElement("button");
 		optionBtn.type = "button";
@@ -171,15 +247,159 @@ const openCustomReminderForm = (id) => {
 		event.preventDefault();
 		const minutes = parseCustomReminderInput(input.value);
 		if (!minutes) return;
+		const urgency = normalizeUrgency(activeReminderMenu?.dataset?.selectedUrgency, "normal");
 		// Convert datetime-local to UTC ISO string for proper timezone handling
 		const [datePart, timePart] = input.value.split("T");
 		const [year, month, day] = datePart.split("-").map(Number);
 		const [hour, minute] = timePart.split(":").map(Number);
 		const localDate = new Date(year, month - 1, day, hour, minute, 0, 0);
 		const isoString = localDate.toISOString();
-		ipcRenderer.send("notifications-snooze", { id, minutes, until: isoString });
+		ipcRenderer.send("notifications-snooze", { id, minutes, until: isoString, urgency });
 		closeReminderMenu();
 	});
+};
+
+const toIsoFromDateTimeLocal = (inputValue) => {
+	const text = String(inputValue ?? "").trim();
+	if (!text) return null;
+	const parsed = new Date(text);
+	if (Number.isNaN(parsed.getTime())) return null;
+	return parsed.toISOString();
+};
+
+const closeScheduleDeleteDialog = () => {
+	if (!activeScheduleDeleteDialog) return;
+	if (activeScheduleDeleteDialog.keydownHandler) {
+		document.removeEventListener("keydown", activeScheduleDeleteDialog.keydownHandler, true);
+	}
+	activeScheduleDeleteDialog.overlay?.remove();
+	activeScheduleDeleteDialog = null;
+};
+
+const openScheduleDeleteDialog = ({ id, title }) => {
+	if (!id) return;
+	closeScheduleDeleteDialog();
+
+	const safeTitle = String(title ?? "").trim() || "this schedule";
+	const overlay = document.createElement("div");
+	overlay.className = "schedule-delete-overlay";
+	overlay.innerHTML = `
+		<div class="schedule-delete-dialog" role="dialog" aria-modal="true" aria-label="Delete schedule">
+			<h3>Delete schedule</h3>
+			<p class="schedule-delete-summary">Choose how to delete <strong data-schedule-delete-title></strong>.</p>
+			<form class="schedule-delete-form">
+				<label class="schedule-delete-option">
+					<input type="radio" name="schedule-delete-mode" value="schedule_only" checked />
+					<span>Schedule only</span>
+				</label>
+				<label class="schedule-delete-option">
+					<input type="radio" name="schedule-delete-mode" value="schedule_and_future_occurrences" />
+					<span>Schedule and future occurrences</span>
+				</label>
+				<label class="schedule-delete-option">
+					<input type="radio" name="schedule-delete-mode" value="${SCHEDULE_DELETE_AFTER_DATE_MODE}" />
+					<span>Schedule and future occurrences after date</span>
+				</label>
+				<label class="schedule-delete-date-field hidden">
+					<span>Delete future occurrences from</span>
+					<input type="datetime-local" step="1" />
+				</label>
+				<p class="schedule-delete-validation hidden"></p>
+				<div class="schedule-delete-actions">
+					<button type="button" class="schedule-delete-cancel">Cancel</button>
+					<button type="submit" class="schedule-delete-confirm">Delete</button>
+				</div>
+			</form>
+		</div>
+	`;
+	document.body.appendChild(overlay);
+	const titleEl = overlay.querySelector("[data-schedule-delete-title]");
+	if (titleEl) {
+		titleEl.textContent = safeTitle;
+	}
+
+	const form = overlay.querySelector(".schedule-delete-form");
+	const dateField = overlay.querySelector(".schedule-delete-date-field");
+	const dateInput = dateField?.querySelector("input[type='datetime-local']");
+	const validationEl = overlay.querySelector(".schedule-delete-validation");
+	const cancelBtn = overlay.querySelector(".schedule-delete-cancel");
+
+	const now = new Date();
+	const tzOffset = now.getTimezoneOffset() * 60000;
+	const localNow = new Date(now.getTime() - tzOffset).toISOString().slice(0, 19);
+	const localNowInput = localNow.slice(0, 16);
+	if (dateInput) {
+		dateInput.min = localNowInput;
+		dateInput.value = localNowInput;
+	}
+
+	const updateDateFieldVisibility = () => {
+		const selectedMode = overlay.querySelector(
+			'input[name="schedule-delete-mode"]:checked',
+		)?.value;
+		const needsDate = selectedMode === SCHEDULE_DELETE_AFTER_DATE_MODE;
+		dateField?.classList.toggle("hidden", !needsDate);
+		if (!needsDate && validationEl) {
+			validationEl.classList.add("hidden");
+			validationEl.textContent = "";
+		}
+	};
+
+	overlay
+		.querySelectorAll('input[name="schedule-delete-mode"]')
+		.forEach((input) => input.addEventListener("change", updateDateFieldVisibility));
+
+	cancelBtn?.addEventListener("click", () => {
+		closeScheduleDeleteDialog();
+	});
+
+	form?.addEventListener("submit", (event) => {
+		event.preventDefault();
+		const selectedMode = overlay.querySelector(
+			'input[name="schedule-delete-mode"]:checked',
+		)?.value;
+		const deleteMode =
+			selectedMode === "schedule_and_future_occurrences" ||
+			selectedMode === SCHEDULE_DELETE_AFTER_DATE_MODE
+				? selectedMode
+				: "schedule_only";
+		const payload = {
+			id: String(id),
+			delete_mode: deleteMode,
+		};
+
+		if (deleteMode === SCHEDULE_DELETE_AFTER_DATE_MODE) {
+			const futureFromIso = toIsoFromDateTimeLocal(dateInput?.value);
+			if (!futureFromIso) {
+				if (validationEl) {
+					validationEl.textContent =
+						"Please choose a valid date/time for future_from.";
+					validationEl.classList.remove("hidden");
+				}
+				return;
+			}
+			payload.future_from = futureFromIso;
+		}
+
+		ipcRenderer.send("schedule-delete", payload);
+		closeScheduleDeleteDialog();
+	});
+
+	overlay.addEventListener("click", (event) => {
+		if (event.target === overlay) {
+			closeScheduleDeleteDialog();
+		}
+	});
+
+	const keydownHandler = (event) => {
+		if (event.key === "Escape") {
+			event.preventDefault();
+			closeScheduleDeleteDialog();
+		}
+	};
+	document.addEventListener("keydown", keydownHandler, true);
+	activeScheduleDeleteDialog = { overlay, keydownHandler };
+	updateDateFieldVisibility();
 };
 
 const formatTime = (timestamp) => {
@@ -256,6 +476,8 @@ const createNotificationItem = (notification, { isUnseen }) => {
 	const li = document.createElement("li");
 	li.className = `notifications-item ${isUnseen ? "unseen" : ""}`;
 	li.dataset.id = notification.id;
+	const urgency = resolveNotificationUrgency(notification);
+	li.classList.add(`urgency-${urgency}`);
 	const snoozedUntilTs = getSnoozedUntilTimestamp(notification);
 	if (snoozedUntilTs) {
 		li.classList.add("snoozed");
@@ -278,6 +500,11 @@ const createNotificationItem = (notification, { isUnseen }) => {
 	timePill.className = "pill";
 	timePill.textContent = formatBadgeDateTime(notification.createdAt);
 	metaLeft.appendChild(timePill);
+
+	const urgencyPill = document.createElement("span");
+	urgencyPill.className = `pill urgency-pill urgency-${urgency}`;
+	urgencyPill.textContent = formatUrgencyLabel(urgency);
+	metaLeft.appendChild(urgencyPill);
 
 	if (notification.meta?.scope) {
 		const scopePill = document.createElement("span");
@@ -321,6 +548,7 @@ const createNotificationItem = (notification, { isUnseen }) => {
 	remindBtn.className = "hover-btn icon-btn reminder-btn";
 	remindBtn.dataset.action = "remind";
 	remindBtn.dataset.id = notification.id;
+	remindBtn.dataset.urgency = urgency;
 	remindBtn.title = "Remind me later";
 	remindBtn.innerHTML = `<img src="../images/clock.svg" alt="Remind later" class="icon" />`;
 	actions.appendChild(remindBtn);
@@ -452,6 +680,7 @@ const createScheduleItem = (schedule, isInstant = false) => {
 	deleteBtn.className = "hover-btn icon-btn schedule-delete-btn";
 	deleteBtn.dataset.action = "schedule-delete";
 	deleteBtn.dataset.id = schedule.id;
+	deleteBtn.dataset.title = schedule.title || "Untitled schedule";
 	deleteBtn.title = "Delete schedule";
 	deleteBtn.innerHTML = `<img src="../images/close.svg" alt="Delete" class="icon" />`;
 
@@ -522,6 +751,7 @@ const renderNotifications = (payload) => {
 	const schedules = payload.schedules ?? [];
 
 	closeReminderMenu();
+	closeScheduleDeleteDialog();
 
 	state.mode = payload.visibilityMode ?? "hidden";
 	state.showHistory = Boolean(payload.showHistory);
@@ -659,8 +889,27 @@ rootEl?.addEventListener("click", (event) => {
 			if (Number.isNaN(numericValue) || numericValue <= 0) {
 				return;
 			}
-			ipcRenderer.send("notifications-snooze", { id, minutes: numericValue });
+			const menu = actionTarget.closest(".reminder-menu");
+			const urgency = normalizeUrgency(menu?.dataset?.selectedUrgency, "normal");
+			ipcRenderer.send("notifications-snooze", { id, minutes: numericValue, urgency });
 			closeReminderMenu();
+			break;
+		}
+		case "remind-urgency": {
+			event.preventDefault();
+			event.stopPropagation();
+			const menu = actionTarget.closest(".reminder-menu");
+			if (!menu) return;
+			const urgency = normalizeUrgency(actionTarget.dataset.urgency, "normal");
+			menu.dataset.selectedUrgency = urgency;
+			menu
+				.querySelectorAll('[data-action="remind-urgency"]')
+				.forEach((button) => {
+					button.classList.toggle(
+						"active",
+						normalizeUrgency(button.dataset.urgency, "normal") === urgency,
+					);
+				});
 			break;
 		}
 		case "remind-custom": {
@@ -683,7 +932,11 @@ rootEl?.addEventListener("click", (event) => {
 		}
 		case "schedule-delete": {
 			if (!id) return;
-			ipcRenderer.send("schedule-delete", { id });
+			closeReminderMenu();
+			openScheduleDeleteDialog({
+				id,
+				title: actionTarget.dataset.title ?? "this schedule",
+			});
 			break;
 		}
 		case "archive": {
@@ -749,11 +1002,13 @@ document.addEventListener("click", (event) => {
 window.addEventListener("keydown", (event) => {
 	if (event.key === "Escape") {
 		closeReminderMenu();
+		closeScheduleDeleteDialog();
 	}
 });
 
 window.addEventListener("resize", () => {
 	closeReminderMenu();
+	closeScheduleDeleteDialog();
 });
 
 ipcRenderer.on("notifications-data", (_, payload) => {

@@ -28,12 +28,25 @@ export function createSocketHandlers({
 	}
 
 	function setUpTasks(data) {
-		if (data.categories) {
-			appState.categories = data.categories.split(",");
+		let payload = data;
+		if (typeof payload === "string") {
+			try {
+				payload = JSON.parse(payload);
+			} catch {
+				return;
+			}
+		}
+		if (!payload || typeof payload !== "object") return;
+
+		if (Array.isArray(payload.categories)) {
+			appState.categories = payload.categories;
+			appState.selectedCategories = [];
+		} else if (typeof payload.categories === "string" && payload.categories.length > 0) {
+			appState.categories = payload.categories.split(",");
 			appState.selectedCategories = []; // Show all categories by default
 		}
 
-		let tags = data.tags;
+		let tags = payload.tags;
 		if (typeof tags === "string") {
 			try {
 				tags = JSON.parse(tags);
@@ -45,7 +58,7 @@ export function createSocketHandlers({
 			appState.tags = tags;
 		}
 
-		let notifications = data.notifications;
+		let notifications = payload.notifications;
 		if (typeof notifications === "string") {
 			try {
 				notifications = JSON.parse(notifications);
@@ -60,11 +73,11 @@ export function createSocketHandlers({
 
 		notificationsController?.bootstrap?.({
 			notifications,
-			unseenCount: data.notifications_unseen_count ?? data.notificationsUnseenCount,
+			unseenCount: payload.notifications_unseen_count ?? payload.notificationsUnseenCount,
 		});
 
 		// Handle schedules
-		let schedules = data.schedules ?? data.schedule_list ?? [];
+		let schedules = payload.schedules ?? payload.schedule_list ?? [];
 		if (typeof schedules === "string") {
 			try {
 				schedules = JSON.parse(schedules);
@@ -74,16 +87,27 @@ export function createSocketHandlers({
 		}
 		if (!Array.isArray(schedules)) schedules = [];
 		schedulesController?.bootstrap?.(schedules);
+		calendarController?.handleConnectedPayload?.(payload);
 
 		const win = getTaskbarWindow();
 		if (win && win.webContents) {
 			setTimeout(() => {
-				win.webContents.send("refresh_tasks", data.tasks);
+				win.webContents.send("refresh_tasks", payload.tasks);
 			}, 1000);
 			setTimeout(handleSocketConnect, 1000);
 		}
 
-		const keyCommands = JSON.parse(data.key_commands);
+		let keyCommands = payload.key_commands;
+		if (typeof keyCommands === "string") {
+			try {
+				keyCommands = JSON.parse(keyCommands);
+			} catch {
+				keyCommands = [];
+			}
+		}
+		if (!Array.isArray(keyCommands)) {
+			keyCommands = [];
+		}
 		commandsController.replaceCommands(keyCommands);
 		syncCustomCommandsWindow();
 	}
@@ -105,6 +129,43 @@ export function createSocketHandlers({
 	const eventHandlers = {
 		ping: ({ send }) => send("pong", "alive and well"),
 		connected: ({ data }) => setUpTasks(data),
+		user_settings: ({ data }) => {
+			let payload = data;
+			if (typeof data === "string") {
+				try {
+					payload = JSON.parse(data);
+				} catch {
+					return;
+				}
+			}
+			if (!payload) return;
+			calendarController?.handleUserSettingsUpdated?.(payload);
+		},
+		user_settings_updated: ({ data }) => {
+			let payload = data;
+			if (typeof data === "string") {
+				try {
+					payload = JSON.parse(data);
+				} catch {
+					return;
+				}
+			}
+			if (!payload) return;
+			calendarController?.handleUserSettingsUpdated?.(payload);
+		},
+		connection_error: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try {
+					payload = JSON.parse(payload);
+				} catch {
+					payload = { message: payload };
+				}
+			}
+			const normalized = payload && typeof payload === "object" ? payload : {};
+			calendarController?.handleConnectionError?.(normalized);
+			broadcast("socket-connection-error", normalized);
+		},
 		related_task_edited: ({ data }) => broadcast("related_task_edited", data),
 		related_task_deleted: ({ data }) => broadcast("related_task_deleted", data),
 		related_task_toggled: ({ data }) => broadcast("related_task_toggled", data),
@@ -250,6 +311,110 @@ export function createSocketHandlers({
 			if (!payload) return;
 			calendarController?.handleOccurrencesList?.(payload);
 		},
+		occurrence_updated: ({ data }) => {
+			let payload = data;
+			if (typeof data === "string") {
+				try {
+					payload = JSON.parse(data);
+				} catch {
+					return;
+				}
+			}
+			if (!payload) return;
+			calendarController?.handleOccurrenceUpdated?.(payload);
+		},
+		occurrence_deleted: ({ data }) => {
+			let payload = data;
+			if (typeof data === "string") {
+				try {
+					payload = JSON.parse(data);
+				} catch {
+					return;
+				}
+			}
+			if (!payload) return;
+			calendarController?.handleOccurrenceDeleted?.(payload);
+		},
+		occurrence_canceled: ({ data }) => {
+			let payload = data;
+			if (typeof data === "string") {
+				try {
+					payload = JSON.parse(data);
+				} catch {
+					return;
+				}
+			}
+			if (!payload) return;
+			calendarController?.handleOccurrenceCanceled?.(payload);
+		},
+		occurrence_cancelled: ({ data }) => {
+			let payload = data;
+			if (typeof data === "string") {
+				try {
+					payload = JSON.parse(data);
+				} catch {
+					return;
+				}
+			}
+			if (!payload) return;
+			calendarController?.handleOccurrenceCanceled?.(payload);
+		},
+		occurrence_series_updated: ({ data }) => {
+			let payload = data;
+			if (typeof data === "string") {
+				try {
+					payload = JSON.parse(data);
+				} catch {
+					return;
+				}
+			}
+			if (!payload) return;
+			calendarController?.handleOccurrenceSeriesUpdated?.(payload);
+		},
+		schedule_list: ({ data }) => {
+			let payload = data;
+			if (typeof data === "string") {
+				try {
+					payload = JSON.parse(data);
+				} catch {
+					return;
+				}
+			}
+			let schedules = payload?.schedules ?? payload;
+			if (typeof schedules === "string") {
+				try {
+					schedules = JSON.parse(schedules);
+				} catch {
+					schedules = [];
+				}
+			}
+			if (!Array.isArray(schedules)) return;
+			schedulesController?.bootstrap?.(schedules);
+			calendarController?.handleSchedulesChanged?.();
+			notificationsController?.sendSnapshotToNotificationsWindow?.();
+		},
+		schedules_list: ({ data }) => {
+			let payload = data;
+			if (typeof data === "string") {
+				try {
+					payload = JSON.parse(data);
+				} catch {
+					return;
+				}
+			}
+			let schedules = payload?.schedules ?? payload;
+			if (typeof schedules === "string") {
+				try {
+					schedules = JSON.parse(schedules);
+				} catch {
+					schedules = [];
+				}
+			}
+			if (!Array.isArray(schedules)) return;
+			schedulesController?.bootstrap?.(schedules);
+			calendarController?.handleSchedulesChanged?.();
+			notificationsController?.sendSnapshotToNotificationsWindow?.();
+		},
 		schedule_created: ({ data }) => {
 			let payload = data;
 			if (typeof data === "string") {
@@ -259,9 +424,12 @@ export function createSocketHandlers({
 					return;
 				}
 			}
-			if (payload?.schedule) {
-				schedulesController?.handleScheduleUpserted?.(payload.schedule);
+			const schedule = payload?.schedule ?? payload;
+			const scheduleId = schedule?.id ?? schedule?.schedule_id ?? schedule?.uuid;
+			if (scheduleId) {
+				schedulesController?.handleScheduleUpserted?.(schedule);
 				calendarController?.handleSchedulesChanged?.();
+				calendarController?.requestVisibleRangeRefetch?.({ includeSchedules: true });
 				notificationsController?.sendSnapshotToNotificationsWindow?.();
 			}
 		},
@@ -274,17 +442,29 @@ export function createSocketHandlers({
 					return;
 				}
 			}
-			if (payload?.schedule) {
-				schedulesController?.handleScheduleUpserted?.(payload.schedule);
+			const schedule = payload?.schedule ?? payload;
+			const scheduleId = schedule?.id ?? schedule?.schedule_id ?? schedule?.uuid;
+			if (scheduleId) {
+				schedulesController?.handleScheduleUpserted?.(schedule);
 				calendarController?.handleSchedulesChanged?.();
+				calendarController?.requestVisibleRangeRefetch?.({ includeSchedules: true });
 				notificationsController?.sendSnapshotToNotificationsWindow?.();
 			}
 		},
 		schedule_deleted: ({ data }) => {
-			const scheduleId = data?.schedule_id ?? data?.id ?? data;
+			let payload = data;
+			if (typeof data === "string") {
+				try {
+					payload = JSON.parse(data);
+				} catch {
+					payload = data;
+				}
+			}
+			const scheduleId = payload?.schedule_id ?? payload?.id ?? payload;
 			if (scheduleId) {
 				schedulesController?.handleScheduleDeleted?.(scheduleId);
 				calendarController?.handleSchedulesChanged?.();
+				calendarController?.requestVisibleRangeRefetch?.({ includeSchedules: true });
 				notificationsController?.sendSnapshotToNotificationsWindow?.();
 			}
 		},
