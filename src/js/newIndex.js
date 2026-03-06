@@ -411,6 +411,15 @@ ipc.on('completeTask', (e, data) => {
 	renderTasksByCategory();
 });
 
+ipc.on('socket-connection-error', (e, data) => {
+	if (data?.type === 'task_blocked_by_list') {
+		// Task completion was rejected by the server because required list items
+		// are still incomplete. The task was optimistically removed — request a
+		// full refresh to restore it.
+		ipc.send("request_hard_refresh");
+	}
+});
+
 ipc.on('update-task-category', (e, data) => {
 	tasks[data.id].updateCategory(data.newCategory);
 	lastCategorySelected = data.newCategory;

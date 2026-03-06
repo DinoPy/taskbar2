@@ -102,6 +102,79 @@ body {
 	box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
 }
 
+/* List status section */
+.list-status-section {
+	display: none;
+}
+
+.list-status-section.visible {
+	display: block;
+}
+
+.list-status-header {
+	font-size: var(--font-size-md);
+	font-weight: 600;
+	color: rgba(255, 255, 255, 0.82);
+	margin: 0 0 var(--spacing-xs) 0;
+}
+
+.list-status-item {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-sm);
+	padding: var(--spacing-xs) var(--spacing-sm);
+	border-radius: 6px;
+	background: rgba(255, 255, 255, 0.04);
+	margin-bottom: var(--spacing-xs);
+	font-size: var(--font-size-sm);
+}
+
+.list-status-name {
+	flex-shrink: 0;
+	color: rgba(255, 255, 255, 0.85);
+	font-weight: 500;
+}
+
+.list-status-progress-bar {
+	flex: 1;
+	height: 5px;
+	background: rgba(255, 255, 255, 0.1);
+	border-radius: 3px;
+	overflow: hidden;
+	min-width: 40px;
+}
+
+.list-status-progress-fill {
+	height: 100%;
+	border-radius: 3px;
+	transition: width 0.3s ease;
+}
+
+.list-status-progress-fill.complete {
+	background: oklch(0.70 0.18 145);
+}
+
+.list-status-progress-fill.incomplete {
+	background: oklch(0.65 0.18 55);
+}
+
+.list-status-count {
+	color: rgba(255, 255, 255, 0.6);
+	font-size: 11px;
+	font-variant-numeric: tabular-nums;
+	white-space: nowrap;
+}
+
+.list-status-blocked-msg {
+	margin-top: var(--spacing-xs);
+	padding: var(--spacing-xs) var(--spacing-sm);
+	background: oklch(0.30 0.12 25 / 0.5);
+	border: 1px solid oklch(0.45 0.15 25 / 0.4);
+	border-radius: 6px;
+	color: oklch(0.85 0.10 25);
+	font-size: var(--font-size-sm);
+}
+
 /* Tags section */
 .tags-section {
 	display: none;

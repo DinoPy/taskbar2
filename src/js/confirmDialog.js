@@ -23,6 +23,9 @@ const tagsSection = document.getElementById("tagsSection");
 const tagsList = document.getElementById("tagsList");
 const tagsInput = document.getElementById("tagsInput");
 const tagsAddBtn = document.getElementById("tagsAddBtn");
+const listStatusSection = document.getElementById("listStatusSection");
+
+let listsBlocked = false;
 
 const resizeWindow = () => {
 	const card = document.querySelector(".confirm-card");
@@ -122,8 +125,87 @@ ipcRenderer.on("confirm-dialog-data", (_, payload) => {
 	});
 });
 
+const renderListStatus = (payload) => {
+	if (!listStatusSection) return;
+	const isCompletion = currentConfig.confirmEvent === "completion-confirmation-confirmed";
+	if (!isCompletion) return;
+
+	const lists = payload?.lists;
+	if (!Array.isArray(lists) || lists.length === 0) {
+		listStatusSection.classList.remove("visible");
+		listsBlocked = false;
+		confirmBtn.disabled = false;
+		return;
+	}
+
+	listStatusSection.innerHTML = "";
+	listStatusSection.classList.add("visible");
+
+	const header = document.createElement("p");
+	header.className = "list-status-header";
+	header.textContent = "Checklist progress";
+	listStatusSection.appendChild(header);
+
+	let totalRequired = 0;
+	let totalCompleted = 0;
+
+	for (const bundle of lists) {
+		if (!bundle.run) continue;
+		const reqTotal = bundle.run.required_total ?? 0;
+		const reqDone = bundle.run.required_completed ?? 0;
+		totalRequired += reqTotal;
+		totalCompleted += reqDone;
+
+		if (reqTotal === 0) continue;
+
+		const pct = Math.round((reqDone / reqTotal) * 100);
+		const done = reqDone >= reqTotal;
+
+		const item = document.createElement("div");
+		item.className = "list-status-item";
+
+		const name = document.createElement("span");
+		name.className = "list-status-name";
+		name.textContent = bundle.definition?.title ?? "List";
+		item.appendChild(name);
+
+		const bar = document.createElement("div");
+		bar.className = "list-status-progress-bar";
+		const fill = document.createElement("div");
+		fill.className = `list-status-progress-fill ${done ? "complete" : "incomplete"}`;
+		fill.style.width = `${pct}%`;
+		bar.appendChild(fill);
+		item.appendChild(bar);
+
+		const count = document.createElement("span");
+		count.className = "list-status-count";
+		count.textContent = `${reqDone}/${reqTotal}`;
+		item.appendChild(count);
+
+		listStatusSection.appendChild(item);
+	}
+
+	const hasIncomplete = totalRequired > 0 && totalCompleted < totalRequired;
+	listsBlocked = hasIncomplete;
+
+	if (hasIncomplete) {
+		const msg = document.createElement("div");
+		msg.className = "list-status-blocked-msg";
+		msg.textContent = `${totalRequired - totalCompleted} required item${totalRequired - totalCompleted === 1 ? "" : "s"} still incomplete. Complete all required checklist items before finishing this task.`;
+		listStatusSection.appendChild(msg);
+		confirmBtn.disabled = true;
+		confirmBtn.blur();
+	} else {
+		confirmBtn.disabled = !currentTasks.length;
+	}
+};
+
+ipcRenderer.on("confirm-dialog-lists-data", (_, payload) => {
+	renderListStatus(payload);
+});
+
 confirmBtn?.addEventListener("click", () => {
-	if (confirmBtn.disabled) return;
+	if (confirmBtn.disabled || listsBlocked) return;
 	ipcRenderer.send(currentConfig.confirmEvent, {
 		tasks: currentTasks,
 		tags: currentTags,

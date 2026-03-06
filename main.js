@@ -181,6 +181,7 @@ const requestTaskCompletionConfirmation = (task) => {
 	windowManager.openCompletionConfirmWindow({
 		task,
 		allTags: appState.tags,
+		listsController,
 		onClose: () => {
 			pendingCompletionTask = null;
 		},

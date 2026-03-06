@@ -7,6 +7,7 @@ export function createCompletionConfirmWindow({
 	task,
 	allTags = [],
 	onClose,
+	listsController,
 } = {}) {
 	const cursorPosition = screen.getCursorScreenPoint();
 	const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
@@ -77,6 +78,23 @@ export function createCompletionConfirmWindow({
 
 	win.webContents.once("did-finish-load", () => {
 		sendTask();
+
+		// Fetch lists for the task so the dialog can show list status
+		if (listsController && task?.id) {
+			const windowRef = {
+				_id: win.webContents.id,
+				_pushFn: (channel, payload) => {
+					if (!win.isDestroyed()) {
+						win.webContents.send("confirm-dialog-lists-data", payload);
+					}
+				},
+			};
+			listsController.fetchForTarget(
+				{ kind: "task", id: task.id },
+				windowRef,
+			);
+			win._listsWindowRef = windowRef;
+		}
 	});
 
 	// Fallback: show after 500ms if renderer never signals ready
@@ -85,6 +103,9 @@ export function createCompletionConfirmWindow({
 	win.on("closed", () => {
 		ipcMain.removeListener("confirm-dialog-resize", handleResizeRequest);
 		ipcMain.removeListener("confirm-dialog-ready", handleReady);
+		if (listsController && win._listsWindowRef) {
+			listsController.unsubscribe(win._listsWindowRef);
+		}
 		onClose?.();
 	});
 

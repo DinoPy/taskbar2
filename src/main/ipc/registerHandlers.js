@@ -260,6 +260,10 @@ export function registerIpcHandlers({
         sendEvent("task_delete", data);
     });
 
+    ipc.on("request_hard_refresh", () => {
+        sendEvent("request_hard_refresh", "");
+    });
+
     ipc.on("toggle_current_task_edit", (_, data) => {
         windowManager.closeEditWindow();
         openEditWindowForTask(data);
