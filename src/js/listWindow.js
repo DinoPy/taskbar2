@@ -125,12 +125,14 @@ const sendMutation = (event, data) => {
 // ---------------------------------------------------------------
 
 let toastTimeout = null;
-const showToast = (message, duration = 3000) => {
+const showToast = (message, duration = 3000, type = "error") => {
 	if (toastTimeout) clearTimeout(toastTimeout);
 	errorToast.textContent = message;
+	errorToast.classList.remove("visible", "success");
+	if (type === "success") errorToast.classList.add("success");
 	errorToast.classList.add("visible");
 	toastTimeout = setTimeout(() => {
-		errorToast.classList.remove("visible");
+		errorToast.classList.remove("visible", "success");
 	}, duration);
 };
 
@@ -815,7 +817,7 @@ const confirmAttach = (targetRef) => {
 		position: 0,
 	});
 	closeAttachPicker();
-	showToast(`Attaching to ${targetRef.kind}: ${targetRef.label}`, 2000);
+	showToast(`Attaching to ${targetRef.kind}: ${targetRef.label}`, 2000, "success");
 };
 
 const submitItemDialog = () => {
@@ -917,7 +919,7 @@ ipc.on("lists-error", (_, errorPayload) => {
 ipc.on("lists-attach-success", (_, payload) => {
 	const dest = payload?.destination;
 	if (dest?.target) {
-		showToast(`List attached to ${dest.target.kind} successfully`, 3000);
+		showToast(`List attached to ${dest.target.kind} successfully`, 3000, "success");
 	}
 });
 
@@ -1037,7 +1039,7 @@ const activateFocusedRunItem = (el) => {
 };
 
 document.addEventListener("keydown", (e) => {
-	const inDialog = addListDialog.open || itemDialog.open || deleteConfirmDialog.open;
+	const inDialog = addListDialog.open || itemDialog.open || deleteConfirmDialog.open || !attachOverlay.classList.contains("hidden");
 	const inInput = document.activeElement?.tagName === "INPUT" ||
 		document.activeElement?.tagName === "TEXTAREA";
 
@@ -1118,12 +1120,8 @@ document.addEventListener("keydown", (e) => {
 		// Add item
 		if (selectedListId) openItemDialog();
 	} else if (e.key === "x" && isStandalone && selectedListId) {
-		const inDialog = addListDialog.open || itemDialog.open || deleteConfirmDialog.open || !attachOverlay.classList.contains("hidden");
-		if (!inDialog) {
-			const bundle = getSelectedBundle();
-			openDeleteConfirmDialog(selectedListId, bundle?.definition?.title);
-			return;
-		}
+		const bundle = getSelectedBundle();
+		openDeleteConfirmDialog(selectedListId, bundle?.definition?.title);
 	} else if (e.key === "?") {
 		helpPanel.classList.toggle("visible");
 	}

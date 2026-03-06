@@ -823,6 +823,9 @@
 .list-error-toast.visible {
 	opacity: 1;
 }
+.list-error-toast.success {
+	background: rgba(34, 120, 60, 0.9);
+}
 
 /* ============================================
    Help Panel
