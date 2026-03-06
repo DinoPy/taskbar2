@@ -5,7 +5,10 @@ let templates = [];
 let selectedId = null;
 let isNewMode = false;
 let searchDebounce = null;
+let statusTimeout = null;
 let tags = [];
+
+const VAR_KEY_REGEX = /^[A-Za-z][A-Za-z0-9_]*$/;
 
 // ---- DOM refs ----
 const closeBtn = document.getElementById("closeBtn");
@@ -32,6 +35,16 @@ const manageListsBtn = document.getElementById("manageListsBtn");
 const useTemplateBtn = document.getElementById("useTemplateBtn");
 const deleteTemplateBtn = document.getElementById("deleteTemplateBtn");
 const saveTemplateBtn = document.getElementById("saveTemplateBtn");
+const tplStatus = document.getElementById("tplStatus");
+
+function showStatus(message, type = "success") {
+	clearTimeout(statusTimeout);
+	tplStatus.textContent = message;
+	tplStatus.className = `tpl-status visible ${type}`;
+	statusTimeout = setTimeout(() => {
+		tplStatus.className = "tpl-status";
+	}, 2500);
+}
 
 // ---- Init ----
 ipc.send("template-list");
@@ -62,6 +75,7 @@ ipc.on("template-created", (_, tpl) => {
 		isNewMode = false;
 		selectedId = tpl.id;
 		loadEditor(tpl);
+		showStatus("Template created");
 	}
 });
 
@@ -71,7 +85,10 @@ ipc.on("template-updated", (_, tpl) => {
 	if (idx >= 0) templates[idx] = tpl;
 	else templates.unshift(tpl);
 	renderList();
-	if (selectedId === tpl.id) loadEditor(tpl);
+	if (selectedId === tpl.id) {
+		loadEditor(tpl);
+		showStatus("Template saved");
+	}
 });
 
 ipc.on("template-deleted", (_, data) => {
@@ -79,6 +96,7 @@ ipc.on("template-deleted", (_, data) => {
 	if (!id) return;
 	templates = templates.filter((t) => t.id !== id);
 	renderList();
+	showStatus("Template deleted");
 	if (selectedId === id) clearEditor();
 });
 
@@ -269,9 +287,20 @@ function collectFormData() {
 	}
 
 	const variables = [];
+	const seenKeys = new Set();
+	let varError = null;
 	tplVarsList.querySelectorAll(".tpl-var-row").forEach((row) => {
 		const key = row.querySelector('[data-field="key"]').value.trim();
 		if (!key) return;
+		if (!VAR_KEY_REGEX.test(key)) {
+			varError = `Invalid variable key "${key}" — must start with a letter, then letters/digits/underscores`;
+			return;
+		}
+		if (seenKeys.has(key)) {
+			varError = `Duplicate variable key "${key}"`;
+			return;
+		}
+		seenKeys.add(key);
 		const obj = { key };
 		const label = row.querySelector('[data-field="label"]').value.trim();
 		const desc = row.querySelector('[data-field="description"]').value.trim();
@@ -279,6 +308,11 @@ function collectFormData() {
 		if (desc) obj.description = desc;
 		variables.push(obj);
 	});
+
+	if (varError) {
+		showStatus(varError, "error");
+		return null;
+	}
 
 	const priorityVal = parseInt(tplPriority.value, 10);
 	const showBefore = (parseInt(tplShowBeforeH.value, 10) || 0) * 60 + (parseInt(tplShowBeforeM.value, 10) || 0);
