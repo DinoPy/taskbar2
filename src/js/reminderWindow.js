@@ -6,6 +6,7 @@ import {
 	getNextWeekday,
 	ZONE,
 } from "../common-language-parser/src/parser-browser.js";
+import { renderListSummary, createListSummaryStyles } from "./listSummary.js";
 
 const { ipcRenderer } = window.require("electron");
 
@@ -65,12 +66,22 @@ const dateTimeFormatter = new Intl.DateTimeFormat("en-GB", {
 	minute: "2-digit",
 });
 
-const dateFormatter = new Intl.DateTimeFormat("en-GB", {
+const monthFormatter = new Intl.DateTimeFormat("en-GB", {
 	timeZone: ZONE,
-	weekday: "short",
-	day: "2-digit",
 	month: "short",
 });
+
+const RRULE_FREQ_UNITS = Object.freeze({
+	0: "year",
+	1: "month",
+	2: "week",
+	3: "day",
+	4: "hour",
+	5: "minute",
+	6: "second",
+});
+
+const WEEKDAY_LABELS = Object.freeze(["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]);
 
 let currentStepId = "title";
 let escapePrimed = false;
@@ -273,6 +284,7 @@ const setActiveStep = (stepId) => {
 };
 
 const closeWindow = () => {
+	ipcRenderer.send("lists-unsubscribe");
 	ipcRenderer.send("reminder-close-window");
 	window.close();
 };
@@ -307,22 +319,297 @@ const createPreviewCard = ({ variant = "info", label, value, meta = [] }) => {
 	return card;
 };
 
+const toFiniteNumber = (value) => {
+	const numeric = Number(value);
+	if (!Number.isFinite(numeric)) return null;
+	return numeric;
+};
+
+const toValidDate = (value) => {
+	if (!value) return null;
+	const date = value instanceof Date ? value : new Date(value);
+	if (Number.isNaN(date.getTime())) return null;
+	return date;
+};
+
+const toNumberList = (value, { min = Number.NEGATIVE_INFINITY, max = Number.POSITIVE_INFINITY } = {}) => {
+	if (!Array.isArray(value)) return [];
+	const unique = new Set();
+	value.forEach((item) => {
+		const numeric = toFiniteNumber(item);
+		if (numeric === null) return;
+		if (numeric < min || numeric > max) return;
+		unique.add(Math.round(numeric));
+	});
+	return Array.from(unique).sort((left, right) => left - right);
+};
+
+const formatList = (values, { maxItems = 10 } = {}) => {
+	if (!Array.isArray(values) || values.length === 0) return "";
+	if (values.length <= maxItems) return values.join(", ");
+	const head = values.slice(0, maxItems).join(", ");
+	return `${head} (+${values.length - maxItems} more)`;
+};
+
+const ordinal = (value) => {
+	const abs = Math.abs(value);
+	const remainder10 = abs % 10;
+	const remainder100 = abs % 100;
+	let suffix = "th";
+	if (remainder10 === 1 && remainder100 !== 11) suffix = "st";
+	else if (remainder10 === 2 && remainder100 !== 12) suffix = "nd";
+	else if (remainder10 === 3 && remainder100 !== 13) suffix = "rd";
+	return `${abs}${suffix}`;
+};
+
+const normalizeWeekdayToken = (weekday) => {
+	if (typeof weekday === "number") {
+		const normalized = ((weekday % 7) + 7) % 7;
+		return WEEKDAY_LABELS[normalized] ?? null;
+	}
+
+	if (typeof weekday === "string") {
+		const token = weekday.toUpperCase().trim();
+		const index = ["MO", "TU", "WE", "TH", "FR", "SA", "SU"].indexOf(token);
+		if (index === -1) return null;
+		return WEEKDAY_LABELS[index];
+	}
+
+	if (weekday && typeof weekday === "object") {
+		const base = normalizeWeekdayToken(weekday.weekday);
+		if (!base) return null;
+		if (typeof weekday.n === "number" && Number.isFinite(weekday.n) && weekday.n !== 0) {
+			if (weekday.n < 0) {
+				return `${ordinal(Math.abs(weekday.n))} last ${base}`;
+			}
+			return `${ordinal(weekday.n)} ${base}`;
+		}
+		return base;
+	}
+
+	return null;
+};
+
+const describeWeekdays = (byweekday) => {
+	if (!Array.isArray(byweekday) || byweekday.length === 0) return "";
+	const labels = [];
+	byweekday.forEach((entry) => {
+		const label = normalizeWeekdayToken(entry);
+		if (!label) return;
+		if (!labels.includes(label)) {
+			labels.push(label);
+		}
+	});
+	return formatList(labels, { maxItems: 8 });
+};
+
+const describeMonths = (bymonth) => {
+	const monthNumbers = toNumberList(bymonth, { min: 1, max: 12 });
+	if (monthNumbers.length === 0) return "";
+	const names = monthNumbers.map((month) => {
+		const sample = new Date(Date.UTC(2026, month - 1, 1, 12, 0, 0));
+		return monthFormatter.format(sample);
+	});
+	return formatList(names, { maxItems: 8 });
+};
+
+const pad2 = (value) => String(value).padStart(2, "0");
+
+const describeTimes = (options, startDate) => {
+	const byhour = toNumberList(options.byhour, { min: 0, max: 23 });
+	const byminute = toNumberList(options.byminute, { min: 0, max: 59 });
+	const bysecond = toNumberList(options.bysecond, { min: 0, max: 59 });
+
+	const validStart = toValidDate(startDate);
+	const fallbackHour = validStart ? validStart.getUTCHours() : 0;
+	const fallbackMinute = validStart ? validStart.getUTCMinutes() : 0;
+	const fallbackSecond = validStart ? validStart.getUTCSeconds() : 0;
+
+	const hours = byhour.length > 0 ? byhour : [fallbackHour];
+	const minutes = byminute.length > 0 ? byminute : [fallbackMinute];
+	const seconds = bysecond.length > 0 ? bysecond : [fallbackSecond];
+
+	const includeSeconds = bysecond.length > 0;
+	const shouldExpand = hours.length * minutes.length <= 10 && seconds.length <= 2;
+
+	if (shouldExpand) {
+		const values = [];
+		hours.forEach((hour) => {
+			minutes.forEach((minute) => {
+				seconds.forEach((second) => {
+					values.push(
+						includeSeconds
+							? `${pad2(hour)}:${pad2(minute)}:${pad2(second)}`
+							: `${pad2(hour)}:${pad2(minute)}`,
+					);
+				});
+			});
+		});
+		return `At ${formatList(values, { maxItems: 8 })}`;
+	}
+
+	const pieces = [];
+	if (hours.length > 0) {
+		pieces.push(`hours ${formatList(hours.map((hour) => pad2(hour)), { maxItems: 10 })}`);
+	}
+	if (minutes.length > 0) {
+		pieces.push(`minutes ${formatList(minutes.map((minute) => pad2(minute)), { maxItems: 10 })}`);
+	}
+	if (includeSeconds) {
+		pieces.push(`seconds ${formatList(seconds.map((second) => pad2(second)), { maxItems: 10 })}`);
+	}
+	if (pieces.length === 0) return "";
+	return `Time pattern: ${pieces.join(" | ")}`;
+};
+
+const describeRulePattern = (options) => {
+	const frequencyUnit = RRULE_FREQ_UNITS[options.freq] ?? "interval";
+	const interval = toFiniteNumber(options.interval) ?? 1;
+	if (frequencyUnit === "interval") {
+		return interval <= 1 ? "Custom recurrence pattern" : `Repeats every ${interval} intervals`;
+	}
+	if (interval <= 1) {
+		return `Every ${frequencyUnit}`;
+	}
+	return `Every ${interval} ${frequencyUnit}s`;
+};
+
+const collectNextOccurrences = (rule, startDate, limit = 8) => {
+	if (!rule || typeof rule.after !== "function") return [];
+	const seed = toValidDate(startDate) ?? new Date();
+	const result = [];
+	let cursor = new Date(seed.getTime() - 1);
+	for (let index = 0; index < limit; index += 1) {
+		const next = rule.after(cursor, false);
+		if (!(next instanceof Date) || Number.isNaN(next.getTime())) break;
+		result.push(next);
+		cursor = new Date(next.getTime() + 1);
+	}
+	return result;
+};
+
+const mapParserWarning = (warning) => {
+	const raw = String(warning ?? "").trim();
+	if (!raw) return "";
+	if (raw.startsWith("EXPORTER_COMPAT:")) {
+		return "Compatibility note: complex include/exclude rules may export differently in external calendars.";
+	}
+	if (raw.startsWith("REGION_SENSITIVE:")) {
+		return "Region-sensitive rule detected; verify locale assumptions before saving.";
+	}
+	return raw;
+};
+
+const buildRecurrenceDetails = (result) => {
+	const options = result?.rule?.options ?? {};
+	const startDate = toValidDate(result?.start);
+	const details = [];
+
+	if (startDate) {
+		details.push(`Starts: ${formatDate(startDate)}`);
+	}
+
+	details.push(`Pattern: ${describeRulePattern(options)}`);
+
+	const weekdays = describeWeekdays(options.byweekday);
+	if (weekdays) {
+		details.push(`Weekdays: ${weekdays}`);
+	}
+
+	const monthDays = toNumberList(options.bymonthday, { min: -31, max: 31 })
+		.filter((value) => value !== 0)
+		.map((value) => String(value));
+	if (monthDays.length > 0) {
+		details.push(`Month days: ${formatList(monthDays, { maxItems: 10 })}`);
+	}
+
+	const months = describeMonths(options.bymonth);
+	if (months) {
+		details.push(`Months: ${months}`);
+	}
+
+	const setPos = toNumberList(options.bysetpos, { min: -366, max: 366 })
+		.filter((value) => value !== 0)
+		.map((value) => (value < 0 ? `${ordinal(Math.abs(value))} last` : ordinal(value)));
+	if (setPos.length > 0) {
+		details.push(`Positions: ${formatList(setPos, { maxItems: 8 })}`);
+	}
+
+	const timeDetails = describeTimes(options, startDate);
+	if (timeDetails) {
+		details.push(timeDetails);
+	}
+
+	const until = toValidDate(options.until);
+	const count = toFiniteNumber(options.count);
+	if (until) {
+		details.push(`Ends: ${formatDate(until)}`);
+	} else if (count && count > 0) {
+		details.push(`Ends after: ${Math.round(count)} occurrences`);
+	} else {
+		details.push("Ends: no explicit end date");
+	}
+
+	if (Array.isArray(result?.rdates) && result.rdates.length > 0) {
+		details.push(`Extra include dates: ${result.rdates.length}`);
+	}
+	if (Array.isArray(result?.exdates) && result.exdates.length > 0) {
+		details.push(`Excluded dates: ${result.exdates.length}`);
+	}
+	if (result?.completionBased === true) {
+		details.push("Recurrence mode: completion-based");
+	}
+
+	const nextOccurrences = collectNextOccurrences(result?.rule, startDate ?? new Date(), 8);
+	if (nextOccurrences.length > 0) {
+		details.push(`Next ${nextOccurrences.length}: ${nextOccurrences.map((date) => formatDate(date)).join(" • ")}`);
+	}
+
+	const warnings = Array.isArray(result?.warnings)
+		? result.warnings.map((item) => mapParserWarning(item)).filter(Boolean)
+		: [];
+
+	const fallbackText = typeof result?.text === "string" ? result.text.trim() : "";
+	const summary = fallbackText.length > 0 ? fallbackText : describeRulePattern(options);
+
+	return {
+		summary,
+		details,
+		warnings,
+		next: nextOccurrences.map((date) => date.toISOString()),
+	};
+};
+
 const sanitizeRecurrence = (result) => {
+	if (!result?.rule || typeof result.rule.toString !== "function") return null;
+	const startDate = toValidDate(result.start);
 	try {
-		const nextOccurrences = result.rule.all((_, index) => index < 3);
+		const details = buildRecurrenceDetails(result);
+		const fallbackText = (result.text ?? result.rule.toText() ?? "").trim();
 		return {
-			text: result.text ?? result.rule.toText(),
+			text: details.summary || fallbackText,
 			rule: result.rule.toString(),
-			start: result.start.toISOString(),
-			next: nextOccurrences.map((occurrence) => occurrence.toISOString()),
+			start: startDate ? startDate.toISOString() : null,
+			next: details.next,
+			details: details.details,
+			warnings: details.warnings,
 		};
 	} catch (error) {
 		console.warn("Failed to build recurrence preview", error);
+		const fallbackDetails = [];
+		if (startDate) {
+			fallbackDetails.push(`Starts: ${formatDate(startDate)}`);
+		}
+		const fallbackWarnings = Array.isArray(result?.warnings)
+			? result.warnings.map((item) => mapParserWarning(item)).filter(Boolean)
+			: [];
 		return {
 			text: result.text ?? "",
 			rule: result.rule.toString(),
-			start: result.start.toISOString(),
+			start: startDate ? startDate.toISOString() : null,
 			next: [],
+			details: fallbackDetails,
+			warnings: fallbackWarnings,
 		};
 	}
 };
@@ -392,14 +679,21 @@ const parseSchedule = (rawText) => {
 	}
 
 	if (recurrenceInfo) {
-		const meta = [];
-		if (recurrenceInfo.start) {
-			const startDate = new Date(recurrenceInfo.start);
-			meta.push(`Starts: ${formatDate(startDate)}`);
+		const meta = Array.isArray(recurrenceInfo.details) ? recurrenceInfo.details.slice() : [];
+		if (meta.length === 0 && recurrenceInfo.start) {
+			const startDate = toValidDate(recurrenceInfo.start);
+			if (startDate) {
+				meta.push(`Starts: ${formatDate(startDate)}`);
+			}
 		}
-		if (recurrenceInfo.next?.length) {
-			const preview = recurrenceInfo.next.map((iso) => formatDate(new Date(iso)));
-			meta.push(`Next: ${preview.join(" • ")}`);
+		if (meta.length === 0 && Array.isArray(recurrenceInfo.next) && recurrenceInfo.next.length > 0) {
+			const preview = recurrenceInfo.next
+				.map((iso) => toValidDate(iso))
+				.filter(Boolean)
+				.map((date) => formatDate(date));
+			if (preview.length > 0) {
+				meta.push(`Next: ${preview.join(" • ")}`);
+			}
 		}
 		cards.push(
 			createPreviewCard({
@@ -409,6 +703,16 @@ const parseSchedule = (rawText) => {
 				meta,
 			}),
 		);
+		if (Array.isArray(recurrenceInfo.warnings) && recurrenceInfo.warnings.length > 0) {
+			cards.push(
+				createPreviewCard({
+					variant: "warn",
+					label: "Check",
+					value: "Review recurrence caveats",
+					meta: recurrenceInfo.warnings,
+				}),
+			);
+		}
 	}
 
 	if (!instantInfo && !recurrenceInfo) {
@@ -420,7 +724,13 @@ const parseSchedule = (rawText) => {
 
 	previewCards.innerHTML = "";
 	cards.forEach((card) => previewCards.appendChild(card));
-	setPreviewStatus("Looks good. Press Enter to continue.", "ok");
+	const hasWarnings = Boolean(recurrenceInfo && Array.isArray(recurrenceInfo.warnings) && recurrenceInfo.warnings.length > 0);
+	setPreviewStatus(
+		hasWarnings
+			? "Looks good with caveats. Review notes below, then press Enter."
+			: "Looks good. Press Enter to continue.",
+		hasWarnings ? "warn" : "ok",
+	);
 
 	state.scheduleResult = {
 		input: text,
@@ -694,6 +1004,39 @@ ipcRenderer.on("reminder-categories", (_, categories) => {
 		option.selected = cat === state.category;
 		categorySelect.appendChild(option);
 	});
+});
+
+document.head.appendChild(createListSummaryStyles());
+
+// Listen for data-from-parent in case window is opened to edit an existing schedule
+ipcRenderer.on("data-from-parent", (_, data) => {
+	const scheduleId = data?.schedule_id ?? data?.scheduleId ?? null;
+	if (!scheduleId) return;
+
+	const listTarget = { kind: "schedule", id: scheduleId };
+	const container = document.createElement("div");
+	container.id = "reminderListSummaryContainer";
+	container.style.margin = "8px 0";
+	// Insert before the close button or at end of body
+	const insertBefore = document.querySelector('[data-action="close"]');
+	if (insertBefore && insertBefore.parentElement) {
+		insertBefore.parentElement.insertBefore(container, insertBefore);
+	} else {
+		document.body.appendChild(container);
+	}
+
+	ipcRenderer.send("lists-fetch", { target: listTarget });
+	const onListsData = (__, payload) => {
+		if (!payload?.target || payload.target.kind !== "schedule" || payload.target.id !== scheduleId) return;
+		ipcRenderer.removeListener("lists-data", onListsData);
+		container.innerHTML = "";
+		const summary = renderListSummary({
+			lists: payload.lists ?? [],
+			target: listTarget,
+		});
+		container.appendChild(summary);
+	};
+	ipcRenderer.on("lists-data", onListsData);
 });
 
 updateTypeSelection(state.kind);

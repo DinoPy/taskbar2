@@ -1,3 +1,5 @@
+import { renderListSummary, createListSummaryStyles } from "./listSummary.js";
+
 const { ipcRenderer } = window.require("electron");
 const { rrulestr } = window.require("rrule");
 
@@ -98,6 +100,8 @@ let detailEditSaveButtonEl = null;
 let detailEditFormCancelButtonEl = null;
 let activeDetailEvent = null;
 let detailEditBaseline = null;
+let detailListSummaryEl = null;
+let detailListsDataListener = null;
 
 const formatEventDate = (date) => {
 	if (!date) return "Unknown time";
@@ -680,6 +684,28 @@ const normalizeOptionalTextInput = (value) => {
 	return trimmed.length > 0 ? trimmed : null;
 };
 
+const normalizeRRuleForComparison = (value) => {
+	const text = normalizeOptionalTextInput(value);
+	if (!text) return null;
+	let normalized = text.replace(/\r\n?/g, "\n").replace(/\\n/g, "\n").trim();
+	if (!normalized) return null;
+	if (/DTSTART:/i.test(normalized) && /RRULE:/i.test(normalized) && !/\n/.test(normalized)) {
+		normalized = normalized.replace(/(DTSTART:[\s\S]*?)(RRULE:)/i, "$1\n$2");
+	}
+	const lines = normalized
+		.split("\n")
+		.map((line) => line.trim())
+		.filter(Boolean);
+	const rruleLine =
+		lines.find((line) => /^RRULE:/i.test(line)) ??
+		lines.find((line) => /^FREQ=/i.test(line)) ??
+		null;
+	if (!rruleLine) return null;
+	const rule = rruleLine.replace(/^RRULE:\s*/i, "").replace(/\s+/g, "");
+	if (!rule) return null;
+	return rule.toUpperCase();
+};
+
 const parseNonNegativeIntegerInput = (value, fallback = null) => {
 	if (value === null || value === undefined) return fallback;
 	const trimmed = String(value).trim();
@@ -944,6 +970,7 @@ const initDetailOverlay = () => {
                 <span data-detail-common-language>—</span>
 	            </p>
 	            <p class="calendar-detail-description" data-detail-description></p>
+					<div class="calendar-detail-list-summary" data-detail-list-summary></div>
 					<div class="calendar-detail-edit-form hidden" data-detail-edit-form>
 						<div class="calendar-detail-edit-grid">
 							<label class="calendar-detail-edit-field calendar-detail-edit-field--wide">
@@ -1097,6 +1124,7 @@ const initDetailOverlay = () => {
 	detailEditAdvancedSectionEl = detailOverlayEl.querySelector(".calendar-detail-edit-advanced");
 	detailEditSaveButtonEl = detailOverlayEl.querySelector("[data-action='save-edit-detail']");
 	detailEditFormCancelButtonEl = detailOverlayEl.querySelector("[data-action='cancel-edit-form']");
+	detailListSummaryEl = detailOverlayEl.querySelector("[data-detail-list-summary]");
 
 	detailEditButton?.addEventListener("click", () => {
 		const target = resolveOccurrenceMutationTarget(activeDetailEvent);
@@ -1182,7 +1210,10 @@ const initDetailOverlay = () => {
 		}
 
 		const rruleInput = normalizeOptionalTextInput(detailEditRruleInputEl?.value);
-		if ((rruleInput ?? null) !== (baseline.rrule ?? null)) {
+		if (
+			normalizeRRuleForComparison(rruleInput) !==
+			normalizeRRuleForComparison(baseline.rrule)
+		) {
 			changes.rrule = rruleInput;
 		}
 
@@ -1446,12 +1477,48 @@ function showEventDetail(event) {
 		setDetailText(detailCommonLanguageEl, "—");
 		detailCommonLanguageRow?.classList.add("hidden");
 	}
+
+	// List summary integration
+	if (detailListSummaryEl) {
+		detailListSummaryEl.innerHTML = "";
+		// Clean up previous listener
+		if (detailListsDataListener) {
+			ipcRenderer.removeListener("lists-data", detailListsDataListener);
+			detailListsDataListener = null;
+		}
+		const occurrenceId = extractNullableStringValue(
+			event?.occurrence?.id ?? event?.occurrence?.occurrence_id ?? event?.occurrence?.OccurrenceID ?? null
+		);
+		if (occurrenceId) {
+			const listTarget = { kind: "occurrence", id: occurrenceId };
+			detailListsDataListener = (_, payload) => {
+				if (!payload?.target || payload.target.kind !== "occurrence" || payload.target.id !== occurrenceId) return;
+				detailListSummaryEl.innerHTML = "";
+				const summary = renderListSummary({
+					lists: payload.lists ?? [],
+					target: listTarget,
+				});
+				detailListSummaryEl.appendChild(summary);
+			};
+			ipcRenderer.on("lists-data", detailListsDataListener);
+			ipcRenderer.send("lists-fetch", { target: listTarget });
+		}
+	}
+
 	detailOverlayEl.classList.remove("hidden");
 }
 
 function closeDetailOverlay() {
 	activeDetailEvent = null;
 	hideDetailEditForm();
+	if (detailListsDataListener) {
+		ipcRenderer.removeListener("lists-data", detailListsDataListener);
+		detailListsDataListener = null;
+	}
+	ipcRenderer.send("lists-unsubscribe");
+	if (detailListSummaryEl) {
+		detailListSummaryEl.innerHTML = "";
+	}
 	detailOverlayEl?.classList.add("hidden");
 }
 
@@ -2818,11 +2885,10 @@ const buildOccurrenceDatesForSchedule = (schedule, start, end) => {
 	}
 
 	try {
-		const hasDtstart = /DTSTART/i.test(ruleText);
 		const options = {
 			tzid: resolveScheduleTimeZone(schedule),
 		};
-		if (!hasDtstart && dtstart) {
+		if (dtstart) {
 			options.dtstart = dtstart;
 		}
 		const rule = rrulestr(ruleText, options);
@@ -3560,6 +3626,7 @@ window.addEventListener("DOMContentLoaded", () => {
 	console.log("[CalendarWindow] DOMContentLoaded");
 	ipcRenderer.send("log", "[CalendarWindow] DOMContentLoaded - Initializing Grid");
 
+	document.head.appendChild(createListSummaryStyles());
 	initDetailOverlay();
 	initFilterControls();
 

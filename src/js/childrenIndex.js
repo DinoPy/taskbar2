@@ -1,4 +1,5 @@
 import { parseString, setupFuzzyFinder } from './helpers.js';
+import { renderListSummary, createListSummaryStyles } from './listSummary.js';
 const { ipcRenderer } = window.require('electron');
 const ipc = ipcRenderer;
 
@@ -33,6 +34,7 @@ const showBeforeDueMinutesInput = document.getElementById('show_before_due_minut
 
 
 document.addEventListener("DOMContentLoaded", () => {
+	document.head.appendChild(createListSummaryStyles());
 	titleInput.focus();
 
 	// Set minimum date to current time
@@ -60,6 +62,38 @@ document.addEventListener("DOMContentLoaded", () => {
 console.log(containerEl);
 
 let categories = [];
+
+function handleListsData(_, payload) {
+	if (!payload || !ID) return;
+	const target = payload.target;
+	if (!target || target.kind !== "task" || target.id !== ID) return;
+
+	const listSummaryContainer = document.getElementById("listSummaryContainer");
+	if (!listSummaryContainer) return;
+
+	listSummaryContainer.innerHTML = "";
+	const summary = renderListSummary({
+		lists: payload.lists ?? [],
+		target: { kind: "task", id: ID },
+	});
+	listSummaryContainer.appendChild(summary);
+}
+
+function handleListsError(_, error) {
+	if (!error) return;
+	if (error.type === "task_blocked_by_list") {
+		const toast = document.createElement("div");
+		toast.className = "list-summary-error-toast";
+		toast.textContent = "Complete required list items first";
+		document.body.appendChild(toast);
+		setTimeout(() => {
+			toast.classList.add("fade-out");
+			setTimeout(() => toast.remove(), 500);
+		}, 3000);
+	}
+}
+
+ipc.on("lists-error", handleListsError);
 
 ipc.on('data-from-parent', (e, data) => {
 
@@ -111,10 +145,22 @@ ipc.on('data-from-parent', (e, data) => {
 
 	availableTags = data.allTags || [];
 
-	if (data.tags.length === 0)
-		return;
-	tags = data.tags;
-	populateTags();
+	if (data.tags.length > 0) {
+		tags = data.tags;
+		populateTags();
+	}
+
+	// List summary integration
+	const listSummaryContainer = document.getElementById("listSummaryContainer");
+	if (listSummaryContainer && ID) {
+		const listTarget = { kind: "task", id: ID };
+
+		// Remove previous listener to avoid duplicates on re-sent data-from-parent
+		ipc.removeListener("lists-data", handleListsData);
+		ipc.on("lists-data", handleListsData);
+
+		ipc.send("lists-fetch", { target: listTarget });
+	}
 });
 
 const createTagElement = (tag) => {
@@ -202,6 +248,9 @@ listenForNewCat();
 
 // v both are taking care of closing the child window.
 closeBtn.addEventListener('click', () => {
+	if (ID) {
+		ipc.send("lists-unsubscribe", { target: { kind: "task", id: ID } });
+	}
 	ipc.send('close-children-window');
 });
 

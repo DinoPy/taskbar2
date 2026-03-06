@@ -1,3 +1,5 @@
+import { renderListSummary, createListSummaryStyles } from "./listSummary.js";
+
 const { ipcRenderer } = window.require("electron");
 
 const MAX_HEIGHT = 420;
@@ -566,6 +568,34 @@ const createNotificationItem = (notification, { isUnseen }) => {
 
 	li.appendChild(actions);
 
+	// List summary integration
+	const rawPayload = notification.payload;
+	const parsedPayload = typeof rawPayload === "string" ? (() => { try { return JSON.parse(rawPayload); } catch { return null; } })() : rawPayload;
+	const hasListData = parsedPayload &&
+		((Array.isArray(parsedPayload.list_run_ids) && parsedPayload.list_run_ids.length > 0) ||
+		 (parsedPayload.open_required_list_count > 0));
+
+	if (hasListData && notification.id) {
+		const listContainer = document.createElement("div");
+		listContainer.className = "notification-list-summary";
+		li.appendChild(listContainer);
+
+		const listTarget = { kind: "notification", id: notification.id };
+		ipcRenderer.send("lists-fetch", { target: listTarget });
+
+		const onListsData = (_, payload) => {
+			if (!payload?.target || payload.target.kind !== "notification" || payload.target.id !== notification.id) return;
+			ipcRenderer.removeListener("lists-data", onListsData);
+			listContainer.innerHTML = "";
+			const summary = renderListSummary({
+				lists: payload.lists ?? [],
+				target: listTarget,
+			});
+			listContainer.appendChild(summary);
+		};
+		ipcRenderer.on("lists-data", onListsData);
+	}
+
 	return li;
 };
 
@@ -1023,5 +1053,6 @@ tabButtons.forEach((btn) => {
 });
 
 window.addEventListener("DOMContentLoaded", () => {
+	document.head.appendChild(createListSummaryStyles());
 	ipcRenderer.send("notifications-window-ready");
 });
