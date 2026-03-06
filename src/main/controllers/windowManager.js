@@ -13,6 +13,7 @@ export function createWindowManager({
 	createCompletionConfirmWindow,
 	createCalendarWindow,
 	createAddDueWindow,
+	createListWindow,
 }) {
 	const state = {
 		taskbar: null,
@@ -29,6 +30,7 @@ export function createWindowManager({
 		addDue: null,
 		calendar: null,
 		commandWindows: new Map(),
+		listWindows: new Map(),
 	};
 
 	const attachLifecycle = (win, key, onClose) => {
@@ -378,6 +380,42 @@ export function createWindowManager({
 
 		getAllCommandWindows() {
 			return Array.from(state.commandWindows.values()).filter(win => win && !win.isDestroyed());
+		},
+
+		openListWindow({ target, props, onClose }) {
+			const key = `${target.kind}:${target.id}`;
+			const existing = state.listWindows.get(key);
+			if (existing && !existing.isDestroyed()) { existing.focus(); return existing; }
+			const win = createListWindow({
+				props: { target, ...props },
+				onClose: () => { state.listWindows.delete(key); onClose?.(); },
+			});
+			state.listWindows.set(key, win);
+			return win;
+		},
+
+		getListWindow(target) {
+			const key = `${target.kind}:${target.id}`;
+			const win = state.listWindows.get(key);
+			if (win && !win.isDestroyed()) return win;
+			state.listWindows.delete(key);
+			return null;
+		},
+
+		closeListWindow(target) {
+			const key = `${target.kind}:${target.id}`;
+			const win = state.listWindows.get(key);
+			if (win && !win.isDestroyed()) win.close();
+		},
+
+		closeAllListWindows() {
+			for (const [, win] of state.listWindows) {
+				if (win && !win.isDestroyed()) win.close();
+			}
+		},
+
+		getAllListWindows() {
+			return Array.from(state.listWindows.values()).filter(w => w && !w.isDestroyed());
 		},
 	};
 }

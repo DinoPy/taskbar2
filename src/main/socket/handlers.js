@@ -8,6 +8,7 @@ export function createSocketHandlers({
 	notificationsController,
 	schedulesController,
 	calendarController,
+	listsController,
 }) {
 	function handleSocketConnect() {
 		const win = getTaskbarWindow();
@@ -110,6 +111,8 @@ export function createSocketHandlers({
 		}
 		commandsController.replaceCommands(keyCommands);
 		syncCustomCommandsWindow();
+
+		listsController?.refetchAllActive?.();
 	}
 
 	function broadcast(channel, payload) {
@@ -153,6 +156,18 @@ export function createSocketHandlers({
 			if (!payload) return;
 			calendarController?.handleUserSettingsUpdated?.(payload);
 		},
+		user_settings_update: ({ data }) => {
+			let payload = data;
+			if (typeof data === "string") {
+				try {
+					payload = JSON.parse(data);
+				} catch {
+					return;
+				}
+			}
+			if (!payload) return;
+			calendarController?.handleUserSettingsUpdated?.(payload);
+		},
 		connection_error: ({ data }) => {
 			let payload = data;
 			if (typeof payload === "string") {
@@ -164,6 +179,22 @@ export function createSocketHandlers({
 			}
 			const normalized = payload && typeof payload === "object" ? payload : {};
 			calendarController?.handleConnectionError?.(normalized);
+			// Forward list-related errors to listsController.
+			// Includes list-specific types and generic types that list handlers may emit.
+			const listErrorTypes = new Set([
+				"invalid_list_target",
+				"invalid_list_item_type",
+				"list_run_locked",
+				"list_owner_locked",
+				"task_blocked_by_list",
+				"invalid_data",
+				"not_found",
+				"unauthorized",
+				"database_error",
+			]);
+			if (normalized.type && listErrorTypes.has(normalized.type)) {
+				listsController?.handleListError?.(normalized);
+			}
 			broadcast("socket-connection-error", normalized);
 		},
 		related_task_edited: ({ data }) => broadcast("related_task_edited", data),
@@ -450,6 +481,95 @@ export function createSocketHandlers({
 				calendarController?.requestVisibleRangeRefetch?.({ includeSchedules: true });
 				notificationsController?.sendSnapshotToNotificationsWindow?.();
 			}
+		},
+		// ---- List events ----
+		lists_target: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			if (!payload) return;
+			listsController?.handleListsTarget?.(payload);
+		},
+		list_created: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			if (!payload) return;
+			listsController?.handleTemplateMutation?.(payload);
+		},
+		list_updated: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			if (!payload) return;
+			listsController?.handleTemplateMutation?.(payload);
+		},
+		list_deleted: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			if (!payload) return;
+			listsController?.handleTemplateMutation?.(payload);
+		},
+		lists_reordered: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			if (!payload) return;
+			listsController?.handleTemplateMutation?.(payload);
+		},
+		list_item_created: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			if (!payload) return;
+			listsController?.handleTemplateMutation?.(payload);
+		},
+		list_item_updated: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			if (!payload) return;
+			listsController?.handleTemplateMutation?.(payload);
+		},
+		list_item_deleted: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			if (!payload) return;
+			listsController?.handleTemplateMutation?.(payload);
+		},
+		list_items_reordered: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			if (!payload) return;
+			listsController?.handleTemplateMutation?.(payload);
+		},
+		list_run_item_updated: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			if (!payload) return;
+			listsController?.handleRunItemUpdated?.(payload);
+		},
+		list_run_updated: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			if (!payload) return;
+			listsController?.handleRunUpdated?.(payload);
 		},
 		schedule_deleted: ({ data }) => {
 			let payload = data;

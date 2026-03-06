@@ -19,6 +19,7 @@ export function registerIpcHandlers({
     notificationsController,
     schedulesController,
     calendarController,
+    listsController,
     log,
     requestTaskDeletion,
     requestTaskCompletionConfirmation,
@@ -830,5 +831,46 @@ export function registerIpcHandlers({
         if (tasksController.refreshCompletedTasksIfOpen()) {
             logger("triggering refresh for tasks after delete");
         }
+    });
+
+    // ---- Lists IPC handlers ----
+
+    ipc.on("lists-fetch", (event, data) => {
+        const target = data?.target;
+        if (!target?.kind || !target?.id) return;
+        const sender = event.sender;
+        const windowRef = {
+            _id: sender.id,
+            _pushFn: (channel, payload) => {
+                if (!sender.isDestroyed()) {
+                    sender.send(channel, payload);
+                }
+            },
+        };
+        listsController?.fetchForTarget?.(target, windowRef);
+    });
+
+    ipc.on("lists-unsubscribe", (event) => {
+        const sender = event.sender;
+        const windowRef = {
+            _id: sender.id,
+            _pushFn: (channel, payload) => {
+                if (!sender.isDestroyed()) {
+                    sender.send(channel, payload);
+                }
+            },
+        };
+        listsController?.unsubscribe?.(windowRef);
+    });
+
+    ipc.on("lists-mutation", (_, data) => {
+        if (!data?.event) return;
+        listsController?.sendMutation?.(data.event, data.data ?? {});
+    });
+
+    ipc.on("open-list-window", (_, data) => {
+        const target = data?.target;
+        const props = data?.props ?? {};
+        windowManager.openListWindow?.({ target, props });
     });
 }

@@ -21,6 +21,7 @@ import { createDeleteConfirmWindow as createDeleteConfirmBrowserWindow } from ".
 import { createCalendarWindow as createCalendarBrowserWindow } from "./src/main/windows/calendarWindow.js";
 import { createCompletionConfirmWindow as createCompletionConfirmBrowserWindow } from "./src/main/windows/completionConfirmWindow.js";
 import { createAddDueWindow as createAddDueBrowserWindow } from "./src/main/windows/addDueWindow.js";
+import { createListWindow as createListBrowserWindow } from "./src/main/windows/listWindow.js";
 import {
 	showMainContextMenu,
 	showTaskContextMenu,
@@ -30,6 +31,7 @@ import { createSocketHandlers } from "./src/main/socket/handlers.js";
 import { createNotificationsController } from "./src/main/controllers/notificationsController.js";
 import { createSchedulesController } from "./src/main/controllers/schedulesController.js";
 import { createCalendarController } from "./src/main/controllers/calendarController.js";
+import { createListsController } from "./src/main/controllers/listsController.js";
 
 const logDir = path.dirname(config.logFilePath);
 if (!fs.existsSync(logDir)) {
@@ -111,6 +113,7 @@ const windowManager = createWindowManager({
 	createCompletionConfirmWindow: createCompletionConfirmBrowserWindow,
 	createCalendarWindow: createCalendarBrowserWindow,
 	createAddDueWindow: createAddDueBrowserWindow,
+	createListWindow: createListBrowserWindow,
 });
 
 const commandsController = createCommandsController({
@@ -205,6 +208,11 @@ const calendarController = createCalendarController({
 	windowManager,
 	sendEvent: (eventName, data) => sendEvent?.(eventName, data),
 	schedulesController,
+});
+
+const listsController = createListsController({
+	sendEvent: (eventName, data) => sendEvent?.(eventName, data),
+	log: (...args) => console.log(...args),
 });
 
 const scheduleCompletedTasksRefresh = () => {
@@ -339,6 +347,7 @@ const {
 	notificationsController,
 	schedulesController,
 	calendarController,
+	listsController,
 });
 
 socketClient = createSocketClient({
@@ -379,6 +388,7 @@ registerIpcHandlers({
 	notificationsController,
 	schedulesController,
 	calendarController,
+	listsController,
 	log: (...args) => console.log(...args),
 	requestTaskDeletion,
 	requestTaskCompletionConfirmation,
@@ -416,6 +426,7 @@ const handleCloseAppRequest = () => {
 	windowManager.closeNotificationsWindow();
 	windowManager.closeReminderWindow();
 	windowManager.closeAddDueWindow();
+	windowManager.closeAllListWindows?.();
 	windowManager.getTaskbarWindow()?.close();
 };
 
@@ -464,6 +475,10 @@ app.whenReady().then(async () => {
 		// Open dev tools for all command windows
 		windowManager.getAllCommandWindows().forEach((commandWin) => {
 			commandWin.webContents.openDevTools();
+		});
+		// Open dev tools for all list windows
+		windowManager.getAllListWindows?.()?.forEach((listWin) => {
+			listWin.webContents.openDevTools();
 		});
 		const calendarWindow = openCalendarWindowOnFocusedScreen();
 		calendarWindow?.webContents.openDevTools();
