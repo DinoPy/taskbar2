@@ -571,6 +571,14 @@ export function createSocketHandlers({
 			if (!payload) return;
 			listsController?.handleRunUpdated?.(payload);
 		},
+		standalone_list_attached: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			if (!payload) return;
+			listsController?.handleStandaloneListAttached?.(payload);
+		},
 		schedule_deleted: ({ data }) => {
 			let payload = data;
 			if (typeof data === "string") {

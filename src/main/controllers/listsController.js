@@ -237,6 +237,22 @@ export function createListsController({ sendEvent, log = console.log, onTaskList
 		}
 	};
 
+	const handleStandaloneListAttached = (payload) => {
+		log(`[ListsController] standalone_list_attached: source=${payload?.source?.list_id}, dest=${payload?.destination?.target?.kind}:${payload?.destination?.target?.id}`);
+		// Notify standalone_home subscribers about the successful attach
+		const key = "standalone_home";
+		const subs = surfaceSubscribers.get(key);
+		if (subs) {
+			for (const [, ref] of subs) {
+				try {
+					ref._pushFn("lists-attach-success", payload);
+				} catch (err) {
+					log(`[ListsController] attach notify error: ${err}`);
+				}
+			}
+		}
+	};
+
 	const handleListError = (errorPayload) => {
 		// Push error to all subscribers across all surfaces
 		for (const [key] of surfaceSubscribers) {
@@ -259,10 +275,15 @@ export function createListsController({ sendEvent, log = console.log, onTaskList
 			if (fetched.has(key)) continue;
 			fetched.add(key);
 
-			const [kind, ...idParts] = key.split(":");
-			const id = idParts.join(":");
-			if (kind && id) {
-				sendEvent?.("lists_fetch", { target: { kind, id } });
+			if (key === "standalone_home") {
+				sendEvent?.("lists_fetch", { target: { kind: "standalone_home" } });
+			} else {
+				const colonIdx = key.indexOf(":");
+				if (colonIdx > 0) {
+					const kind = key.substring(0, colonIdx);
+					const id = key.substring(colonIdx + 1);
+					sendEvent?.("lists_fetch", { target: { kind, id } });
+				}
 			}
 		}
 	};
@@ -282,6 +303,7 @@ export function createListsController({ sendEvent, log = console.log, onTaskList
 		handleTemplateMutation,
 		handleRunItemUpdated,
 		handleRunUpdated,
+		handleStandaloneListAttached,
 		handleListError,
 		refetchAllActive,
 		getSurface,
