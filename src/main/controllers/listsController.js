@@ -25,7 +25,7 @@ const parsePayload = (data) => {
 	return typeof data === "object" ? data : null;
 };
 
-export function createListsController({ sendEvent, log = console.log, onTaskListStatus }) {
+export function createListsController({ sendEvent, log = console.log, onTaskListStatus, onTemplateSurfaceUpdated }) {
 	/** Map<surfaceKey, ListsTargetPayload> */
 	const surfaces = new Map();
 
@@ -178,6 +178,10 @@ export function createListsController({ sendEvent, log = console.log, onTaskList
 
 		storeSurface(key, payload);
 		pushToSubscribers(key, payload);
+
+		if (payload.target.kind === "task_template") {
+			onTemplateSurfaceUpdated?.(payload.target);
+		}
 	};
 
 	const handleTemplateMutation = (rawPayload) => {

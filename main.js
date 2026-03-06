@@ -223,6 +223,12 @@ const listsController = createListsController({
 			win.webContents.send("task-list-status", status);
 		}
 	},
+	onTemplateSurfaceUpdated: (target) => {
+		const tplWin = windowManager.getTemplateWindow?.();
+		if (tplWin && !tplWin.isDestroyed()) {
+			tplWin.webContents.send("lists-surface-updated", { target });
+		}
+	},
 });
 
 const scheduleCompletedTasksRefresh = () => {
