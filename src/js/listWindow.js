@@ -66,6 +66,16 @@ const deleteConfirmSubmit = document.getElementById("deleteConfirmSubmit");
 const deleteConfirmCancel = document.getElementById("deleteConfirmCancel");
 let pendingDeleteListId = null;
 
+const attachOverlay = document.getElementById("attachOverlay");
+const attachInput = document.getElementById("attachInput");
+const attachResults = document.getElementById("attachResults");
+const attachEmpty = document.getElementById("attachEmpty");
+const attachCloseBtn = document.getElementById("attachCloseBtn");
+let attachTargets = [];
+let attachFiltered = [];
+let attachFocusIndex = -1;
+let attachListId = null;
+
 // ---------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------
@@ -198,6 +208,19 @@ const renderSidebar = (lists) => {
 
 		const actionsDiv = document.createElement("div");
 		actionsDiv.className = "list-sidebar-item-actions";
+
+		if (isStandalone) {
+			const attachBtn = document.createElement("button");
+			attachBtn.className = "list-sidebar-item-action attach";
+			attachBtn.textContent = "\u21B1";
+			attachBtn.title = "Attach to task or schedule";
+			attachBtn.setAttribute("tabindex", "-1");
+			attachBtn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				openAttachPicker(def.id);
+			});
+			actionsDiv.appendChild(attachBtn);
+		}
 
 		const deleteBtn = document.createElement("button");
 		deleteBtn.className = "list-sidebar-item-action delete";
@@ -728,6 +751,73 @@ const confirmDelete = () => {
 	closeDeleteConfirmDialog();
 };
 
+// ---------------------------------------------------------------
+// Attach picker (standalone mode)
+// ---------------------------------------------------------------
+
+const escapeHtml = (str) => {
+	const div = document.createElement("div");
+	div.textContent = str;
+	return div.innerHTML;
+};
+
+const openAttachPicker = async (listId) => {
+	attachListId = listId;
+	attachFocusIndex = -1;
+	attachInput.value = "";
+
+	try {
+		attachTargets = await ipc.invoke("get-attach-targets");
+	} catch {
+		attachTargets = [];
+	}
+
+	attachOverlay.classList.remove("hidden");
+	attachInput.focus();
+	filterAttachTargets("");
+};
+
+const closeAttachPicker = () => {
+	attachOverlay.classList.add("hidden");
+	attachListId = null;
+	attachTargets = [];
+	attachFiltered = [];
+	attachFocusIndex = -1;
+};
+
+const filterAttachTargets = (query) => {
+	const q = query.toLowerCase().trim();
+	attachFiltered = q
+		? attachTargets.filter((t) => t.label.toLowerCase().includes(q) || t.kind.toLowerCase().includes(q))
+		: [...attachTargets];
+	renderAttachResults();
+};
+
+const renderAttachResults = () => {
+	attachResults.innerHTML = "";
+	attachEmpty.classList.toggle("hidden", attachFiltered.length > 0);
+
+	for (let i = 0; i < attachFiltered.length; i++) {
+		const t = attachFiltered[i];
+		const el = document.createElement("div");
+		el.className = "list-attach-result-item" + (i === attachFocusIndex ? " focused" : "");
+		el.innerHTML = `<span class="list-attach-result-kind">${t.kind}</span><span class="list-attach-result-label">${escapeHtml(t.label)}</span>`;
+		el.addEventListener("click", () => confirmAttach(t));
+		attachResults.appendChild(el);
+	}
+};
+
+const confirmAttach = (targetRef) => {
+	if (!attachListId) return;
+	sendMutation("standalone_list_attach", {
+		list_id: attachListId,
+		target: { kind: targetRef.kind, id: targetRef.id },
+		position: 0,
+	});
+	closeAttachPicker();
+	showToast(`Attaching to ${targetRef.kind}: ${targetRef.label}`, 2000);
+};
+
 const submitItemDialog = () => {
 	const title = itemTitleInput.value.trim();
 	if (!title) {
@@ -824,6 +914,13 @@ ipc.on("lists-error", (_, errorPayload) => {
 	}
 });
 
+ipc.on("lists-attach-success", (_, payload) => {
+	const dest = payload?.destination;
+	if (dest?.target) {
+		showToast(`List attached to ${dest.target.kind} successfully`, 3000);
+	}
+});
+
 // ---------------------------------------------------------------
 // Event listeners
 // ---------------------------------------------------------------
@@ -859,6 +956,35 @@ itemDialogCancel.addEventListener("click", () => {
 
 deleteConfirmSubmit.addEventListener("click", confirmDelete);
 deleteConfirmCancel.addEventListener("click", closeDeleteConfirmDialog);
+
+attachCloseBtn.addEventListener("click", closeAttachPicker);
+attachInput.addEventListener("input", (e) => {
+	attachFocusIndex = -1;
+	filterAttachTargets(e.target.value);
+});
+attachInput.addEventListener("keydown", (e) => {
+	if (e.key === "ArrowDown") {
+		e.preventDefault();
+		if (attachFiltered.length > 0) {
+			attachFocusIndex = Math.min(attachFocusIndex + 1, attachFiltered.length - 1);
+			renderAttachResults();
+		}
+	} else if (e.key === "ArrowUp") {
+		e.preventDefault();
+		if (attachFiltered.length > 0) {
+			attachFocusIndex = Math.max(attachFocusIndex - 1, 0);
+			renderAttachResults();
+		}
+	} else if (e.key === "Enter") {
+		e.preventDefault();
+		if (attachFocusIndex >= 0 && attachFocusIndex < attachFiltered.length) {
+			confirmAttach(attachFiltered[attachFocusIndex]);
+		}
+	} else if (e.key === "Escape") {
+		e.preventDefault();
+		closeAttachPicker();
+	}
+});
 
 // Type radio change in item dialog
 itemDialog.querySelectorAll('input[name="itemType"]').forEach((radio) => {
@@ -917,6 +1043,7 @@ document.addEventListener("keydown", (e) => {
 
 	// Dialog handling
 	if (e.key === "Escape") {
+		if (!attachOverlay.classList.contains("hidden")) { closeAttachPicker(); return; }
 		if (deleteConfirmDialog.open) { closeDeleteConfirmDialog(); return; }
 		if (helpPanel.classList.contains("visible")) {
 			helpPanel.classList.remove("visible");
@@ -990,6 +1117,13 @@ document.addEventListener("keydown", (e) => {
 	} else if (e.key === "a") {
 		// Add item
 		if (selectedListId) openItemDialog();
+	} else if (e.key === "x" && isStandalone && selectedListId) {
+		const inDialog = addListDialog.open || itemDialog.open || deleteConfirmDialog.open || !attachOverlay.classList.contains("hidden");
+		if (!inDialog) {
+			const bundle = getSelectedBundle();
+			openDeleteConfirmDialog(selectedListId, bundle?.definition?.title);
+			return;
+		}
 	} else if (e.key === "?") {
 		helpPanel.classList.toggle("visible");
 	}

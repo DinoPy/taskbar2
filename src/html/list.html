@@ -136,6 +136,19 @@
 			</div>
 		</dialog>
 
+		<!-- Attach picker overlay -->
+		<div class="list-attach-overlay hidden" id="attachOverlay">
+			<div class="list-attach-picker">
+				<div class="list-attach-header">
+					<h3 class="list-attach-title">Attach to...</h3>
+					<button class="list-attach-close" id="attachCloseBtn">&times;</button>
+				</div>
+				<input class="list-attach-input" id="attachInput" type="text" placeholder="Type to filter tasks and schedules..." autocomplete="off" />
+				<div class="list-attach-results" id="attachResults"></div>
+				<div class="list-attach-empty" id="attachEmpty">No matching targets</div>
+			</div>
+		</div>
+
 		<!-- Help panel -->
 		<div class="list-help-panel" id="helpPanel">
 			<div class="list-help-header">
@@ -159,6 +172,7 @@
 						<dt><kbd>Space</kbd> / <kbd>Enter</kbd></dt><dd>Activate item</dd>
 						<dt><kbd>n</kbd></dt><dd>New list</dd>
 						<dt><kbd>a</kbd></dt><dd>Add item</dd>
+						<dt><kbd>x</kbd></dt><dd>Delete selected list</dd>
 					</dl>
 				</div>
 				<div class="list-help-section">

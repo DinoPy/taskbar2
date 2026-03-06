@@ -955,3 +955,112 @@
 	background: #3a3d4a;
 	border-radius: 2px;
 }
+
+/* ============================================
+   Attach picker overlay
+   ============================================ */
+
+.list-sidebar-item-action.attach {
+	font-size: 12px;
+}
+
+.list-attach-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.5);
+	display: flex;
+	align-items: flex-start;
+	justify-content: center;
+	padding-top: 60px;
+	z-index: 200;
+}
+.list-attach-overlay.hidden {
+	display: none;
+}
+.list-attach-picker {
+	background: #1e2028;
+	border: 1px solid #2a2d38;
+	border-radius: 8px;
+	width: 400px;
+	max-height: 360px;
+	display: flex;
+	flex-direction: column;
+	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+.list-attach-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 10px 14px;
+	border-bottom: 1px solid #2a2d38;
+}
+.list-attach-title {
+	font-size: 14px;
+	font-weight: 600;
+	color: #e8e8e8;
+	margin: 0;
+}
+.list-attach-close {
+	background: none;
+	border: none;
+	color: #6b7080;
+	font-size: 18px;
+	cursor: pointer;
+	padding: 0 4px;
+}
+.list-attach-close:hover {
+	color: #e8e8e8;
+}
+.list-attach-input {
+	margin: 10px 14px;
+	padding: 8px 10px;
+	background: #1a1c22;
+	border: 1px solid #2a2d38;
+	border-radius: 4px;
+	color: #e8e8e8;
+	font-size: 13px;
+	outline: none;
+}
+.list-attach-input:focus {
+	border-color: oklch(0.55 0.20 80);
+}
+.list-attach-results {
+	flex: 1;
+	overflow-y: auto;
+	padding: 4px 0;
+	max-height: 240px;
+}
+.list-attach-result-item {
+	padding: 8px 14px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-size: 13px;
+	color: #e8e8e8;
+}
+.list-attach-result-item:hover,
+.list-attach-result-item.focused {
+	background: #2a2d38;
+}
+.list-attach-result-kind {
+	font-size: 11px;
+	color: #6b7080;
+	text-transform: uppercase;
+	min-width: 56px;
+}
+.list-attach-result-label {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.list-attach-empty {
+	padding: 16px 14px;
+	text-align: center;
+	color: #6b7080;
+	font-size: 13px;
+}
+.list-attach-empty.hidden {
+	display: none;
+}
