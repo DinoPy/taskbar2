@@ -919,6 +919,11 @@ const parseCommand = (input) => {
 		return { type: 'list', index: parseInt(match[1]) };
 	}
 
+	// Standalone lists home: lists
+	if (trimmed === 'lists') {
+		return { type: 'open_lists_home' };
+	}
+
 	// Split task: sp1, sp2, etc.
 	if (trimmed.match(/^sp(\d+)$/)) {
 		const match = trimmed.match(/^sp(\d+)$/);
@@ -1101,7 +1106,11 @@ const executeCommand = (command) => {
 			}
 			return { success: false, message: `Invalid task index: ${command.index}` };
 		}
-			
+
+		case 'open_lists_home':
+			ipc.send("open-list-window", { target: { kind: "standalone_home" } });
+			return { success: true, message: "Opening standalone lists" };
+
 		case 'invalid':
 			return { success: false, message: `Invalid command: ${command.input}` };
 			
@@ -1132,7 +1141,8 @@ const getCommandSuggestions = (input) => {
 		{ command: 'sw0u', description: 'screen 0 up' },
 		{ command: 'calendar', description: 'open calendar window' },
 		{ command: 'llc', description: 'open list for current task' },
-		{ command: 'll1', description: 'open list for task 1' }
+		{ command: 'll1', description: 'open list for task 1' },
+		{ command: 'lists', description: 'open standalone lists' }
 	];
 	}
 
@@ -1144,6 +1154,9 @@ const getCommandSuggestions = (input) => {
 	}
 	if ('llc'.startsWith(trimmed) && trimmed.startsWith('l')) {
 		suggestions.push({ command: 'llc', description: 'open list for current task' });
+	}
+	if ('lists'.startsWith(trimmed) && trimmed.startsWith('li') && !trimmed.startsWith('ll')) {
+		suggestions.push({ command: 'lists', description: 'open standalone lists' });
 	}
 	if (trimmed.startsWith('ll') && trimmed.match(/^ll\d*$/)) {
 		if (trimmed.match(/^ll\d+$/)) {
@@ -1170,7 +1183,8 @@ const getCommandSuggestions = (input) => {
 		{ command: 'remind', description: 'create reminder/task', pattern: /^remind$/ },
 		{ command: 'calendar', description: 'open calendar window', pattern: /^calendar$/ },
 		{ command: 'll', description: 'open list for task', pattern: /^ll(\d+)$/ },
-		{ command: 'llc', description: 'open list for current task', pattern: /^llc$/ }
+		{ command: 'llc', description: 'open list for current task', pattern: /^llc$/ },
+		{ command: 'lists', description: 'open standalone lists', pattern: /^lists$/ }
 	];
 	
 	// Handle all command types with consistent logic
@@ -1276,6 +1290,8 @@ const getCommandSuggestions = (input) => {
 						suggestions.push({ command: trimmed, description: 'create reminder/task' });
 					} else if (trimmed === 'calendar') {
 						suggestions.push({ command: trimmed, description: 'open calendar window' });
+					} else if (trimmed === 'lists') {
+						suggestions.push({ command: 'lists', description: 'open standalone lists' });
 					}
 				} else {
 					// Partial match - collect command names only
@@ -1347,7 +1363,7 @@ const updateCommandHelp = (input) => {
 const handleTaskChangeSearch = () => {
 	searchContainer.style.display = "flex";
 	searchInput.focus();
-	searchInput.placeholder = "s1, e2, c3, d4, ddd5, ec, llc, ll1, sat, sw0d, remind, calendar...";
+	searchInput.placeholder = "s1, e2, c3, d4, ddd5, ec, llc, ll1, lists, sat, sw0d, remind, calendar...";
 
 	const commandHelp = document.querySelector('.commandHelp');
 	
@@ -1379,7 +1395,7 @@ const handleTaskChangeSearch = () => {
 		setTimeout(() => {
 			searchInput.blur();
 			searchInput.value = "";
-			searchInput.placeholder = "s1, e2, c3, d4, ddd5, ec, llc, ll1, sat, sw0d, remind, calendar...";
+			searchInput.placeholder = "s1, e2, c3, d4, ddd5, ec, llc, ll1, lists, sat, sw0d, remind, calendar...";
 			searchInput.style.backgroundColor = '';
 			searchInput.style.color = '';
 			searchContainer.style.display = "none";
