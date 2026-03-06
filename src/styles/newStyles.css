@@ -98,6 +98,36 @@ body {
     font-size: var(--font-size-index);
 }
 
+.taskListBadge {
+    display: none;
+    position: absolute;
+    top: 2px;
+    right: 3px;
+    min-width: 16px;
+    height: 16px;
+    line-height: 16px;
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    border-radius: 8px;
+    padding: 0 4px;
+    pointer-events: none;
+}
+
+.taskListBadge.visible {
+    display: inline-block;
+}
+
+.taskListBadge.incomplete {
+    background: oklch(0.55 0.18 55);
+    color: oklch(0.98 0.02 55);
+}
+
+.taskListBadge.complete {
+    background: oklch(0.50 0.14 145);
+    color: oklch(0.95 0.02 145);
+}
+
 .mainContent {
 	height: 100%;
 	display: flex;

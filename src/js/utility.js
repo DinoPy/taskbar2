@@ -148,6 +148,7 @@ export class Task {
             timerEl: document.createElement('p'),
             categoryEl: document.createElement('p'),
             indexEl: document.createElement('p'),
+            listBadgeEl: document.createElement('span'),
         },
         this.isFocused = isActive;
         this.taskTimerInterval = null;
@@ -473,8 +474,12 @@ export class Task {
             topRowEl.append(dueDateEl);
             topRowEl.append(this.children.timerEl);
 
+            // List badge (hidden by default, shown when list data is available)
+            this.children.listBadgeEl.className = 'taskListBadge';
+
             this.taskEl.append(topRowEl);
             this.taskEl.append(this.children.titleEl);
+            this.taskEl.append(this.children.listBadgeEl);
             this.taskEl.append(this.children.indexEl);
         };
 
@@ -489,6 +494,28 @@ export class Task {
 
         updateIndex (num) {
             this.children.indexEl.textContent = (num);
+        }
+
+        updateListStatus ({ incompleteCount, listCount }) {
+            const badge = this.children.listBadgeEl;
+            if (!badge) return;
+            if (listCount === 0) {
+                badge.classList.remove('visible', 'incomplete', 'complete');
+                badge.textContent = '';
+                return;
+            }
+            badge.classList.add('visible');
+            if (incompleteCount > 0) {
+                badge.classList.add('incomplete');
+                badge.classList.remove('complete');
+                badge.textContent = incompleteCount;
+                badge.title = `${incompleteCount} required list item${incompleteCount === 1 ? '' : 's'} incomplete`;
+            } else {
+                badge.classList.add('complete');
+                badge.classList.remove('incomplete');
+                badge.textContent = '\u2713';
+                badge.title = 'All list items complete';
+            }
         }
 
         openCtxMenu () {

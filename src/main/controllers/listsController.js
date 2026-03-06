@@ -23,7 +23,7 @@ const parsePayload = (data) => {
 	return typeof data === "object" ? data : null;
 };
 
-export function createListsController({ sendEvent, log = console.log }) {
+export function createListsController({ sendEvent, log = console.log, onTaskListStatus }) {
 	/** Map<surfaceKey, ListsTargetPayload> */
 	const surfaces = new Map();
 
@@ -70,6 +70,31 @@ export function createListsController({ sendEvent, log = console.log }) {
 	const storeSurface = (key, payload) => {
 		surfaces.set(key, payload);
 		rebuildRunIndex(key, payload);
+		notifyTaskListStatus(key, payload);
+	};
+
+	const notifyTaskListStatus = (key, payload) => {
+		if (!onTaskListStatus) return;
+		// Only notify for task surfaces
+		const target = payload?.target;
+		if (!target || target.kind !== "task") return;
+
+		let totalRequired = 0;
+		let totalCompleted = 0;
+		const lists = payload?.lists;
+		if (Array.isArray(lists)) {
+			for (const bundle of lists) {
+				if (!bundle?.run) continue;
+				totalRequired += bundle.run.required_total ?? 0;
+				totalCompleted += bundle.run.required_completed ?? 0;
+			}
+		}
+		onTaskListStatus({
+			taskId: target.id,
+			incompleteCount: Math.max(0, totalRequired - totalCompleted),
+			totalRequired,
+			listCount: Array.isArray(lists) ? lists.length : 0,
+		});
 	};
 
 	const removeSurface = (key) => {

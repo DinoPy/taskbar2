@@ -214,6 +214,11 @@ const calendarController = createCalendarController({
 const listsController = createListsController({
 	sendEvent: (eventName, data) => sendEvent?.(eventName, data),
 	log: (...args) => console.log(...args),
+	onTaskListStatus: (status) => {
+		if (win && !win.isDestroyed()) {
+			win.webContents.send("task-list-status", status);
+		}
+	},
 });
 
 const scheduleCompletedTasksRefresh = () => {

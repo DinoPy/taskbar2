@@ -411,6 +411,12 @@ ipc.on('completeTask', (e, data) => {
 	renderTasksByCategory();
 });
 
+ipc.on('task-list-status', (e, data) => {
+	if (data?.taskId && tasks[data.taskId]) {
+		tasks[data.taskId].updateListStatus(data);
+	}
+});
+
 ipc.on('socket-connection-error', (e, data) => {
 	if (data?.type === 'task_blocked_by_list') {
 		// Task completion was rejected by the server because required list items
