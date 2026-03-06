@@ -39,6 +39,8 @@ const footerOwner = document.getElementById("footerOwner");
 const footerRev = document.getElementById("footerRev");
 const footerStatus = document.getElementById("footerStatus");
 const errorToast = document.getElementById("errorToast");
+const helpPanel = document.getElementById("helpPanel");
+const helpCloseBtn = document.getElementById("helpCloseBtn");
 
 // Dialogs
 const addListDialog = document.getElementById("addListDialog");
@@ -867,7 +869,9 @@ document.addEventListener("keydown", (e) => {
 
 	// Dialog handling
 	if (e.key === "Escape") {
-		if (addListDialog.open) {
+		if (helpPanel.classList.contains("visible")) {
+			helpPanel.classList.remove("visible");
+		} else if (addListDialog.open) {
 			closeAddListDialog();
 		} else if (itemDialog.open) {
 			closeItemDialog();
@@ -936,7 +940,13 @@ document.addEventListener("keydown", (e) => {
 	} else if (e.key === "a") {
 		// Add item
 		if (selectedListId) openItemDialog();
+	} else if (e.key === "?") {
+		helpPanel.classList.toggle("visible");
 	}
+});
+
+helpCloseBtn.addEventListener("click", () => {
+	helpPanel.classList.remove("visible");
 });
 
 // ---------------------------------------------------------------
