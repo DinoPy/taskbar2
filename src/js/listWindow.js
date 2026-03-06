@@ -6,6 +6,7 @@ const ipc = ipcRenderer;
 // ---------------------------------------------------------------
 
 let target = null;
+let isStandalone = false;
 let listsPayload = null; // Full ListsTargetPayload
 let selectedListId = null;
 let isOwnerFrozen = false;
@@ -127,7 +128,12 @@ const render = () => {
 
 	// Update header
 	if (target) {
-		headerTarget.textContent = `${target.kind}: ${target.id.substring(0, 8)}...`;
+		if (isStandalone) {
+			headerTarget.textContent = "";
+			document.querySelector(".list-header-title").textContent = "Standalone Lists";
+		} else {
+			headerTarget.textContent = `${target.kind}: ${target.id.substring(0, 8)}...`;
+		}
 	}
 
 	// Toggle readonly
@@ -576,6 +582,13 @@ const computeTimerElapsed = (ts) => {
 };
 
 const renderFooter = (bundle) => {
+	if (isStandalone) {
+		const listCount = listsPayload?.lists?.length ?? 0;
+		footerOwner.textContent = `${listCount} list${listCount !== 1 ? "s" : ""}`;
+		footerRev.textContent = bundle ? `rev ${bundle.definition.rev}` : "";
+		footerStatus.textContent = bundle?.run ? bundle.run.status : "";
+		return;
+	}
 	const def = bundle.definition;
 	const run = bundle.run;
 
@@ -747,9 +760,9 @@ const submitItemDialog = () => {
 ipc.on("data-from-parent", (_, data) => {
 	if (!data?.target) return;
 	target = data.target;
+	isStandalone = target.kind === "standalone_home";
 
-	// Determine if owner is frozen based on target kind context
-	// The server enforces this; the UI hints are best-effort
+	// Standalone lists are never frozen
 	isOwnerFrozen = false;
 
 	ipc.send("lists-fetch", { target });
