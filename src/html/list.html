@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Lists</title>
+		<link href="../styles/variables.css" rel="stylesheet" />
+		<link href="../styles/list.css" rel="stylesheet" />
+		<script src="../js/listWindow.js" defer type="module"></script>
+	</head>
+	<body class="list-body">
+		<header class="list-header">
+			<div class="list-header-left">
+				<span class="list-header-title">Lists</span>
+				<span class="list-header-target" id="headerTarget"></span>
+			</div>
+			<img
+				class="list-close-btn"
+				id="closeBtn"
+				src="../images/close.svg"
+				title="Close window"
+			/>
+		</header>
+
+		<div class="list-container">
+			<!-- Left sidebar: list definitions -->
+			<aside class="list-sidebar" id="listSidebar">
+				<div class="list-sidebar-items" id="sidebarItems"></div>
+				<button class="list-sidebar-add-btn" id="addListBtn" title="Add a new list">+ Add List</button>
+			</aside>
+
+			<!-- Right panel -->
+			<main class="list-main" id="listMain">
+				<!-- Empty state -->
+				<div class="list-empty-state" id="emptyState">
+					<p>No lists yet.</p>
+					<p>Click <strong>+ Add List</strong> to create one.</p>
+				</div>
+
+				<!-- Template items section -->
+				<section class="list-template-section" id="templateSection">
+					<div class="list-template-header">
+						<h3 class="list-template-title" id="templateTitle"></h3>
+						<span class="list-template-kind" id="templateKind"></span>
+					</div>
+					<div class="list-template-items" id="templateItems"></div>
+					<button class="list-add-item-btn" id="addItemBtn">+ Add Item</button>
+				</section>
+
+				<!-- Run progress section -->
+				<section class="list-run-section" id="runSection">
+					<div class="list-run-header">
+						<h4 class="list-run-title">Progress</h4>
+						<span class="list-run-status" id="runStatus"></span>
+					</div>
+					<div class="list-run-progress-bar-container">
+						<div class="list-run-progress-bar" id="runProgressBar">
+							<div class="list-run-progress-fill" id="runProgressFill"></div>
+						</div>
+						<span class="list-run-progress-text" id="runProgressText"></span>
+					</div>
+					<div class="list-run-items" id="runItems"></div>
+				</section>
+			</main>
+		</div>
+
+		<footer class="list-footer" id="listFooter">
+			<span class="list-footer-owner" id="footerOwner"></span>
+			<span class="list-footer-rev" id="footerRev"></span>
+			<span class="list-footer-status" id="footerStatus"></span>
+		</footer>
+
+		<!-- Add list dialog -->
+		<dialog class="list-dialog" id="addListDialog">
+			<h3 class="list-dialog-title">New List</h3>
+			<label class="list-dialog-label" for="listTitleInput">Title</label>
+			<input class="list-dialog-input" id="listTitleInput" type="text" placeholder="List title" maxlength="120" />
+			<fieldset class="list-dialog-fieldset">
+				<legend class="list-dialog-legend">Kind</legend>
+				<label class="list-dialog-radio-label">
+					<input type="radio" name="listKind" value="checklist" checked /> Checklist
+				</label>
+				<label class="list-dialog-radio-label">
+					<input type="radio" name="listKind" value="workflow" /> Workflow
+				</label>
+				<label class="list-dialog-radio-label">
+					<input type="radio" name="listKind" value="routine" /> Routine
+				</label>
+			</fieldset>
+			<div class="list-dialog-actions">
+				<button class="list-dialog-btn list-dialog-btn-submit" id="addListSubmit">Create</button>
+				<button class="list-dialog-btn list-dialog-btn-cancel" id="addListCancel">Cancel</button>
+			</div>
+		</dialog>
+
+		<!-- Add/edit item dialog -->
+		<dialog class="list-dialog" id="itemDialog">
+			<h3 class="list-dialog-title" id="itemDialogTitle">New Item</h3>
+			<label class="list-dialog-label" for="itemTitleInput">Title</label>
+			<input class="list-dialog-input" id="itemTitleInput" type="text" placeholder="Item title" maxlength="200" />
+			<fieldset class="list-dialog-fieldset">
+				<legend class="list-dialog-legend">Type</legend>
+				<label class="list-dialog-radio-label">
+					<input type="radio" name="itemType" value="checkbox" checked /> Checkbox
+				</label>
+				<label class="list-dialog-radio-label">
+					<input type="radio" name="itemType" value="timer" /> Timer
+				</label>
+				<label class="list-dialog-radio-label">
+					<input type="radio" name="itemType" value="note" /> Note
+				</label>
+			</fieldset>
+			<div class="list-dialog-timer-duration" id="timerDurationGroup">
+				<label class="list-dialog-label" for="timerDurationInput">Duration (seconds)</label>
+				<input class="list-dialog-input" id="timerDurationInput" type="number" min="1" placeholder="e.g. 900" />
+			</div>
+			<label class="list-dialog-checkbox-label" id="requiredGroup">
+				<input type="checkbox" id="itemRequiredInput" checked /> Required
+			</label>
+			<label class="list-dialog-label" for="itemDescriptionInput">Description</label>
+			<textarea class="list-dialog-textarea" id="itemDescriptionInput" rows="3" placeholder="Optional description"></textarea>
+			<div class="list-dialog-actions">
+				<button class="list-dialog-btn list-dialog-btn-submit" id="itemDialogSubmit">Create</button>
+				<button class="list-dialog-btn list-dialog-btn-cancel" id="itemDialogCancel">Cancel</button>
+			</div>
+		</dialog>
+
+		<!-- Error toast -->
+		<div class="list-error-toast" id="errorToast"></div>
+	</body>
+</html>
