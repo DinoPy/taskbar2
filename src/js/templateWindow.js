@@ -276,12 +276,15 @@ function addVariableRow(v = {}) {
 	labelInput.dataset.field = "label";
 	row.appendChild(labelInput);
 
-	const descInput = document.createElement("input");
-	descInput.type = "text";
-	descInput.placeholder = "description";
-	descInput.value = v.description || "";
-	descInput.dataset.field = "description";
-	row.appendChild(descInput);
+	const reqLabel = document.createElement("label");
+	reqLabel.className = "tpl-var-req-label";
+	const reqInput = document.createElement("input");
+	reqInput.type = "checkbox";
+	reqInput.checked = v.required !== false;
+	reqInput.dataset.field = "required";
+	reqLabel.appendChild(reqInput);
+	reqLabel.appendChild(document.createTextNode(" req"));
+	row.appendChild(reqLabel);
 
 	const removeBtn = document.createElement("button");
 	removeBtn.className = "tpl-var-remove-btn";
@@ -318,11 +321,9 @@ function collectFormData() {
 			return;
 		}
 		seenKeys.add(key);
-		const obj = { key };
+		const obj = { key, required: row.querySelector('[data-field="required"]').checked };
 		const label = row.querySelector('[data-field="label"]').value.trim();
-		const desc = row.querySelector('[data-field="description"]').value.trim();
 		if (label) obj.label = label;
-		if (desc) obj.description = desc;
 		variables.push(obj);
 	});
 

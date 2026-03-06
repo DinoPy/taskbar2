@@ -28,21 +28,15 @@ function render() {
 		field.className = "vp-field";
 
 		const label = document.createElement("label");
-		label.textContent = v.label || v.key;
+		label.textContent = (v.label || v.key) + (v.required === false ? " (optional)" : "");
 		label.setAttribute("for", `var-${v.key}`);
 		field.appendChild(label);
-
-		if (v.description) {
-			const desc = document.createElement("div");
-			desc.className = "vp-field-desc";
-			desc.textContent = v.description;
-			field.appendChild(desc);
-		}
 
 		const input = document.createElement("input");
 		input.type = "text";
 		input.id = `var-${v.key}`;
 		input.dataset.key = v.key;
+		input.dataset.required = v.required !== false ? "true" : "false";
 		input.placeholder = v.label || v.key;
 		if (i === 0) input.autofocus = true;
 		field.appendChild(input);
@@ -63,13 +57,16 @@ function collectVariables() {
 
 	inputs.forEach((input) => {
 		const value = input.value.trim();
-		if (!value) {
+		const isRequired = input.dataset.required === "true";
+		if (isRequired && !value) {
 			input.classList.add("vp-error");
 			valid = false;
 		} else {
 			input.classList.remove("vp-error");
 		}
-		variables[input.dataset.key] = value;
+		if (value) {
+			variables[input.dataset.key] = value;
+		}
 	});
 
 	return { variables, valid };

@@ -269,7 +269,7 @@ body {
 	align-items: center;
 }
 
-.tpl-var-row input {
+.tpl-var-row input[type="text"] {
 	flex: 1;
 	padding: 5px 8px;
 	font-size: 12px;
@@ -281,7 +281,24 @@ body {
 	font-family: inherit;
 }
 
-.tpl-var-row input:focus { border-color: var(--color-border-focus); }
+.tpl-var-row input[type="text"]:focus { border-color: var(--color-border-focus); }
+
+.tpl-var-req-label {
+	display: flex;
+	align-items: center;
+	gap: 3px;
+	font-size: 11px;
+	color: oklch(0.70 0.04 80);
+	white-space: nowrap;
+	cursor: pointer;
+}
+
+.tpl-var-req-label input[type="checkbox"] {
+	flex: none;
+	width: 14px;
+	height: 14px;
+	accent-color: oklch(0.65 0.18 145);
+}
 
 .tpl-var-remove-btn {
 	background: none;
