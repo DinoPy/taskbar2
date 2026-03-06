@@ -901,7 +901,18 @@ const parseCommand = (input) => {
 	if (trimmed === 'remind') {
 		return { type: 'open_reminder' };
 	}
-	
+
+	// List current task: llc
+	if (trimmed === 'llc') {
+		return { type: 'list_current' };
+	}
+
+	// List for task N: ll1, ll2, etc.
+	if (trimmed.match(/^ll(\d+)$/)) {
+		const match = trimmed.match(/^ll(\d+)$/);
+		return { type: 'list', index: parseInt(match[1]) };
+	}
+
 	// Split task: sp1, sp2, etc.
 	if (trimmed.match(/^sp(\d+)$/)) {
 		const match = trimmed.match(/^sp(\d+)$/);
@@ -1066,6 +1077,24 @@ const executeCommand = (command) => {
 		case 'open_calendar':
 			ipc.send('open-calendar-window');
 			return { success: true, message: "Opening calendar window" };
+
+		case 'list_current': {
+			const fid = Object.keys(tasks).find(id => tasks[id].isFocused);
+			if (fid) {
+				ipc.send("open-list-window", { target: { kind: "task", id: fid } });
+				return { success: true, message: "Opening list for current task" };
+			}
+			return { success: false, message: "No task is currently focused" };
+		}
+
+		case 'list': {
+			if (command.index > 0 && command.index <= taskKeys.length) {
+				const taskId = taskKeys[command.index - 1];
+				ipc.send("open-list-window", { target: { kind: "task", id: taskId } });
+				return { success: true, message: `Opening list for task ${command.index}` };
+			}
+			return { success: false, message: `Invalid task index: ${command.index}` };
+		}
 			
 		case 'invalid':
 			return { success: false, message: `Invalid command: ${command.input}` };
@@ -1095,7 +1124,9 @@ const getCommandSuggestions = (input) => {
 		{ command: 'remind', description: 'create reminder/task' },
 		{ command: 'sw0d', description: 'screen 0 down' },
 		{ command: 'sw0u', description: 'screen 0 up' },
-		{ command: 'calendar', description: 'open calendar window' }
+		{ command: 'calendar', description: 'open calendar window' },
+		{ command: 'llc', description: 'open list for current task' },
+		{ command: 'll1', description: 'open list for task 1' }
 	];
 	}
 
@@ -1104,6 +1135,17 @@ const getCommandSuggestions = (input) => {
 	}
 	if ('calendar'.startsWith(trimmed)) {
 		suggestions.push({ command: 'calendar', description: 'open calendar window' });
+	}
+	if ('llc'.startsWith(trimmed) && trimmed.startsWith('l')) {
+		suggestions.push({ command: 'llc', description: 'open list for current task' });
+	}
+	if (trimmed.startsWith('ll') && trimmed.match(/^ll\d*$/)) {
+		if (trimmed.match(/^ll\d+$/)) {
+			const match = trimmed.match(/^ll(\d+)$/);
+			suggestions.push({ command: trimmed, description: `open list for task ${match[1]}` });
+		} else {
+			suggestions.push({ command: 'll1, ll2, ll3...', description: 'open list for task' });
+		}
 	}
 
 	// Filter commands that start with the input
@@ -1120,7 +1162,9 @@ const getCommandSuggestions = (input) => {
 		{ command: 'sp', description: 'split task', pattern: /^sp(\d+)$/ },
 		{ command: 'sw', description: 'switch screen', pattern: /^sw(\d+)([du])$/ },
 		{ command: 'remind', description: 'create reminder/task', pattern: /^remind$/ },
-		{ command: 'calendar', description: 'open calendar window', pattern: /^calendar$/ }
+		{ command: 'calendar', description: 'open calendar window', pattern: /^calendar$/ },
+		{ command: 'll', description: 'open list for task', pattern: /^ll(\d+)$/ },
+		{ command: 'llc', description: 'open list for current task', pattern: /^llc$/ }
 	];
 	
 	// Handle all command types with consistent logic
@@ -1297,7 +1341,7 @@ const updateCommandHelp = (input) => {
 const handleTaskChangeSearch = () => {
 	searchContainer.style.display = "flex";
 	searchInput.focus();
-	searchInput.placeholder = "s1, e2, c3, d4, ddd5, ec, sat, sw0d, remind, calendar...";
+	searchInput.placeholder = "s1, e2, c3, d4, ddd5, ec, llc, ll1, sat, sw0d, remind, calendar...";
 
 	const commandHelp = document.querySelector('.commandHelp');
 	
@@ -1329,7 +1373,7 @@ const handleTaskChangeSearch = () => {
 		setTimeout(() => {
 			searchInput.blur();
 			searchInput.value = "";
-			searchInput.placeholder = "s1, e2, c3, d4, ddd5, ec, sat, sw0d, remind, calendar...";
+			searchInput.placeholder = "s1, e2, c3, d4, ddd5, ec, llc, ll1, sat, sw0d, remind, calendar...";
 			searchInput.style.backgroundColor = '';
 			searchInput.style.color = '';
 			searchContainer.style.display = "none";
