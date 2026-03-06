@@ -878,4 +878,36 @@ export function registerIpcHandlers({
         const props = data?.props ?? {};
         windowManager.openListWindow?.({ target, props });
     });
+
+    ipc.handle("get-attach-targets", async () => {
+        const targets = [];
+
+        // Get tasks from renderer
+        const taskbarWin = windowManager.getTaskbarWindow();
+        if (taskbarWin && !taskbarWin.isDestroyed()) {
+            try {
+                const taskData = await taskbarWin.webContents.executeJavaScript(
+                    `(function() {
+                        const t = window.__tasks || (typeof tasks !== 'undefined' ? tasks : {});
+                        return Object.values(t).map(task => ({ id: task.id, title: task.title })).filter(t => t.id && t.title);
+                    })()`
+                );
+                for (const t of taskData) {
+                    targets.push({ kind: "task", id: t.id, label: t.title });
+                }
+            } catch (err) {
+                logger("get-attach-targets: failed to get tasks from renderer:", err);
+            }
+        }
+
+        // Get schedules from controller
+        const schedules = schedulesController?.getAllSchedules?.() ?? [];
+        for (const s of schedules) {
+            if (s?.id && s?.title) {
+                targets.push({ kind: "schedule", id: s.id, label: s.title });
+            }
+        }
+
+        return targets;
+    });
 }
