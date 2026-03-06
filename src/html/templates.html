@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<link rel="stylesheet" href="../styles/variables.css">
+	<link rel="stylesheet" href="../styles/templates.css">
+	<title>Task Templates</title>
+</head>
+<body>
+	<div class="tpl-window" id="tplWindow">
+		<div class="tpl-titlebar" style="-webkit-app-region: drag;">
+			<span class="tpl-titlebar-text">Task Templates</span>
+			<button class="tpl-close-btn" id="closeBtn" style="-webkit-app-region: no-drag;">
+				<svg width="12" height="12" viewBox="0 0 12 12"><path d="M1 1l10 10M11 1L1 11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+			</button>
+		</div>
+
+		<div class="tpl-body">
+			<!-- Left panel: list -->
+			<div class="tpl-list-panel">
+				<div class="tpl-search-bar">
+					<input type="text" class="tpl-search-input" id="searchInput" placeholder="Search templates..." autocomplete="off" />
+				</div>
+				<div class="tpl-list" id="templateList">
+					<!-- template cards rendered here -->
+				</div>
+				<button class="tpl-new-btn" id="newTemplateBtn">+ New Template</button>
+			</div>
+
+			<!-- Right panel: editor -->
+			<div class="tpl-editor-panel" id="editorPanel">
+				<div class="tpl-editor-empty" id="editorEmpty">
+					<p>Select a template or create a new one</p>
+				</div>
+
+				<form class="tpl-editor-form" id="editorForm" style="display:none;">
+					<div class="tpl-form-row">
+						<label for="tplTitle">Title</label>
+						<input type="text" id="tplTitle" placeholder="e.g. Call {{name}}" required />
+					</div>
+
+					<div class="tpl-form-row">
+						<label for="tplDescription">Description</label>
+						<textarea id="tplDescription" rows="3" placeholder="e.g. Follow up with {{name}} tomorrow"></textarea>
+					</div>
+
+					<div class="tpl-form-row">
+						<label for="tplCategory">Category</label>
+						<input type="text" id="tplCategory" placeholder="Life" />
+					</div>
+
+					<div class="tpl-form-row">
+						<label>Tags</label>
+						<div class="tpl-tags-container">
+							<input type="text" class="tpl-tags-input" id="tplTagsInput" placeholder="Add tag..." />
+							<button type="button" class="tpl-tags-add-btn" id="tplTagsAddBtn">Add</button>
+						</div>
+						<div class="tpl-tags-list" id="tplTagsList"></div>
+					</div>
+
+					<div class="tpl-form-row tpl-form-row-inline">
+						<div>
+							<label for="tplPriority">Priority (1-10)</label>
+							<input type="number" id="tplPriority" min="1" max="10" />
+						</div>
+						<div>
+							<label>Show Before Due</label>
+							<div class="tpl-time-row">
+								<input type="number" id="tplShowBeforeH" min="0" max="23" value="0" />
+								<span>h</span>
+								<input type="number" id="tplShowBeforeM" min="0" max="59" value="0" />
+								<span>m</span>
+							</div>
+						</div>
+						<div>
+							<label>Due Offset</label>
+							<div class="tpl-time-row">
+								<input type="number" id="tplDueOffsetH" min="0" value="0" />
+								<span>h</span>
+								<input type="number" id="tplDueOffsetM" min="0" max="59" value="0" />
+								<span>m</span>
+							</div>
+						</div>
+					</div>
+
+					<!-- Variables section -->
+					<div class="tpl-form-row">
+						<label>Variables</label>
+						<div class="tpl-vars-list" id="tplVarsList"></div>
+						<button type="button" class="tpl-vars-add-btn" id="tplVarsAddBtn">+ Add Variable</button>
+					</div>
+
+					<!-- Actions -->
+					<div class="tpl-editor-actions">
+						<button type="button" class="tpl-btn tpl-btn-secondary" id="manageListsBtn">Manage Lists</button>
+						<button type="button" class="tpl-btn tpl-btn-accent" id="useTemplateBtn">Use Template</button>
+						<div class="tpl-editor-actions-right">
+							<button type="button" class="tpl-btn tpl-btn-danger" id="deleteTemplateBtn" style="display:none;">Delete</button>
+							<button type="submit" class="tpl-btn tpl-btn-primary" id="saveTemplateBtn">Save</button>
+						</div>
+					</div>
+				</form>
+			</div>
+		</div>
+	</div>
+
+	<script type="module" src="../js/templateWindow.js"></script>
+</body>
+</html>
