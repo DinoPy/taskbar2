@@ -22,6 +22,8 @@ import { createCalendarWindow as createCalendarBrowserWindow } from "./src/main/
 import { createCompletionConfirmWindow as createCompletionConfirmBrowserWindow } from "./src/main/windows/completionConfirmWindow.js";
 import { createAddDueWindow as createAddDueBrowserWindow } from "./src/main/windows/addDueWindow.js";
 import { createListWindow as createListBrowserWindow } from "./src/main/windows/listWindow.js";
+import { createTemplateWindow as createTemplateBrowserWindow } from "./src/main/windows/templateWindow.js";
+import { createVariablePromptWindow as createVariablePromptBrowserWindow } from "./src/main/windows/variablePromptWindow.js";
 import {
 	showMainContextMenu,
 	showTaskContextMenu,
@@ -114,6 +116,8 @@ const windowManager = createWindowManager({
 	createCalendarWindow: createCalendarBrowserWindow,
 	createAddDueWindow: createAddDueBrowserWindow,
 	createListWindow: createListBrowserWindow,
+	createTemplateWindow: createTemplateBrowserWindow,
+	createVariablePromptWindow: createVariablePromptBrowserWindow,
 });
 
 const commandsController = createCommandsController({
@@ -434,6 +438,8 @@ const handleCloseAppRequest = () => {
 	windowManager.closeReminderWindow();
 	windowManager.closeAddDueWindow();
 	windowManager.closeAllListWindows?.();
+	windowManager.closeTemplateWindow();
+	windowManager.closeVariablePromptWindow();
 	windowManager.getTaskbarWindow()?.close();
 };
 
@@ -487,6 +493,7 @@ app.whenReady().then(async () => {
 		windowManager.getAllListWindows?.()?.forEach((listWin) => {
 			listWin.webContents.openDevTools();
 		});
+		windowManager.getTemplateWindow()?.webContents.openDevTools();
 		const calendarWindow = openCalendarWindowOnFocusedScreen();
 		calendarWindow?.webContents.openDevTools();
 	});
@@ -697,6 +704,23 @@ function openCalendarWindowOnFocusedScreen(options = {}) {
 	const normalizedIndex = Math.min(Math.max(requestedIndex, 0), maxIndex);
 	try {
 		return windowManager.openCalendarWindow({
+			...options,
+			screenIndex: normalizedIndex,
+		});
+	} catch (e) {
+		console.error(e);
+	}
+}
+
+function openTemplateWindow(options = {}) {
+	const displays = screen.getAllDisplays();
+	const requestedIndex = Number.isInteger(options.screenIndex)
+		? options.screenIndex
+		: appState.currentlySelectedScreenIndex ?? 0;
+	const maxIndex = Math.max(displays.length - 1, 0);
+	const normalizedIndex = Math.min(Math.max(requestedIndex, 0), maxIndex);
+	try {
+		return windowManager.openTemplateWindow({
 			...options,
 			screenIndex: normalizedIndex,
 		});

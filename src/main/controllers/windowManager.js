@@ -14,6 +14,8 @@ export function createWindowManager({
 	createCalendarWindow,
 	createAddDueWindow,
 	createListWindow,
+	createTemplateWindow,
+	createVariablePromptWindow,
 }) {
 	const state = {
 		taskbar: null,
@@ -29,6 +31,8 @@ export function createWindowManager({
 		deleteConfirm: null,
 		addDue: null,
 		calendar: null,
+		template: null,
+		variablePrompt: null,
 		commandWindows: new Map(),
 		listWindows: new Map(),
 	};
@@ -416,6 +420,57 @@ export function createWindowManager({
 
 		getAllListWindows() {
 			return Array.from(state.listWindows.values()).filter(w => w && !w.isDestroyed());
+		},
+
+		openTemplateWindow(options = {}) {
+			if (state.template && !state.template.isDestroyed()) {
+				state.template.focus();
+				return state.template;
+			}
+			state.template = createTemplateWindow({
+				...options,
+				onClose: () => {
+					state.template = null;
+					options?.onClose?.();
+				},
+			});
+			return state.template;
+		},
+
+		getTemplateWindow() {
+			return state.template;
+		},
+
+		closeTemplateWindow() {
+			if (state.template && !state.template.isDestroyed()) {
+				state.template.close();
+			}
+		},
+
+		openVariablePromptWindow(options = {}) {
+			if (state.variablePrompt && !state.variablePrompt.isDestroyed()) {
+				state.variablePrompt.focus();
+				state.variablePrompt.webContents.send("variable-prompt-data", options?.template);
+				return state.variablePrompt;
+			}
+			state.variablePrompt = createVariablePromptWindow({
+				...options,
+				onClose: () => {
+					state.variablePrompt = null;
+					options?.onClose?.();
+				},
+			});
+			return state.variablePrompt;
+		},
+
+		getVariablePromptWindow() {
+			return state.variablePrompt;
+		},
+
+		closeVariablePromptWindow() {
+			if (state.variablePrompt && !state.variablePrompt.isDestroyed()) {
+				state.variablePrompt.close();
+			}
 		},
 	};
 }
