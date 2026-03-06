@@ -165,6 +165,17 @@
 	color: #ef4444;
 }
 
+.list-sidebar-item:focus {
+	outline: none;
+	background: #2a2d3a;
+	color: #f0f0f0;
+	box-shadow: inset 2px 0 0 oklch(0.60 0.20 80);
+}
+
+.list-sidebar-item:focus .list-sidebar-item-actions {
+	display: flex;
+}
+
 .list-sidebar-add-btn {
 	background: none;
 	border: none;
@@ -467,6 +478,12 @@
 
 .list-run-item:hover {
 	background: #262a35;
+}
+
+.list-run-item:focus {
+	outline: none;
+	background: #262a35;
+	box-shadow: inset 3px 0 0 oklch(0.60 0.20 80);
 }
 
 .list-run-item.child {

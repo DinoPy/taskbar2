@@ -12,6 +12,8 @@ let isOwnerFrozen = false;
 let editingItemId = null; // non-null when editing an existing item
 let timerIntervalId = null;
 let noteDebounceTimers = new Map();
+let focusPanel = "run"; // "sidebar" | "run"
+let focusIndex = -1;
 
 // ---------------------------------------------------------------
 // DOM refs
@@ -172,6 +174,8 @@ const renderSidebar = (lists) => {
 	for (const def of sorted) {
 		const item = document.createElement("div");
 		item.className = "list-sidebar-item" + (def.id === selectedListId ? " active" : "");
+		item.setAttribute("tabindex", "0");
+		item.setAttribute("data-sidebar-id", def.id);
 
 		const titleSpan = document.createElement("span");
 		titleSpan.className = "list-sidebar-item-title";
@@ -185,6 +189,7 @@ const renderSidebar = (lists) => {
 		deleteBtn.className = "list-sidebar-item-action delete";
 		deleteBtn.textContent = "\u2715";
 		deleteBtn.title = "Delete list";
+		deleteBtn.setAttribute("tabindex", "-1");
 		deleteBtn.addEventListener("click", (e) => {
 			e.stopPropagation();
 			sendMutation("list_delete", { id: def.id });
@@ -379,6 +384,10 @@ const renderRunItems = (bundle) => {
 		const snap = ri.snapshot ?? {};
 		const el = document.createElement("div");
 		el.className = "list-run-item" + (isChild ? " child" : "") + (ri.is_completed ? " completed" : "");
+		el.setAttribute("tabindex", "0");
+		el.setAttribute("data-run-item-id-row", ri.id);
+		if (snap.item_id) el.setAttribute("data-item-id", snap.item_id);
+		if (snap.type) el.setAttribute("data-item-type", snap.type);
 
 		if (snap.type === "checkbox") {
 			renderCheckboxRunItem(el, ri, snap, run, readonly);
@@ -814,10 +823,49 @@ addListDialog.addEventListener("cancel", (e) => e.preventDefault());
 itemDialog.addEventListener("cancel", (e) => e.preventDefault());
 
 // ---------------------------------------------------------------
-// Keyboard
+// Keyboard Navigation
 // ---------------------------------------------------------------
 
+const getFocusableItems = (panel) => {
+	if (panel === "sidebar") {
+		return [...sidebarItems.querySelectorAll(".list-sidebar-item[tabindex]")];
+	}
+	return [...runItemsEl.querySelectorAll(".list-run-item[tabindex]")];
+};
+
+const focusItem = (panel, index) => {
+	const items = getFocusableItems(panel);
+	if (items.length === 0) return;
+	focusPanel = panel;
+	focusIndex = Math.max(0, Math.min(index, items.length - 1));
+	items[focusIndex]?.focus();
+};
+
+const activateFocusedRunItem = (el) => {
+	if (!el) return;
+	const type = el.getAttribute("data-item-type");
+	if (type === "checkbox") {
+		const cb = el.querySelector(".list-run-item-checkbox");
+		if (cb && !cb.disabled) {
+			cb.checked = !cb.checked;
+			cb.dispatchEvent(new Event("change"));
+		}
+	} else if (type === "timer") {
+		// Click the first visible action button (Start/Pause)
+		const btn = el.querySelector(".list-run-item-timer-btn:not(.complete-btn)");
+		if (btn) btn.click();
+	} else if (type === "note") {
+		const textarea = el.querySelector(".list-run-item-note-textarea");
+		if (textarea) textarea.focus();
+	}
+};
+
 document.addEventListener("keydown", (e) => {
+	const inDialog = addListDialog.open || itemDialog.open;
+	const inInput = document.activeElement?.tagName === "INPUT" ||
+		document.activeElement?.tagName === "TEXTAREA";
+
+	// Dialog handling
 	if (e.key === "Escape") {
 		if (addListDialog.open) {
 			closeAddListDialog();
@@ -826,17 +874,68 @@ document.addEventListener("keydown", (e) => {
 		} else {
 			window.close();
 		}
+		return;
 	}
 
-	// Enter to submit in dialogs
 	if (e.key === "Enter" && !e.shiftKey) {
 		if (addListDialog.open) {
 			e.preventDefault();
 			submitAddList();
-		} else if (itemDialog.open && document.activeElement !== itemDescriptionInput) {
+			return;
+		}
+		if (itemDialog.open && document.activeElement !== itemDescriptionInput) {
 			e.preventDefault();
 			submitItemDialog();
+			return;
 		}
+	}
+
+	if (inDialog || inInput) return;
+
+	// Arrow navigation
+	if (e.key === "ArrowDown" || e.key === "j") {
+		e.preventDefault();
+		const items = getFocusableItems(focusPanel);
+		if (items.length === 0) return;
+		focusItem(focusPanel, focusIndex + 1);
+	} else if (e.key === "ArrowUp" || e.key === "k") {
+		e.preventDefault();
+		focusItem(focusPanel, focusIndex - 1);
+	} else if (e.key === "ArrowLeft" || e.key === "h") {
+		e.preventDefault();
+		focusItem("sidebar", 0);
+	} else if (e.key === "ArrowRight" || e.key === "l") {
+		e.preventDefault();
+		focusItem("run", 0);
+	} else if (e.key === "Tab") {
+		e.preventDefault();
+		const nextPanel = focusPanel === "sidebar" ? "run" : "sidebar";
+		focusItem(nextPanel, 0);
+	} else if (e.key === " " || (e.key === "Enter" && !inDialog)) {
+		// Activate focused run item (toggle checkbox, start/pause timer)
+		e.preventDefault();
+		if (focusPanel === "sidebar") {
+			const items = getFocusableItems("sidebar");
+			const el = items[focusIndex];
+			if (el) {
+				const id = el.getAttribute("data-sidebar-id");
+				if (id) {
+					selectedListId = id;
+					render();
+					// Refocus sidebar after re-render
+					requestAnimationFrame(() => focusItem("sidebar", focusIndex));
+				}
+			}
+		} else {
+			const items = getFocusableItems("run");
+			activateFocusedRunItem(items[focusIndex]);
+		}
+	} else if (e.key === "n") {
+		// New list
+		openAddListDialog();
+	} else if (e.key === "a") {
+		// Add item
+		if (selectedListId) openItemDialog();
 	}
 });
 
