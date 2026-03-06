@@ -125,10 +125,32 @@ ipcRenderer.on("confirm-dialog-data", (_, payload) => {
 	});
 });
 
+const computeTimerElapsed = (timerState) => {
+	if (!timerState?.status) return 0;
+	let elapsed = timerState.elapsed_seconds ?? 0;
+	if (timerState.status === "running" && timerState.last_started_at) {
+		const started = new Date(timerState.last_started_at).getTime();
+		elapsed += Math.floor((Date.now() - started) / 1000);
+	}
+	return elapsed;
+};
+
+const formatDuration = (totalSeconds) => {
+	const mins = Math.floor(totalSeconds / 60);
+	const secs = Math.floor(totalSeconds % 60);
+	return `${mins}m ${String(secs).padStart(2, "0")}s`;
+};
+
+const TYPE_ICONS = { checkbox: "\u2610", timer: "\u23F1", note: "\u270E" };
+
+let currentListsPayload = null;
+
 const renderListStatus = (payload) => {
 	if (!listStatusSection) return;
 	const isCompletion = currentConfig.confirmEvent === "completion-confirmation-confirmed";
 	if (!isCompletion) return;
+
+	currentListsPayload = payload;
 
 	const lists = payload?.lists;
 	if (!Array.isArray(lists) || lists.length === 0) {
@@ -161,6 +183,7 @@ const renderListStatus = (payload) => {
 		const pct = Math.round((reqDone / reqTotal) * 100);
 		const done = reqDone >= reqTotal;
 
+		// List header with progress bar
 		const item = document.createElement("div");
 		item.className = "list-status-item";
 
@@ -183,6 +206,70 @@ const renderListStatus = (payload) => {
 		item.appendChild(count);
 
 		listStatusSection.appendChild(item);
+
+		// Show individual incomplete required items
+		const runItems = bundle.run_items ?? [];
+		const incompleteItems = runItems.filter(
+			(ri) => ri.snapshot?.required && !ri.is_completed
+		);
+
+		if (incompleteItems.length > 0) {
+			const itemsList = document.createElement("div");
+			itemsList.className = "list-status-remaining-items";
+
+			for (const ri of incompleteItems) {
+				const snap = ri.snapshot;
+				const row = document.createElement("div");
+				row.className = "list-status-remaining-row";
+
+				const icon = document.createElement("span");
+				icon.className = "list-status-remaining-icon";
+				icon.textContent = TYPE_ICONS[snap.type] ?? "";
+				row.appendChild(icon);
+
+				const title = document.createElement("span");
+				title.className = "list-status-remaining-title";
+				title.textContent = snap.title || "(untitled)";
+				row.appendChild(title);
+
+				// Timer items: show elapsed vs target, allow completing if past target
+				if (snap.type === "timer") {
+					const duration = snap.config?.duration_seconds ?? 0;
+					const elapsed = computeTimerElapsed(ri.timer_state);
+					const pastTarget = elapsed >= duration && duration > 0;
+
+					const timerInfo = document.createElement("span");
+					timerInfo.className = "list-status-remaining-timer";
+					timerInfo.textContent = `${formatDuration(elapsed)} / ${formatDuration(duration)}`;
+					if (pastTarget) timerInfo.classList.add("past-target");
+					row.appendChild(timerInfo);
+
+					if (pastTarget && snap.item_id) {
+						const completeBtn = document.createElement("button");
+						completeBtn.className = "list-status-complete-timer-btn";
+						completeBtn.textContent = "Complete";
+						completeBtn.title = "Timer is past target — mark as complete";
+						completeBtn.addEventListener("click", () => {
+							ipcRenderer.send("lists-mutation", {
+								event: "list_run_item_timer_complete",
+								data: {
+									run_id: bundle.run.id,
+									item_id: snap.item_id,
+									last_modified_at: Date.now(),
+								},
+							});
+							completeBtn.disabled = true;
+							completeBtn.textContent = "...";
+						});
+						row.appendChild(completeBtn);
+					}
+				}
+
+				itemsList.appendChild(row);
+			}
+
+			listStatusSection.appendChild(itemsList);
+		}
 	}
 
 	const hasIncomplete = totalRequired > 0 && totalCompleted < totalRequired;

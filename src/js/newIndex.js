@@ -581,8 +581,6 @@ ipc.on("request-current-task-data-for-edit", () => {
 ipc.on("complete_current_task", () => {
 	for (let t in tasks) {
 		if (!tasks[t].isFocused) continue;
-
-		tasks[t].removeFocus(true);
 		requestTaskCompletionForInstance(tasks[t]);
 		break;
 	}

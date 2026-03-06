@@ -175,6 +175,64 @@ body {
 	font-size: var(--font-size-sm);
 }
 
+.list-status-remaining-items {
+	padding: 2px 0 var(--spacing-xs) var(--spacing-sm);
+}
+
+.list-status-remaining-row {
+	display: flex;
+	align-items: center;
+	gap: 6px;
+	padding: 3px 0;
+	font-size: 12px;
+	color: rgba(255, 255, 255, 0.7);
+}
+
+.list-status-remaining-icon {
+	font-size: 12px;
+	flex-shrink: 0;
+	width: 16px;
+	text-align: center;
+}
+
+.list-status-remaining-title {
+	flex: 1;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.list-status-remaining-timer {
+	font-size: 11px;
+	font-variant-numeric: tabular-nums;
+	color: rgba(255, 255, 255, 0.5);
+	flex-shrink: 0;
+}
+
+.list-status-remaining-timer.past-target {
+	color: oklch(0.70 0.18 145);
+}
+
+.list-status-complete-timer-btn {
+	padding: 2px 8px;
+	font-size: 11px;
+	background: oklch(0.40 0.12 145);
+	color: #fff;
+	border: none;
+	border-radius: 4px;
+	cursor: pointer;
+	flex-shrink: 0;
+}
+
+.list-status-complete-timer-btn:hover {
+	background: oklch(0.48 0.14 145);
+}
+
+.list-status-complete-timer-btn:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
 /* Tags section */
 .tags-section {
 	display: none;
