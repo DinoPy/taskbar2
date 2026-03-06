@@ -841,7 +841,8 @@ export function registerIpcHandlers({
 
     ipc.on("lists-fetch", (event, data) => {
         const target = data?.target;
-        if (!target?.kind || !target?.id) return;
+        if (!target?.kind) return;
+        if (target.kind !== "standalone_home" && !target.id) return;
         const sender = event.sender;
         const windowRef = {
             _id: sender.id,

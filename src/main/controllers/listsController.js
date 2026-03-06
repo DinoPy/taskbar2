@@ -7,7 +7,9 @@
  */
 
 const surfaceKey = (target) => {
-	if (!target?.kind || !target?.id) return null;
+	if (!target?.kind) return null;
+	if (target.kind === "standalone_home") return "standalone_home";
+	if (!target.id) return null;
 	return `${target.kind}:${target.id}`;
 };
 

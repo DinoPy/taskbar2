@@ -383,7 +383,7 @@ export function createWindowManager({
 		},
 
 		openListWindow({ target, props, onClose }) {
-			const key = `${target.kind}:${target.id}`;
+			const key = target.kind === "standalone_home" ? "standalone_home" : `${target.kind}:${target.id}`;
 			const existing = state.listWindows.get(key);
 			if (existing && !existing.isDestroyed()) { existing.focus(); return existing; }
 			const win = createListWindow({
@@ -395,7 +395,7 @@ export function createWindowManager({
 		},
 
 		getListWindow(target) {
-			const key = `${target.kind}:${target.id}`;
+			const key = target.kind === "standalone_home" ? "standalone_home" : `${target.kind}:${target.id}`;
 			const win = state.listWindows.get(key);
 			if (win && !win.isDestroyed()) return win;
 			state.listWindows.delete(key);
@@ -403,7 +403,7 @@ export function createWindowManager({
 		},
 
 		closeListWindow(target) {
-			const key = `${target.kind}:${target.id}`;
+			const key = target.kind === "standalone_home" ? "standalone_home" : `${target.kind}:${target.id}`;
 			const win = state.listWindows.get(key);
 			if (win && !win.isDestroyed()) win.close();
 		},
