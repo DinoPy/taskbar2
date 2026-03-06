@@ -60,6 +60,12 @@ const itemDescriptionInput = document.getElementById("itemDescriptionInput");
 const itemDialogSubmit = document.getElementById("itemDialogSubmit");
 const itemDialogCancel = document.getElementById("itemDialogCancel");
 
+const deleteConfirmDialog = document.getElementById("deleteConfirmDialog");
+const deleteConfirmMessage = document.getElementById("deleteConfirmMessage");
+const deleteConfirmSubmit = document.getElementById("deleteConfirmSubmit");
+const deleteConfirmCancel = document.getElementById("deleteConfirmCancel");
+let pendingDeleteListId = null;
+
 // ---------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------
@@ -200,7 +206,11 @@ const renderSidebar = (lists) => {
 		deleteBtn.setAttribute("tabindex", "-1");
 		deleteBtn.addEventListener("click", (e) => {
 			e.stopPropagation();
-			sendMutation("list_delete", { id: def.id });
+			if (isStandalone) {
+				openDeleteConfirmDialog(def.id, def.title);
+			} else {
+				sendMutation("list_delete", { id: def.id });
+			}
 		});
 		actionsDiv.appendChild(deleteBtn);
 		item.appendChild(actionsDiv);
@@ -697,6 +707,27 @@ const updateItemDialogVisibility = (type) => {
 	}
 };
 
+// ---------------------------------------------------------------
+// Delete confirmation dialog (standalone mode)
+// ---------------------------------------------------------------
+
+const openDeleteConfirmDialog = (listId, title) => {
+	pendingDeleteListId = listId;
+	deleteConfirmMessage.textContent = `Delete "${title || "(untitled)"}"? This cannot be undone.`;
+	deleteConfirmDialog.showModal();
+};
+
+const closeDeleteConfirmDialog = () => {
+	pendingDeleteListId = null;
+	deleteConfirmDialog.close();
+};
+
+const confirmDelete = () => {
+	if (!pendingDeleteListId) return;
+	sendMutation("list_delete", { id: pendingDeleteListId });
+	closeDeleteConfirmDialog();
+};
+
 const submitItemDialog = () => {
 	const title = itemTitleInput.value.trim();
 	if (!title) {
@@ -826,6 +857,9 @@ itemDialogCancel.addEventListener("click", () => {
 	closeItemDialog();
 });
 
+deleteConfirmSubmit.addEventListener("click", confirmDelete);
+deleteConfirmCancel.addEventListener("click", closeDeleteConfirmDialog);
+
 // Type radio change in item dialog
 itemDialog.querySelectorAll('input[name="itemType"]').forEach((radio) => {
 	radio.addEventListener("change", (e) => {
@@ -836,6 +870,7 @@ itemDialog.querySelectorAll('input[name="itemType"]').forEach((radio) => {
 // Prevent dialog cancel from closing on backdrop click
 addListDialog.addEventListener("cancel", (e) => e.preventDefault());
 itemDialog.addEventListener("cancel", (e) => e.preventDefault());
+deleteConfirmDialog.addEventListener("cancel", (e) => e.preventDefault());
 
 // ---------------------------------------------------------------
 // Keyboard Navigation
@@ -876,12 +911,13 @@ const activateFocusedRunItem = (el) => {
 };
 
 document.addEventListener("keydown", (e) => {
-	const inDialog = addListDialog.open || itemDialog.open;
+	const inDialog = addListDialog.open || itemDialog.open || deleteConfirmDialog.open;
 	const inInput = document.activeElement?.tagName === "INPUT" ||
 		document.activeElement?.tagName === "TEXTAREA";
 
 	// Dialog handling
 	if (e.key === "Escape") {
+		if (deleteConfirmDialog.open) { closeDeleteConfirmDialog(); return; }
 		if (helpPanel.classList.contains("visible")) {
 			helpPanel.classList.remove("visible");
 		} else if (addListDialog.open) {
@@ -895,6 +931,7 @@ document.addEventListener("keydown", (e) => {
 	}
 
 	if (e.key === "Enter" && !e.shiftKey) {
+		if (deleteConfirmDialog.open) { confirmDelete(); return; }
 		if (addListDialog.open) {
 			e.preventDefault();
 			submitAddList();

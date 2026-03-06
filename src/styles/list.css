@@ -758,6 +758,21 @@
 	color: #f0f0f0;
 }
 
+.list-dialog-btn-danger {
+	background: oklch(0.45 0.15 25);
+	color: #fff;
+}
+.list-dialog-btn-danger:hover {
+	background: oklch(0.50 0.18 25);
+}
+
+.list-dialog-message {
+	color: #b0b4c0;
+	font-size: 13px;
+	margin: 0 0 16px 0;
+	line-height: 1.4;
+}
+
 /* ============================================
    Readonly States
    ============================================ */
