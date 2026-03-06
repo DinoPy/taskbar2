@@ -244,6 +244,7 @@ export function showTaskContextMenu({
 	createTaskSplitWindow,
 	requestTaskDeletion,
 	requestTaskCompletionConfirmation,
+	windowManager,
 }) {
 	const menu = new Menu();
 
@@ -297,6 +298,17 @@ export function showTaskContextMenu({
 		new MenuItem({
 			label: "Split",
 			click: () => createTaskSplitWindow(task),
+		})
+	);
+
+	menu.append(
+		new MenuItem({
+			label: "Lists",
+			click: () => {
+				windowManager?.openListWindow?.({
+					target: { kind: "task", id: task.id },
+				});
+			},
 		})
 	);
 

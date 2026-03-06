@@ -327,6 +327,7 @@ const showTaskMenu = (task) =>
 		createTaskSplitWindow,
 		requestTaskDeletion,
 		requestTaskCompletionConfirmation,
+		windowManager,
 	});
 
 const showLoginMenu = () =>
