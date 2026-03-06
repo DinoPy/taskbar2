@@ -54,6 +54,7 @@ const state = {
 	urgency: "normal",
 	notifyOffsetsMin: [],
 	mutedOffsetsMin: [],
+	templateUse: null,
 };
 
 const dateTimeFormatter = new Intl.DateTimeFormat("en-GB", {
@@ -850,6 +851,9 @@ const submit = () => {
 		show_before_minutes: showBeforeMinutes,
 		category: state.category,
 	};
+	if (state.templateUse) {
+		payload.template_use = state.templateUse;
+	}
 	const trimmedLanguage = (state.scheduleText ?? "").trim();
 	if (trimmedLanguage) {
 		payload.common_language = trimmedLanguage;
@@ -1004,6 +1008,18 @@ ipcRenderer.on("reminder-categories", (_, categories) => {
 		option.selected = cat === state.category;
 		categorySelect.appendChild(option);
 	});
+});
+
+ipcRenderer.on("reminder-template-use", (_, templateUse) => {
+	if (!templateUse) return;
+	state.templateUse = templateUse;
+	state.kind = "task";
+	state.title = "(from template)";
+	updateTypeSelection("task");
+	titleInput.value = state.title;
+	titleInput.disabled = true;
+	titleInput.classList.add("disabled");
+	setActiveStep("schedule");
 });
 
 document.head.appendChild(createListSummaryStyles());

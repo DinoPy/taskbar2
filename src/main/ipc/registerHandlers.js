@@ -957,7 +957,10 @@ export function registerIpcHandlers({
 
     ipc.on("open-variable-prompt", (_, data) => {
         if (!data?.template) return;
-        windowManager.openVariablePromptWindow?.({ template: data.template });
+        windowManager.openVariablePromptWindow?.({
+            template: data.template,
+            mode: data.mode ?? "create_task",
+        });
     });
 
     ipc.on("variable-prompt-close", () => {
@@ -966,10 +969,28 @@ export function registerIpcHandlers({
 
     ipc.on("variable-prompt-submit", (_, data) => {
         if (!data?.template_use) return;
-        sendEvent?.("task_create_from_template", {
-            template_use: data.template_use,
-            last_modified_at: Date.now(),
-        });
         windowManager.closeVariablePromptWindow?.();
+
+        if (data.mode === "schedule") {
+            const win = windowManager.openReminderWindow?.({
+                screenIndex: appState.currentlySelectedScreenIndex ?? 0,
+            });
+            if (win && !win.isDestroyed()) {
+                const send = () => {
+                    win.webContents.send("reminder-categories", appState.categories);
+                    win.webContents.send("reminder-template-use", data.template_use);
+                };
+                if (win.webContents.isLoading()) {
+                    win.webContents.once("did-finish-load", send);
+                } else {
+                    send();
+                }
+            }
+        } else {
+            sendEvent?.("task_create_from_template", {
+                template_use: data.template_use,
+                last_modified_at: Date.now(),
+            });
+        }
     });
 }

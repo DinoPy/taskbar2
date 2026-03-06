@@ -450,7 +450,10 @@ export function createWindowManager({
 		openVariablePromptWindow(options = {}) {
 			if (state.variablePrompt && !state.variablePrompt.isDestroyed()) {
 				state.variablePrompt.focus();
-				state.variablePrompt.webContents.send("variable-prompt-data", options?.template);
+				state.variablePrompt.webContents.send("variable-prompt-data", {
+					template: options?.template,
+					mode: options?.mode ?? "create_task",
+				});
 				return state.variablePrompt;
 			}
 			state.variablePrompt = createVariablePromptWindow({

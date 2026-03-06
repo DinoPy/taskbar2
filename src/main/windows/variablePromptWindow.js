@@ -3,7 +3,7 @@ import { BrowserWindow, screen } from "electron";
 const WINDOW_WIDTH = 440;
 const WINDOW_HEIGHT = 320;
 
-export function createVariablePromptWindow({ template, onClose } = {}) {
+export function createVariablePromptWindow({ template, mode, onClose } = {}) {
 	const cursorPosition = screen.getCursorScreenPoint();
 	const activeDisplay = screen.getDisplayNearestPoint(cursorPosition);
 
@@ -34,7 +34,7 @@ export function createVariablePromptWindow({ template, onClose } = {}) {
 	win.setMenuBarVisibility(false);
 
 	win.webContents.once("did-finish-load", () => {
-		win.webContents.send("variable-prompt-data", template);
+		win.webContents.send("variable-prompt-data", { template, mode: mode ?? "create_task" });
 		win.show();
 		win.focus();
 	});

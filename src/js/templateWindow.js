@@ -34,6 +34,7 @@ const tplVarsList = document.getElementById("tplVarsList");
 const tplVarsAddBtn = document.getElementById("tplVarsAddBtn");
 const manageListsBtn = document.getElementById("manageListsBtn");
 const useTemplateBtn = document.getElementById("useTemplateBtn");
+const scheduleTemplateBtn = document.getElementById("scheduleTemplateBtn");
 const deleteTemplateBtn = document.getElementById("deleteTemplateBtn");
 const saveTemplateBtn = document.getElementById("saveTemplateBtn");
 const tplStatus = document.getElementById("tplStatus");
@@ -199,6 +200,7 @@ function loadEditor(tpl) {
 	deleteTemplateBtn.style.display = isNewMode ? "none" : "inline-block";
 	manageListsBtn.style.display = isNewMode ? "none" : "inline-block";
 	useTemplateBtn.style.display = isNewMode ? "none" : "inline-block";
+	scheduleTemplateBtn.style.display = isNewMode ? "none" : "inline-block";
 }
 
 function loadEmptyEditor() {
@@ -218,6 +220,7 @@ function loadEmptyEditor() {
 	deleteTemplateBtn.style.display = "none";
 	manageListsBtn.style.display = "none";
 	useTemplateBtn.style.display = "none";
+	scheduleTemplateBtn.style.display = "none";
 	tplTitle.focus();
 }
 
@@ -393,7 +396,15 @@ useTemplateBtn.addEventListener("click", () => {
 	if (!selectedId) return;
 	const tpl = templates.find((t) => t.id === selectedId);
 	if (!tpl) return;
-	ipc.send("open-variable-prompt", { template: tpl });
+	ipc.send("open-variable-prompt", { template: tpl, mode: "create_task" });
+});
+
+// ---- Schedule Template ----
+scheduleTemplateBtn.addEventListener("click", () => {
+	if (!selectedId) return;
+	const tpl = templates.find((t) => t.id === selectedId);
+	if (!tpl) return;
+	ipc.send("open-variable-prompt", { template: tpl, mode: "schedule" });
 });
 
 // ---- Search ----

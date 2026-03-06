@@ -1,6 +1,7 @@
 const { ipcRenderer: ipc } = require("electron");
 
 let template = null;
+let mode = "create_task";
 
 const vpTitle = document.getElementById("vpTitle");
 const vpFields = document.getElementById("vpFields");
@@ -8,7 +9,8 @@ const submitBtn = document.getElementById("submitBtn");
 const cancelBtn = document.getElementById("cancelBtn");
 
 ipc.on("variable-prompt-data", (_, data) => {
-	template = data;
+	template = data?.template ?? data;
+	mode = data?.mode ?? "create_task";
 	render();
 });
 
@@ -76,21 +78,15 @@ function submitForm() {
 	if (!template) return;
 
 	const variables = template.variables || [];
-	if (variables.length === 0) {
-		ipc.send("variable-prompt-submit", {
-			template_use: {
-				template_id: template.id,
-				template_rev: template.rev,
-				variables: {},
-			},
-		});
-		return;
+	let vars = {};
+	if (variables.length > 0) {
+		const result = collectVariables();
+		if (!result.valid) return;
+		vars = result.variables;
 	}
 
-	const { variables: vars, valid } = collectVariables();
-	if (!valid) return;
-
 	ipc.send("variable-prompt-submit", {
+		mode,
 		template_use: {
 			template_id: template.id,
 			template_rev: template.rev,

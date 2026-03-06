@@ -355,6 +355,10 @@ export function createSchedulesController({ sendEvent, log = console.log }) {
             if (commonLanguage) payload.common_language = commonLanguage;
         }
 
+        if (input.template_use && typeof input.template_use === "object") {
+            payload.template_use = input.template_use;
+        }
+
         return payload;
     };
 
