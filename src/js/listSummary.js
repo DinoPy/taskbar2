@@ -101,6 +101,7 @@ export function createListSummaryStyles() {
 			margin: 8px 0;
 			font-size: 12px;
 			min-height: 28px;
+			-webkit-app-region: no-drag;
 		}
 
 		.list-summary-label {
