@@ -24,7 +24,8 @@
   "scripts": {
     "start": "electron .",
     "build": "electron-builder",
-    "dev": "electron . --trace-warnings"
+    "dev": "electron . --trace-warnings",
+    "calendar:ws-scenarios": "node scripts/ws-calendar-scenarios.mjs"
   },
   "build": {
     "appId": "com.taskbar2.app",

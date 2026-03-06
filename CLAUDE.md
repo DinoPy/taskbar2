@@ -92,6 +92,14 @@ These are reserved and registered in `main.js`:
 - `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` - Required for OAuth
 - `APP_STAGE` - "development" uses `ws://localhost:8080`, "production" uses `wss://pythonws.dinodev.dev`
 
+## Worktree Cleanliness
+
+The agent is responsible for keeping the git worktree clean. Before finishing any task:
+- Do not leave untracked files that aren't necessary for the project
+- Do not leave uncommitted changes from work that is complete
+- Clean up any temporary or generated files created during development
+- If work is in progress and cannot be committed, communicate this clearly to the user
+
 ## Window System
 13+ window types managed by `WindowManager` singleton. Each window has:
 - Factory function in `src/main/windows/`
