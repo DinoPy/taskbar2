@@ -914,9 +914,17 @@ export function registerIpcHandlers({
     // ---- Template IPC handlers ----
 
     ipc.on("open-template-window", () => {
-        windowManager.openTemplateWindow?.({
+        const win = windowManager.openTemplateWindow?.({
             screenIndex: appState.currentlySelectedScreenIndex ?? 0,
         });
+        if (win && !win.isDestroyed()) {
+            const send = () => win.webContents.send("template-categories", appState.categories);
+            if (win.webContents.isLoading()) {
+                win.webContents.once("did-finish-load", send);
+            } else {
+                send();
+            }
+        }
     });
 
     ipc.on("template-create", (_, data) => {

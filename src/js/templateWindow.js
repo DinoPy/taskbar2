@@ -7,6 +7,7 @@ let isNewMode = false;
 let searchDebounce = null;
 let statusTimeout = null;
 let tags = [];
+let categories = [];
 
 const VAR_KEY_REGEX = /^[A-Za-z][A-Za-z0-9_]*$/;
 
@@ -46,8 +47,24 @@ function showStatus(message, type = "success") {
 	}, 2500);
 }
 
+function populateCategories(selected) {
+	tplCategory.innerHTML = "";
+	categories.forEach((cat) => {
+		const opt = document.createElement("option");
+		opt.value = cat;
+		opt.textContent = cat;
+		if (cat === selected) opt.selected = true;
+		tplCategory.appendChild(opt);
+	});
+}
+
 // ---- Init ----
 ipc.send("template-list");
+
+ipc.on("template-categories", (_, data) => {
+	categories = Array.isArray(data) ? data : [];
+	populateCategories(tplCategory.value);
+});
 
 // ---- IPC Listeners ----
 ipc.on("template-list", (_, data) => {
@@ -163,7 +180,7 @@ function loadEditor(tpl) {
 
 	tplTitle.value = tpl.title || "";
 	tplDescription.value = tpl.description || "";
-	tplCategory.value = tpl.category || "";
+	populateCategories(tpl.category || "Life");
 	tplPriority.value = tpl.priority?.Valid ? tpl.priority.Int32 : "";
 
 	const showBefore = tpl.show_before_due_time || 0;
@@ -189,7 +206,7 @@ function loadEmptyEditor() {
 	editorForm.style.display = "flex";
 	tplTitle.value = "";
 	tplDescription.value = "";
-	tplCategory.value = "";
+	populateCategories("Life");
 	tplPriority.value = "";
 	tplShowBeforeH.value = "0";
 	tplShowBeforeM.value = "0";
