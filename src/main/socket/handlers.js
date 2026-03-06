@@ -113,6 +113,12 @@ export function createSocketHandlers({
 		syncCustomCommandsWindow();
 
 		listsController?.refetchAllActive?.();
+
+		// Refetch templates if the template window is open
+		const templateWin = windowManager.getTemplateWindow?.();
+		if (templateWin && !templateWin.isDestroyed()) {
+			templateWin.webContents.send("socket-reconnected");
+		}
 	}
 
 	function broadcast(channel, payload) {
@@ -578,6 +584,64 @@ export function createSocketHandlers({
 			}
 			if (!payload) return;
 			listsController?.handleStandaloneListAttached?.(payload);
+		},
+		// ---- Template events ----
+		template_created: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			if (!payload) return;
+			const win = windowManager.getTemplateWindow?.();
+			if (win && !win.isDestroyed()) {
+				win.webContents.send("template-created", payload);
+			}
+		},
+		template_updated: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			if (!payload) return;
+			const win = windowManager.getTemplateWindow?.();
+			if (win && !win.isDestroyed()) {
+				win.webContents.send("template-updated", payload);
+			}
+		},
+		template_deleted: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			if (!payload) return;
+			const win = windowManager.getTemplateWindow?.();
+			if (win && !win.isDestroyed()) {
+				win.webContents.send("template-deleted", payload);
+			}
+			const templateId = payload?.id;
+			if (templateId) {
+				windowManager.closeListWindow?.({ kind: "task_template", id: templateId });
+			}
+		},
+		template_list: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			const win = windowManager.getTemplateWindow?.();
+			if (win && !win.isDestroyed()) {
+				win.webContents.send("template-list", payload);
+			}
+		},
+		template_search: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			const win = windowManager.getTemplateWindow?.();
+			if (win && !win.isDestroyed()) {
+				win.webContents.send("template-search", payload);
+			}
 		},
 		schedule_deleted: ({ data }) => {
 			let payload = data;

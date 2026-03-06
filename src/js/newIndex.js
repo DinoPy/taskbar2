@@ -906,6 +906,11 @@ const parseCommand = (input) => {
 		return { type: 'open_reminder' };
 	}
 
+	// Templates command
+	if (trimmed === 'templates') {
+		return { type: 'open_templates' };
+	}
+
 	// List current task: llc
 	if (trimmed === 'llc') {
 		return { type: 'list_current' };
@@ -1109,6 +1114,10 @@ const executeCommand = (command) => {
 			ipc.send("open-list-window", { target: { kind: "standalone_home" } });
 			return { success: true, message: "Opening standalone lists" };
 
+		case 'open_templates':
+			ipc.send('open-template-window');
+			return { success: true, message: "Opening templates window" };
+
 		case 'invalid':
 			return { success: false, message: `Invalid command: ${command.input}` };
 			
@@ -1140,7 +1149,8 @@ const getCommandSuggestions = (input) => {
 		{ command: 'calendar', description: 'open calendar window' },
 		{ command: 'llc', description: 'open list for current task' },
 		{ command: 'll1', description: 'open list for task 1' },
-		{ command: 'lists', description: 'open standalone lists' }
+		{ command: 'lists', description: 'open standalone lists' },
+		{ command: 'templates', description: 'open task templates' }
 	];
 	}
 
@@ -1155,6 +1165,9 @@ const getCommandSuggestions = (input) => {
 	}
 	if ('lists'.startsWith(trimmed) && trimmed.startsWith('li') && !trimmed.startsWith('ll')) {
 		suggestions.push({ command: 'lists', description: 'open standalone lists' });
+	}
+	if ('templates'.startsWith(trimmed) && trimmed.startsWith('te')) {
+		suggestions.push({ command: 'templates', description: 'open task templates' });
 	}
 	if (trimmed.startsWith('ll') && trimmed.match(/^ll\d*$/)) {
 		if (trimmed.match(/^ll\d+$/)) {
@@ -1182,7 +1195,8 @@ const getCommandSuggestions = (input) => {
 		{ command: 'calendar', description: 'open calendar window', pattern: /^calendar$/ },
 		{ command: 'll', description: 'open list for task', pattern: /^ll(\d+)$/ },
 		{ command: 'llc', description: 'open list for current task', pattern: /^llc$/ },
-		{ command: 'lists', description: 'open standalone lists', pattern: /^lists$/ }
+		{ command: 'lists', description: 'open standalone lists', pattern: /^lists$/ },
+		{ command: 'templates', description: 'open task templates', pattern: /^templates$/ }
 	];
 	
 	// Handle all command types with consistent logic

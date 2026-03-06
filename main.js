@@ -307,6 +307,7 @@ const showMainMenu = () =>
 		createCustomCommandsWindow,
 		createHelpWindow,
 		createCalendarWindow: openCalendarWindowOnFocusedScreen,
+		openTemplateWindow,
 		toggleAlwaysOnTop,
 		notificationReminderIntervalMinutes: appState.notificationReminderIntervalMinutes,
 		setNotificationReminderInterval: (minutes) => {

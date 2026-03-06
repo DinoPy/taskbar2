@@ -12,6 +12,7 @@ export function showMainContextMenu({
 	notificationsMuted,
 	setNotificationsMuted,
 	createCalendarWindow,
+	openTemplateWindow,
 }) {
 	const menu = new Menu();
 
@@ -143,6 +144,14 @@ export function showMainContextMenu({
 			label: "Calendar",
 			toolTip: "Open the scheduler calendar view",
 			click: () => createCalendarWindow?.(),
+		})
+	);
+
+	menu.append(
+		new MenuItem({
+			label: "Templates",
+			toolTip: "Open the task templates manager",
+			click: () => openTemplateWindow?.(),
 		})
 	);
 

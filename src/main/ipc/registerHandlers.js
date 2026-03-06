@@ -910,4 +910,58 @@ export function registerIpcHandlers({
 
         return targets;
     });
+
+    // ---- Template IPC handlers ----
+
+    ipc.on("open-template-window", () => {
+        windowManager.openTemplateWindow?.({
+            screenIndex: appState.currentlySelectedScreenIndex ?? 0,
+        });
+    });
+
+    ipc.on("template-create", (_, data) => {
+        if (!data) return;
+        sendEvent?.("template_create", data);
+    });
+
+    ipc.on("template-edit", (_, data) => {
+        if (!data) return;
+        sendEvent?.("template_edit", data);
+    });
+
+    ipc.on("template-delete", (_, data) => {
+        if (!data?.id) return;
+        sendEvent?.("template_delete", { id: data.id });
+    });
+
+    ipc.on("template-list", () => {
+        sendEvent?.("template_list", {});
+    });
+
+    ipc.on("template-search", (_, data) => {
+        sendEvent?.("template_search", data ?? {});
+    });
+
+    ipc.on("task-create-from-template", (_, data) => {
+        if (!data?.template_use) return;
+        sendEvent?.("task_create_from_template", data);
+    });
+
+    ipc.on("open-variable-prompt", (_, data) => {
+        if (!data?.template) return;
+        windowManager.openVariablePromptWindow?.({ template: data.template });
+    });
+
+    ipc.on("variable-prompt-close", () => {
+        windowManager.closeVariablePromptWindow?.();
+    });
+
+    ipc.on("variable-prompt-submit", (_, data) => {
+        if (!data?.template_use) return;
+        sendEvent?.("task_create_from_template", {
+            template_use: data.template_use,
+            last_modified_at: Date.now(),
+        });
+        windowManager.closeVariablePromptWindow?.();
+    });
 }
