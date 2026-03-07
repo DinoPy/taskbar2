@@ -13,6 +13,7 @@ export function showMainContextMenu({
 	setNotificationsMuted,
 	createCalendarWindow,
 	openTemplateWindow,
+	openFinanceWindow,
 }) {
 	const menu = new Menu();
 
@@ -152,6 +153,14 @@ export function showMainContextMenu({
 			label: "Templates",
 			toolTip: "Open the task templates manager",
 			click: () => openTemplateWindow?.(),
+		})
+	);
+
+	menu.append(
+		new MenuItem({
+			label: "Finance",
+			toolTip: "Open the personal finance manager",
+			click: () => openFinanceWindow?.(),
 		})
 	);
 

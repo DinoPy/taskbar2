@@ -9,6 +9,7 @@ export function createSocketHandlers({
 	schedulesController,
 	calendarController,
 	listsController,
+	financeController,
 }) {
 	function handleSocketConnect() {
 		const win = getTaskbarWindow();
@@ -185,6 +186,7 @@ export function createSocketHandlers({
 			}
 			const normalized = payload && typeof payload === "object" ? payload : {};
 			calendarController?.handleConnectionError?.(normalized);
+			financeController?.forwardToFinanceWindow?.("connection_error", normalized);
 			// Forward list-related errors to listsController.
 			// Includes list-specific types and generic types that list handlers may emit.
 			const listErrorTypes = new Set([
@@ -643,6 +645,7 @@ export function createSocketHandlers({
 				win.webContents.send("template-search", payload);
 			}
 		},
+		...(financeController?.getSocketEventHandlers?.() ?? {}),
 		schedule_deleted: ({ data }) => {
 			let payload = data;
 			if (typeof data === "string") {

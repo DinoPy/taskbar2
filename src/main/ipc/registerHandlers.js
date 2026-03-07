@@ -24,6 +24,7 @@ export function registerIpcHandlers({
     requestTaskDeletion,
     requestTaskCompletionConfirmation,
     openCalendarWindow,
+    financeController,
 }) {
     const logger = log ?? console.log;
     const RFC3339_TIMESTAMP_REGEX =
@@ -1000,5 +1001,18 @@ export function registerIpcHandlers({
                 last_modified_at: Date.now(),
             });
         }
+    });
+
+    // ---- Finance IPC handlers ----
+
+    ipc.on("fin-send", (_, data) => {
+        if (!data?.event) return;
+        financeController?.handleRendererSend?.(data.event, data.data ?? {});
+    });
+
+    ipc.on("open-finance-window", () => {
+        windowManager.openFinanceWindow?.({
+            screenIndex: appState.currentlySelectedScreenIndex ?? 0,
+        });
     });
 }

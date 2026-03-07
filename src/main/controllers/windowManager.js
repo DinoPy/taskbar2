@@ -16,6 +16,7 @@ export function createWindowManager({
 	createListWindow,
 	createTemplateWindow,
 	createVariablePromptWindow,
+	createFinanceWindow,
 }) {
 	const state = {
 		taskbar: null,
@@ -33,6 +34,7 @@ export function createWindowManager({
 		calendar: null,
 		template: null,
 		variablePrompt: null,
+		finance: null,
 		commandWindows: new Map(),
 		listWindows: new Map(),
 	};
@@ -473,6 +475,31 @@ export function createWindowManager({
 		closeVariablePromptWindow() {
 			if (state.variablePrompt && !state.variablePrompt.isDestroyed()) {
 				state.variablePrompt.close();
+			}
+		},
+
+		openFinanceWindow(options = {}) {
+			if (state.finance && !state.finance.isDestroyed()) {
+				state.finance.focus();
+				return state.finance;
+			}
+			state.finance = createFinanceWindow({
+				...options,
+				onClose: () => {
+					state.finance = null;
+					options?.onClose?.();
+				},
+			});
+			return state.finance;
+		},
+
+		getFinanceWindow() {
+			return state.finance;
+		},
+
+		closeFinanceWindow() {
+			if (state.finance && !state.finance.isDestroyed()) {
+				state.finance.close();
 			}
 		},
 	};

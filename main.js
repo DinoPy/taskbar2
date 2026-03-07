@@ -19,6 +19,7 @@ import { createNotificationsWindow as createNotificationsBrowserWindow } from ".
 import { createReminderWindow as createReminderBrowserWindow } from "./src/main/windows/reminderWindow.js";
 import { createDeleteConfirmWindow as createDeleteConfirmBrowserWindow } from "./src/main/windows/deleteConfirmWindow.js";
 import { createCalendarWindow as createCalendarBrowserWindow } from "./src/main/windows/calendarWindow.js";
+import { createFinanceWindow as createFinanceBrowserWindow } from "./src/main/windows/financeWindow.js";
 import { createCompletionConfirmWindow as createCompletionConfirmBrowserWindow } from "./src/main/windows/completionConfirmWindow.js";
 import { createAddDueWindow as createAddDueBrowserWindow } from "./src/main/windows/addDueWindow.js";
 import { createListWindow as createListBrowserWindow } from "./src/main/windows/listWindow.js";
@@ -34,6 +35,7 @@ import { createNotificationsController } from "./src/main/controllers/notificati
 import { createSchedulesController } from "./src/main/controllers/schedulesController.js";
 import { createCalendarController } from "./src/main/controllers/calendarController.js";
 import { createListsController } from "./src/main/controllers/listsController.js";
+import { createFinanceController } from "./src/main/controllers/financeController.js";
 
 const logDir = path.dirname(config.logFilePath);
 if (!fs.existsSync(logDir)) {
@@ -118,6 +120,7 @@ const windowManager = createWindowManager({
 	createListWindow: createListBrowserWindow,
 	createTemplateWindow: createTemplateBrowserWindow,
 	createVariablePromptWindow: createVariablePromptBrowserWindow,
+	createFinanceWindow: createFinanceBrowserWindow,
 });
 
 const commandsController = createCommandsController({
@@ -231,6 +234,11 @@ const listsController = createListsController({
 	},
 });
 
+const financeController = createFinanceController({
+	windowManager,
+	sendEvent: (eventName, data) => sendEvent?.(eventName, data),
+});
+
 const scheduleCompletedTasksRefresh = () => {
 	setTimeout(() => {
 		sendEvent("get_completed_tasks", appState.fromCompletedData);
@@ -314,6 +322,7 @@ const showMainMenu = () =>
 		createHelpWindow,
 		createCalendarWindow: openCalendarWindowOnFocusedScreen,
 		openTemplateWindow,
+		openFinanceWindow,
 		toggleAlwaysOnTop,
 		notificationReminderIntervalMinutes: appState.notificationReminderIntervalMinutes,
 		setNotificationReminderInterval: (minutes) => {
@@ -366,6 +375,7 @@ const {
 	schedulesController,
 	calendarController,
 	listsController,
+	financeController,
 });
 
 socketClient = createSocketClient({
@@ -411,6 +421,7 @@ registerIpcHandlers({
 	requestTaskDeletion,
 	requestTaskCompletionConfirmation,
 	openCalendarWindow: openCalendarWindowOnFocusedScreen,
+	financeController,
 });
 
 ipc.on("completion-confirmation-confirmed", (_, payload) => {
@@ -447,6 +458,7 @@ const handleCloseAppRequest = () => {
 	windowManager.closeAllListWindows?.();
 	windowManager.closeTemplateWindow();
 	windowManager.closeVariablePromptWindow();
+	windowManager.closeFinanceWindow();
 	windowManager.getTaskbarWindow()?.close();
 };
 
@@ -501,6 +513,7 @@ app.whenReady().then(async () => {
 			listWin.webContents.openDevTools();
 		});
 		windowManager.getTemplateWindow()?.webContents.openDevTools();
+		windowManager.getFinanceWindow()?.webContents.openDevTools();
 		const calendarWindow = openCalendarWindowOnFocusedScreen();
 		calendarWindow?.webContents.openDevTools();
 	});
@@ -728,6 +741,23 @@ function openTemplateWindow(options = {}) {
 	const normalizedIndex = Math.min(Math.max(requestedIndex, 0), maxIndex);
 	try {
 		return windowManager.openTemplateWindow({
+			...options,
+			screenIndex: normalizedIndex,
+		});
+	} catch (e) {
+		console.error(e);
+	}
+}
+
+function openFinanceWindow(options = {}) {
+	const displays = screen.getAllDisplays();
+	const requestedIndex = Number.isInteger(options.screenIndex)
+		? options.screenIndex
+		: appState.currentlySelectedScreenIndex ?? 0;
+	const maxIndex = Math.max(displays.length - 1, 0);
+	const normalizedIndex = Math.min(Math.max(requestedIndex, 0), maxIndex);
+	try {
+		return windowManager.openFinanceWindow({
 			...options,
 			screenIndex: normalizedIndex,
 		});
