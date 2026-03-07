@@ -2,12 +2,12 @@
 :root {
 	box-sizing: content-box;
 	/* ===========================================
-	   SYSTEMATIC OKLCH COLOR SYSTEM
+	   OKLCH LIGHT THEME COLOR SYSTEM
 	   =========================================== */
 
-	/* Base Color Parameters */
+	/* Hue Parameters */
 	--hue-primary: 80;
-	/* Green hue */
+	/* Olive/sage hue */
 	--hue-secondary: 100;
 	/* Yellow-green hue */
 	--hue-accent: 20;
@@ -17,73 +17,52 @@
 	--hue-accent-dark: 15;
 	/* Red-orange hue */
 
-	/* Lightness Scale */
-	--lightness-darkest: 0.25;
-	/* Very dark */
-	--lightness-darker: 0.35;
-	/* Dark */
-	--lightness-dark: 0.45;
-	/* Medium-dark */
-	--lightness-medium: 0.55;
-	/* Medium */
-	--lightness-light: 0.75;
-	/* Light */
-	--lightness-lighter: 0.90;
-	/* Very light */
-	--lightness-lightest: 0.95;
-	/* Almost white */
+	/* Background Colors */
+	--color-bg-root: oklch(0.97 0.02 var(--hue-primary));
+	--color-bg-primary: oklch(0.95 0.03 var(--hue-primary));
+	--color-bg-secondary: oklch(0.90 0.04 var(--hue-primary));
+	--color-bg-tertiary: oklch(0.85 0.05 var(--hue-primary));
+	--color-bg-elevated: oklch(0.98 0.01 var(--hue-primary));
+	--color-bg-hover: oklch(0.88 0.06 var(--hue-primary));
+	--color-bg-sidebar: oklch(0.93 0.03 var(--hue-primary));
+	--color-bg-header: oklch(0.94 0.04 var(--hue-primary));
+	--color-bg-overlay: rgba(0, 0, 0, 0.35);
+	--color-bg-input: oklch(0.98 0.01 var(--hue-primary));
 
-	/* Chroma Scale */
-	--chroma-high: 0.15;
-	/* High saturation */
-	--chroma-medium: 0.10;
-	/* Medium saturation */
-	--chroma-low: 0.05;
-	/* Low saturation */
-	--chroma-minimal: 0.02;
-	/* Minimal saturation */
-	--chroma-intense: 0.20;
-	/* Very high saturation */
+	/* Text Colors */
+	--color-text-primary: oklch(0.25 0.06 var(--hue-primary));
+	--color-text-secondary: oklch(0.40 0.05 var(--hue-primary));
+	--color-text-tertiary: oklch(0.55 0.04 var(--hue-primary));
+	--color-text-white: oklch(0.95 0.02 var(--hue-primary));
+	--color-text-warning: oklch(0.35 0.15 var(--hue-accent));
 
-	/* Generated Background Colors */
-	--color-bg-root: oklch(var(--lightness-darkest) var(--chroma-medium) var(--hue-primary));
-	--color-bg-primary: oklch(var(--lightness-lighter) var(--chroma-low) var(--hue-primary));
-	--color-bg-secondary: oklch(var(--lightness-light) var(--chroma-medium) var(--hue-primary));
-	--color-bg-tertiary: oklch(var(--lightness-medium) var(--chroma-medium) var(--hue-primary));
-	--color-bg-elevated: oklch(var(--lightness-lightest) var(--chroma-minimal) var(--hue-primary));
-	--color-bg-hover: oklch(var(--lightness-dark) var(--chroma-high) var(--hue-primary));
+	/* Border Colors */
+	--color-border-primary: oklch(0.82 0.05 var(--hue-primary));
+	--color-border-secondary: oklch(0.72 0.07 var(--hue-primary));
+	--color-border-focus: oklch(0.35 0.15 var(--hue-accent));
+	--color-border-subtle: oklch(0.90 0.03 var(--hue-primary));
+	--color-border-table: oklch(0.88 0.03 var(--hue-primary));
 
-	/* Generated Border Colors */
-	--color-border-primary: oklch(var(--lightness-medium) var(--chroma-medium) var(--hue-primary));
-	--color-border-secondary: oklch(var(--lightness-dark) var(--chroma-high) var(--hue-primary));
-	--color-border-focus: oklch(var(--lightness-darker) var(--chroma-high) var(--hue-accent));
-	--color-border-table: oklch(0.97 0.01 79.9 / 0.7);
+	/* Scrollbar Colors */
+	--color-scrollbar-thumb: oklch(0.75 0.05 var(--hue-primary));
+	--color-scrollbar-track: oklch(0.92 0.02 var(--hue-primary));
 
-	/* Generated Text Colors */
-	--color-text-primary: oklch(var(--lightness-darkest) var(--chroma-medium) var(--hue-primary));
-	--color-text-secondary: oklch(var(--lightness-darker) var(--chroma-medium) var(--hue-primary));
-	--color-text-tertiary: oklch(var(--lightness-dark) var(--chroma-high) var(--hue-primary));
-	--color-text-white: oklch(var(--lightness-lightest) var(--chroma-minimal) var(--hue-primary));
-	--color-text-warning: oklch(var(--lightness-darker) var(--chroma-high) var(--hue-accent));
-
-	/* Generated Accent Colors */
-	--color-accent-primary: oklch(var(--lightness-medium) var(--chroma-intense) var(--hue-accent));
-	--color-accent-hover: oklch(var(--lightness-dark) var(--chroma-intense) var(--hue-accent));
-	--color-accent-active: oklch(var(--lightness-darker) var(--chroma-intense) var(--hue-accent));
-	--color-accent-light: oklch(var(--lightness-light) var(--chroma-intense) var(--hue-accent-light));
-	--color-accent-subtle: oklch(var(--lightness-lighter) var(--chroma-medium) var(--hue-accent-light));
-	--color-accent-dark: oklch(var(--lightness-darkest) var(--chroma-intense) var(--hue-accent-dark));
+	/* Accent Colors */
+	--color-accent-primary: oklch(0.55 0.20 var(--hue-accent));
+	--color-accent-hover: oklch(0.45 0.20 var(--hue-accent));
+	--color-accent-active: oklch(0.35 0.20 var(--hue-accent));
+	--color-accent-light: oklch(0.75 0.20 var(--hue-accent-light));
+	--color-accent-subtle: oklch(0.90 0.10 var(--hue-accent-light));
+	--color-accent-dark: oklch(0.25 0.20 var(--hue-accent-dark));
 
 	/* Component Colors */
 	--color-task-bg: var(--color-bg-elevated);
-	/* Very light orange - regular tasks */
 	--color-task-border: var(--color-border-primary);
 	--color-task-active-bg: var(--color-accent-primary);
-	/* Dark orange - accent/active task */
 	--color-task-active-border: var(--color-accent-hover);
 
 	/* Input Colors */
-	--color-input-bg: var(--color-bg-elevated);
+	--color-input-bg: var(--color-bg-input);
 	--color-input-border: var(--color-border-primary);
 	--color-input-outline: var(--color-border-focus);
 
@@ -97,15 +76,11 @@
 	/* Hover Colors */
 	--color-hover-subtle: var(--color-bg-hover);
 
-	/* Status Colors - Orange Theme */
+	/* Status Colors */
 	--color-status-error: #dc2626;
-	/* Red-orange - errors */
 	--color-status-success: #16a34a;
-	/* Green - success (contrast) */
 	--color-status-warning: #ea580c;
-	/* Dark orange - warnings */
 	--color-status-info: #f97316;
-	/* Bright orange - info */
 
 	/* Backward Compatibility - Legacy Variables */
 	--color-primary: var(--color-bg-primary);
@@ -134,8 +109,8 @@
 	--color-dropdown-edit-hover: var(--color-bg-tertiary);
 
 	--color-dropdown-delete-bg: var(--color-bg-root);
-	--color-dropdown-delete-text: var(--color-text-white);
-	--color-dropdown-delete-hover: rgba(255, 255, 255, 0.1);
+	--color-dropdown-delete-text: var(--color-text-primary);
+	--color-dropdown-delete-hover: var(--color-bg-hover);
 
 	/* ===========================================
 	   SPACING
