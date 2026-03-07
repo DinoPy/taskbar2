@@ -489,7 +489,10 @@ const createNotificationItem = (notification, { isUnseen }) => {
 
 	const title = document.createElement("p");
 	title.className = "notification-title";
-	title.textContent = notification.description || notification.title || "Notification";
+	const dot = document.createElement('span');
+	dot.className = `urgency-dot urgency-${urgency}`;
+	title.appendChild(dot);
+	title.appendChild(document.createTextNode(notification.description || notification.title || "Notification"));
 	infoWrapper.appendChild(title);
 
 	const meta = document.createElement("div");
@@ -538,31 +541,31 @@ const createNotificationItem = (notification, { isUnseen }) => {
 
 	if (isUnseen) {
 		const acknowledgeBtn = document.createElement("button");
-		acknowledgeBtn.className = "hover-btn icon-btn";
+		acknowledgeBtn.className = "action-text-btn";
 		acknowledgeBtn.dataset.action = "ack";
 		acknowledgeBtn.dataset.id = notification.id;
 		acknowledgeBtn.title = "Mark as viewed";
-		acknowledgeBtn.innerHTML = `<img src="../images/done.svg" alt="Viewed" class="icon" />`;
+		acknowledgeBtn.textContent = "Dismiss";
 		actions.appendChild(acknowledgeBtn);
 	}
 
 	const remindBtn = document.createElement("button");
-	remindBtn.className = "hover-btn icon-btn reminder-btn";
+	remindBtn.className = "action-text-btn reminder-btn";
 	remindBtn.dataset.action = "remind";
 	remindBtn.dataset.id = notification.id;
 	remindBtn.dataset.urgency = urgency;
 	remindBtn.title = "Remind me later";
-	remindBtn.innerHTML = `<img src="../images/clock.svg" alt="Remind later" class="icon" />`;
+	remindBtn.textContent = "Snooze";
 	actions.appendChild(remindBtn);
 
 	// Add archive button (for non-archived notifications)
 	if (notification.status !== "archived") {
 		const archiveBtn = document.createElement("button");
-		archiveBtn.className = "hover-btn icon-btn";
+		archiveBtn.className = "action-text-btn";
 		archiveBtn.dataset.action = "archive";
 		archiveBtn.dataset.id = notification.id;
 		archiveBtn.title = "Archive";
-		archiveBtn.innerHTML = `<img src="../images/archive.svg" alt="Archive" class="icon" />`;
+		archiveBtn.textContent = "Archive";
 		actions.appendChild(archiveBtn);
 	}
 

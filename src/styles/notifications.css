@@ -109,31 +109,26 @@ body::-webkit-scrollbar-thumb:hover {
 	grid-template-columns: 1fr auto;
 	background: var(--color-bg-elevated);
 	border: 1px solid var(--color-border-subtle);
-	border-left-width: 4px;
 	border-radius: 10px;
-	padding: var(--spacing-sm);
+	padding: var(--spacing-sm) var(--spacing-md);
 	gap: var(--spacing-sm);
 }
 
-.notifications-item.urgency-low {
-	border-left-color: rgba(76, 175, 80, 0.9);
+.urgency-dot {
+	display: inline-block;
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	flex-shrink: 0;
+	margin-right: 6px;
+	vertical-align: middle;
 }
 
-.notifications-item.urgency-normal {
-	border-left-color: rgba(59, 130, 246, 0.9);
-}
-
-.notifications-item.urgency-high {
-	border-left-color: rgba(249, 115, 22, 0.95);
-}
-
-.notifications-item.urgency-max {
-	border-left-color: rgba(239, 68, 68, 0.95);
-}
-
-.notifications-item.urgency-ultimate {
-	border-left-color: rgba(220, 38, 38, 1);
-}
+.urgency-dot.urgency-low { background: #16a34a; }
+.urgency-dot.urgency-normal { background: #3b82f6; }
+.urgency-dot.urgency-high { background: #f97316; }
+.urgency-dot.urgency-max { background: #ef4444; }
+.urgency-dot.urgency-ultimate { background: #dc2626; }
 
 .notifications-item.unseen {
 	border-color: var(--color-accent-primary);
@@ -144,31 +139,6 @@ body::-webkit-scrollbar-thumb:hover {
 	border-color: var(--color-accent-primary);
 	box-shadow: 0 0 0 1px rgba(249, 115, 22, 0.2);
 	background: rgba(249, 115, 22, 0.05);
-}
-
-.notifications-item.unseen.urgency-low,
-.notifications-item.snoozed.urgency-low {
-	border-left-color: rgba(76, 175, 80, 0.9);
-}
-
-.notifications-item.unseen.urgency-normal,
-.notifications-item.snoozed.urgency-normal {
-	border-left-color: rgba(59, 130, 246, 0.9);
-}
-
-.notifications-item.unseen.urgency-high,
-.notifications-item.snoozed.urgency-high {
-	border-left-color: rgba(249, 115, 22, 0.95);
-}
-
-.notifications-item.unseen.urgency-max,
-.notifications-item.snoozed.urgency-max {
-	border-left-color: rgba(239, 68, 68, 0.95);
-}
-
-.notifications-item.unseen.urgency-ultimate,
-.notifications-item.snoozed.urgency-ultimate {
-	border-left-color: rgba(220, 38, 38, 1);
 }
 
 .notification-title {
@@ -221,30 +191,17 @@ body::-webkit-scrollbar-thumb:hover {
 	letter-spacing: 0.04em;
 }
 
-.pill.urgency-pill.urgency-low {
-	background: rgba(76, 175, 80, 0.12);
-	color: #16a34a;
+.pill.urgency-pill {
+	background: none;
+	padding: 0;
+	font-weight: 600;
 }
 
-.pill.urgency-pill.urgency-normal {
-	background: rgba(59, 130, 246, 0.12);
-	color: #2563eb;
-}
-
-.pill.urgency-pill.urgency-high {
-	background: rgba(249, 115, 22, 0.12);
-	color: #ea580c;
-}
-
-.pill.urgency-pill.urgency-max {
-	background: rgba(239, 68, 68, 0.12);
-	color: #dc2626;
-}
-
-.pill.urgency-pill.urgency-ultimate {
-	background: rgba(220, 38, 38, 0.15);
-	color: #b91c1c;
-}
+.pill.urgency-pill.urgency-low { color: #16a34a; }
+.pill.urgency-pill.urgency-normal { color: #3b82f6; }
+.pill.urgency-pill.urgency-high { color: #ea580c; }
+.pill.urgency-pill.urgency-max { color: #dc2626; }
+.pill.urgency-pill.urgency-ultimate { color: #b91c1c; }
 
 .notification-snoozed-text {
 	font-size: 10px;
@@ -263,6 +220,24 @@ body::-webkit-scrollbar-thumb:hover {
 	gap: 6px;
 	position: relative;
 	justify-self: flex-end;
+}
+
+.action-text-btn {
+	background: none;
+	border: none;
+	color: var(--color-text-tertiary);
+	font-size: 11px;
+	font-weight: 600;
+	cursor: pointer;
+	padding: 4px 8px;
+	border-radius: 6px;
+	transition: background 0.15s ease, color 0.15s ease;
+	font-family: 'Nunito', sans-serif;
+}
+
+.action-text-btn:hover {
+	background: var(--color-bg-hover);
+	color: var(--color-accent-primary);
 }
 
 .reminder-btn.active {
@@ -639,30 +614,32 @@ body::-webkit-scrollbar-thumb:hover {
 	display: flex;
 	gap: 4px;
 	border-bottom: 1px solid var(--color-border-subtle);
-	padding-bottom: 6px;
+	padding-bottom: 0;
 	margin-bottom: var(--spacing-md);
 }
 
 .tab-btn {
 	background: transparent;
 	border: none;
+	border-bottom: 2px solid transparent;
 	color: var(--color-text-tertiary);
-	padding: 6px 12px;
+	padding: 8px 12px;
 	cursor: pointer;
-	border-radius: 6px;
+	border-radius: 0;
 	font-size: 12px;
 	font-weight: 500;
-	transition: background 120ms ease, color 120ms ease;
+	transition: color 0.15s ease, border-color 0.15s ease;
 }
 
 .tab-btn:hover {
-	background: var(--color-bg-hover);
 	color: var(--color-text-primary);
+	background: transparent;
 }
 
 .tab-btn.active {
-	background: var(--color-bg-hover);
+	background: transparent;
 	color: var(--color-accent-primary);
+	border-bottom-color: var(--color-accent-primary);
 	font-weight: 600;
 }
 
