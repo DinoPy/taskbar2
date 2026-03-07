@@ -24,7 +24,7 @@ export function createNotificationsWindow({
 		maximizable: false,
 		alwaysOnTop: true,
 		title: "Notifications",
-		backgroundColor: "#1f1f1f",
+		backgroundColor: "#f3f1ec",
 		webPreferences: {
 			nodeIntegration: true,
 			contextIsolation: false,

@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600&display=swap');
+
 :root {
 	--notifications-max-height: 420px;
 	--notifications-width: 420px;
@@ -8,8 +10,8 @@ body {
 	margin: 0;
 	padding: 0;
 	background: var(--color-bg-root);
-	color: var(--color-text-white);
-	font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+	color: var(--color-text-primary);
+	font-family: 'Nunito', sans-serif;
 	font-size: 13px;
 	line-height: 1.4;
 	overflow-y: auto;
@@ -20,12 +22,12 @@ body::-webkit-scrollbar {
 }
 
 body::-webkit-scrollbar-thumb {
-	background: rgba(255, 255, 255, 0.2);
+	background: var(--color-scrollbar-thumb);
 	border-radius: 999px;
 }
 
 body::-webkit-scrollbar-thumb:hover {
-	background: rgba(255, 255, 255, 0.33);
+	background: var(--color-border-secondary);
 }
 
 .notifications-root {
@@ -49,13 +51,13 @@ body::-webkit-scrollbar-thumb:hover {
 	margin: 0;
 	font-size: 16px;
 	font-weight: 600;
-	color: var(--color-text-white);
+	color: var(--color-text-primary);
 }
 
 .notifications-subtitle {
 	margin: 2px 0 0;
 	font-size: 11px;
-	color: rgba(255, 255, 255, 0.6);
+	color: var(--color-text-tertiary);
 }
 
 .text-btn {
@@ -70,12 +72,12 @@ body::-webkit-scrollbar-thumb:hover {
 }
 
 .text-btn:hover {
-	background: rgba(255, 255, 255, 0.08);
+	background: var(--color-bg-hover);
 	color: var(--color-accent-primary);
 }
 
 .text-btn:active {
-	background: rgba(255, 255, 255, 0.16);
+	background: var(--color-bg-tertiary);
 }
 
 .notifications-section {
@@ -88,7 +90,7 @@ body::-webkit-scrollbar-thumb:hover {
 	margin: 0;
 	font-size: 13px;
 	font-weight: 600;
-	color: rgba(255, 255, 255, 0.85);
+	color: var(--color-text-primary);
 	text-transform: uppercase;
 	letter-spacing: 0.06em;
 }
@@ -105,8 +107,8 @@ body::-webkit-scrollbar-thumb:hover {
 .notifications-item {
 	display: grid;
 	grid-template-columns: 1fr auto;
-	background: rgba(255, 255, 255, 0.05);
-	border: 1px solid rgba(255, 255, 255, 0.1);
+	background: var(--color-bg-elevated);
+	border: 1px solid var(--color-border-subtle);
 	border-left-width: 4px;
 	border-radius: 10px;
 	padding: var(--spacing-sm);
@@ -174,13 +176,13 @@ body::-webkit-scrollbar-thumb:hover {
 	font-weight: 600;
 	margin: 0;
 	margin-bottom: 12px;
-	color: var(--color-text-white);
+	color: var(--color-text-primary);
 }
 
 .notification-body {
 	margin: 2px 0 6px;
 	font-size: 12px;
-	color: rgba(255, 255, 255, 0.78);
+	color: var(--color-text-secondary);
 	white-space: pre-wrap;
 }
 
@@ -190,7 +192,7 @@ body::-webkit-scrollbar-thumb:hover {
 	align-items: center;
 	gap: var(--spacing-xs);
 	font-size: 11px;
-	color: rgba(255, 255, 255, 0.45);
+	color: var(--color-text-tertiary);
 }
 
 .notification-meta-left,
@@ -213,40 +215,40 @@ body::-webkit-scrollbar-thumb:hover {
 	align-items: center;
 	padding: 2px 6px;
 	border-radius: 999px;
-	background: rgba(255, 255, 255, 0.08);
+	background: var(--color-bg-secondary);
 	font-size: 10px;
 	text-transform: uppercase;
 	letter-spacing: 0.04em;
 }
 
 .pill.urgency-pill.urgency-low {
-	background: rgba(76, 175, 80, 0.2);
-	color: rgba(185, 246, 202, 0.95);
+	background: rgba(76, 175, 80, 0.12);
+	color: #16a34a;
 }
 
 .pill.urgency-pill.urgency-normal {
-	background: rgba(59, 130, 246, 0.2);
-	color: rgba(191, 219, 254, 0.95);
+	background: rgba(59, 130, 246, 0.12);
+	color: #2563eb;
 }
 
 .pill.urgency-pill.urgency-high {
-	background: rgba(249, 115, 22, 0.2);
-	color: rgba(254, 215, 170, 0.95);
+	background: rgba(249, 115, 22, 0.12);
+	color: #ea580c;
 }
 
 .pill.urgency-pill.urgency-max {
-	background: rgba(239, 68, 68, 0.2);
-	color: rgba(254, 202, 202, 0.95);
+	background: rgba(239, 68, 68, 0.12);
+	color: #dc2626;
 }
 
 .pill.urgency-pill.urgency-ultimate {
-	background: rgba(220, 38, 38, 0.3);
-	color: rgba(255, 220, 220, 0.98);
+	background: rgba(220, 38, 38, 0.15);
+	color: #b91c1c;
 }
 
 .notification-snoozed-text {
 	font-size: 10px;
-	color: rgba(255, 255, 255, 0.7);
+	color: var(--color-text-secondary);
 	text-transform: none;
 }
 
@@ -264,8 +266,8 @@ body::-webkit-scrollbar-thumb:hover {
 }
 
 .reminder-btn.active {
-	background: rgba(255, 255, 255, 0.16);
-	border-color: rgba(255, 255, 255, 0.35);
+	background: var(--color-bg-tertiary);
+	border-color: var(--color-border-secondary);
 }
 
 .hover-btn {
@@ -273,9 +275,9 @@ body::-webkit-scrollbar-thumb:hover {
 	height: 28px;
 	border-radius: 6px;
 	padding: 0 var(--spacing-sm);
-	border: 1px solid rgba(255, 255, 255, 0.16);
-	background: rgba(255, 255, 255, 0.05);
-	color: rgba(255, 255, 255, 0.9);
+	border: 1px solid var(--color-border-primary);
+	background: var(--color-bg-elevated);
+	color: var(--color-text-primary);
 	font-size: 12px;
 	cursor: pointer;
 	display: grid;
@@ -298,10 +300,10 @@ body::-webkit-scrollbar-thumb:hover {
 	position: absolute;
 	top: calc(100% + 6px);
 	right: 0;
-	background: rgba(26, 26, 26, 0.95);
-	border: 1px solid rgba(255, 255, 255, 0.12);
+	background: var(--color-bg-root);
+	border: 1px solid var(--color-border-primary);
 	border-radius: 8px;
-	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
 	min-width: 160px;
 	z-index: 20;
 	display: flex;
@@ -316,12 +318,12 @@ body::-webkit-scrollbar-thumb:hover {
 	flex-direction: column;
 	gap: 6px;
 	padding: 6px 8px;
-	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .reminder-urgency-label {
 	font-size: 10px;
-	color: rgba(255, 255, 255, 0.55);
+	color: var(--color-text-tertiary);
 	text-transform: uppercase;
 	letter-spacing: 0.06em;
 }
@@ -333,24 +335,24 @@ body::-webkit-scrollbar-thumb:hover {
 }
 
 .reminder-urgency-btn {
-	background: rgba(255, 255, 255, 0.04);
-	border: 1px solid rgba(255, 255, 255, 0.14);
+	background: var(--color-bg-elevated);
+	border: 1px solid var(--color-border-subtle);
 	border-radius: 6px;
 	padding: 5px 6px;
 	font-size: 10px;
 	font-weight: 600;
-	color: rgba(255, 255, 255, 0.8);
+	color: var(--color-text-primary);
 	cursor: pointer;
 }
 
 .reminder-urgency-btn:hover {
-	background: rgba(255, 255, 255, 0.12);
+	background: var(--color-bg-hover);
 }
 
 .reminder-urgency-btn.active {
-	border-color: rgba(255, 255, 255, 0.4);
-	background: rgba(255, 255, 255, 0.18);
-	color: #fff;
+	border-color: var(--color-border-secondary);
+	background: var(--color-bg-tertiary);
+	color: var(--color-text-primary);
 }
 
 .reminder-urgency-btn.urgency-low.active {
@@ -382,7 +384,7 @@ body::-webkit-scrollbar-thumb:hover {
 .schedule-delete-overlay {
 	position: fixed;
 	inset: 0;
-	background: rgba(8, 12, 18, 0.62);
+	background: var(--color-bg-overlay);
 	display: grid;
 	place-items: center;
 	z-index: 120;
@@ -391,10 +393,10 @@ body::-webkit-scrollbar-thumb:hover {
 
 .schedule-delete-dialog {
 	width: min(420px, 100%);
-	background: rgba(20, 26, 37, 0.98);
-	border: 1px solid rgba(255, 255, 255, 0.15);
+	background: var(--color-bg-root);
+	border: 1px solid var(--color-border-primary);
 	border-radius: 12px;
-	box-shadow: 0 22px 36px rgba(0, 0, 0, 0.45);
+	box-shadow: 0 22px 36px rgba(0, 0, 0, 0.12);
 	padding: 14px 14px 12px;
 }
 
@@ -402,13 +404,13 @@ body::-webkit-scrollbar-thumb:hover {
 	margin: 0 0 8px;
 	font-size: 15px;
 	font-weight: 700;
-	color: rgba(255, 255, 255, 0.92);
+	color: var(--color-text-primary);
 }
 
 .schedule-delete-summary {
 	margin: 0 0 10px;
 	font-size: 12px;
-	color: rgba(255, 255, 255, 0.75);
+	color: var(--color-text-secondary);
 }
 
 .schedule-delete-form {
@@ -422,7 +424,7 @@ body::-webkit-scrollbar-thumb:hover {
 	align-items: center;
 	gap: 8px;
 	font-size: 12px;
-	color: rgba(255, 255, 255, 0.86);
+	color: var(--color-text-primary);
 }
 
 .schedule-delete-date-field {
@@ -430,23 +432,23 @@ body::-webkit-scrollbar-thumb:hover {
 	flex-direction: column;
 	gap: 6px;
 	font-size: 12px;
-	color: rgba(255, 255, 255, 0.8);
+	color: var(--color-text-primary);
 	margin-top: 2px;
 }
 
 .schedule-delete-date-field input[type="datetime-local"] {
-	background: rgba(255, 255, 255, 0.07);
-	border: 1px solid rgba(255, 255, 255, 0.18);
+	background: var(--color-bg-input);
+	border: 1px solid var(--color-border-primary);
 	border-radius: 6px;
 	padding: 6px 8px;
-	color: rgba(255, 255, 255, 0.9);
+	color: var(--color-text-primary);
 	font-size: 12px;
 }
 
 .schedule-delete-validation {
 	margin: 2px 0 0;
 	font-size: 11px;
-	color: rgba(255, 132, 132, 0.98);
+	color: var(--color-status-error);
 }
 
 .schedule-delete-actions {
@@ -466,23 +468,23 @@ body::-webkit-scrollbar-thumb:hover {
 }
 
 .schedule-delete-cancel {
-	border: 1px solid rgba(255, 255, 255, 0.22);
-	background: rgba(255, 255, 255, 0.06);
-	color: rgba(255, 255, 255, 0.9);
+	border: 1px solid var(--color-border-primary);
+	background: var(--color-bg-secondary);
+	color: var(--color-text-primary);
 }
 
 .schedule-delete-confirm {
-	border: 1px solid rgba(255, 109, 109, 0.45);
-	background: rgba(239, 68, 68, 0.2);
-	color: rgba(255, 190, 190, 0.98);
+	border: 1px solid rgba(220, 38, 38, 0.3);
+	background: rgba(239, 68, 68, 0.1);
+	color: var(--color-status-error);
 }
 
 .schedule-delete-cancel:hover {
-	background: rgba(255, 255, 255, 0.12);
+	background: var(--color-bg-tertiary);
 }
 
 .schedule-delete-confirm:hover {
-	background: rgba(239, 68, 68, 0.3);
+	background: rgba(239, 68, 68, 0.18);
 }
 
 .reminder-menu::-webkit-scrollbar {
@@ -490,18 +492,18 @@ body::-webkit-scrollbar-thumb:hover {
 }
 
 .reminder-menu::-webkit-scrollbar-thumb {
-	background: rgba(255, 255, 255, 0.2);
+	background: var(--color-scrollbar-thumb);
 	border-radius: 999px;
 }
 
 .reminder-menu::-webkit-scrollbar-thumb:hover {
-	background: rgba(255, 255, 255, 0.33);
+	background: var(--color-border-secondary);
 }
 
 .reminder-option {
 	background: transparent;
 	border: none;
-	color: rgba(255, 255, 255, 0.85);
+	color: var(--color-text-primary);
 	text-align: left;
 	padding: 6px 10px;
 	border-radius: 6px;
@@ -510,7 +512,7 @@ body::-webkit-scrollbar-thumb:hover {
 }
 
 .reminder-option:hover {
-	background: rgba(255, 255, 255, 0.12);
+	background: var(--color-bg-hover);
 	color: var(--color-accent-primary);
 }
 
@@ -523,20 +525,20 @@ body::-webkit-scrollbar-thumb:hover {
 	flex-direction: column;
 	gap: 6px;
 	padding: 6px;
-	border-top: 1px solid rgba(255, 255, 255, 0.08);
+	border-top: 1px solid var(--color-border-subtle);
 }
 
 .reminder-custom label {
 	font-size: 11px;
-	color: rgba(255, 255, 255, 0.65);
+	color: var(--color-text-secondary);
 }
 
 .reminder-custom input[type="datetime-local"] {
-	background: rgba(255, 255, 255, 0.06);
-	border: 1px solid rgba(255, 255, 255, 0.16);
+	background: var(--color-bg-input);
+	border: 1px solid var(--color-border-primary);
 	border-radius: 6px;
 	padding: 6px 8px;
-	color: rgba(255, 255, 255, 0.9);
+	color: var(--color-text-primary);
 	font-size: 12px;
 }
 
@@ -544,7 +546,7 @@ body::-webkit-scrollbar-thumb:hover {
 	background: var(--color-accent-primary);
 	border: none;
 	border-radius: 6px;
-	color: #000;
+	color: var(--color-text-white);
 	font-size: 12px;
 	font-weight: 600;
 	padding: 6px 10px;
@@ -556,12 +558,12 @@ body::-webkit-scrollbar-thumb:hover {
 }
 
 .hover-btn:hover {
-	background: rgba(255, 255, 255, 0.12);
-	border-color: rgba(255, 255, 255, 0.32);
+	background: var(--color-bg-hover);
+	border-color: var(--color-border-secondary);
 }
 
 .hover-btn:active {
-	background: rgba(255, 255, 255, 0.2);
+	background: var(--color-bg-tertiary);
 }
 
 .empty-state {
@@ -569,7 +571,7 @@ body::-webkit-scrollbar-thumb:hover {
 	padding: var(--spacing-sm);
 	text-align: center;
 	font-size: 12px;
-	color: rgba(255, 255, 255, 0.45);
+	color: var(--color-text-tertiary);
 	display: none;
 }
 
@@ -578,7 +580,7 @@ body::-webkit-scrollbar-thumb:hover {
 }
 
 .history-collapsible {
-	border-top: 1px solid rgba(255, 255, 255, 0.08);
+	border-top: 1px solid var(--color-border-subtle);
 	padding-top: var(--spacing-sm);
 }
 
@@ -597,12 +599,12 @@ body::-webkit-scrollbar-thumb:hover {
 }
 
 .tab-scroll::-webkit-scrollbar-thumb {
-	background: rgba(255, 255, 255, 0.2);
+	background: var(--color-scrollbar-thumb);
 	border-radius: 999px;
 }
 
 .tab-scroll::-webkit-scrollbar-thumb:hover {
-	background: rgba(255, 255, 255, 0.33);
+	background: var(--color-border-secondary);
 }
 
 .history-header {
@@ -618,7 +620,7 @@ body::-webkit-scrollbar-thumb:hover {
 
 .loading-indicator {
 	font-size: 11px;
-	color: rgba(255, 255, 255, 0.5);
+	color: var(--color-text-tertiary);
 	text-align: center;
 	margin: var(--spacing-xs) 0 0;
 	display: none;
@@ -636,7 +638,7 @@ body::-webkit-scrollbar-thumb:hover {
 .tab-nav {
 	display: flex;
 	gap: 4px;
-	border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+	border-bottom: 1px solid var(--color-border-subtle);
 	padding-bottom: 6px;
 	margin-bottom: var(--spacing-md);
 }
@@ -644,7 +646,7 @@ body::-webkit-scrollbar-thumb:hover {
 .tab-btn {
 	background: transparent;
 	border: none;
-	color: rgba(255, 255, 255, 0.6);
+	color: var(--color-text-tertiary);
 	padding: 6px 12px;
 	cursor: pointer;
 	border-radius: 6px;
@@ -654,12 +656,12 @@ body::-webkit-scrollbar-thumb:hover {
 }
 
 .tab-btn:hover {
-	background: rgba(255, 255, 255, 0.08);
-	color: rgba(255, 255, 255, 0.9);
+	background: var(--color-bg-hover);
+	color: var(--color-text-primary);
 }
 
 .tab-btn.active {
-	background: rgba(255, 255, 255, 0.12);
+	background: var(--color-bg-hover);
 	color: var(--color-accent-primary);
 	font-weight: 600;
 }
@@ -693,15 +695,15 @@ body::-webkit-scrollbar-thumb:hover {
 	padding: 0;
 	text-transform: uppercase;
 	letter-spacing: 0.5px;
-	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	border-bottom: 1px solid var(--color-border-subtle);
 	padding-bottom: 4px;
 }
 
 .schedule-item {
 	display: grid;
 	grid-template-columns: 1fr auto;
-	background: rgba(255, 255, 255, 0.05);
-	border: 1px solid rgba(255, 255, 255, 0.1);
+	background: var(--color-bg-elevated);
+	border: 1px solid var(--color-border-subtle);
 	border-radius: 10px;
 	padding: var(--spacing-sm);
 	gap: var(--spacing-sm);
@@ -719,13 +721,13 @@ body::-webkit-scrollbar-thumb:hover {
 	font-size: 13px;
 	font-weight: 600;
 	margin: 0;
-	color: var(--color-text-white);
+	color: var(--color-text-primary);
 }
 
 .schedule-rrule {
 	margin: 0;
 	font-size: 11px;
-	color: rgba(255, 255, 255, 0.6);
+	color: var(--color-text-tertiary);
 	font-family: "SF Mono", "Consolas", monospace;
 	word-break: break-all;
 	white-space: pre-wrap;
@@ -745,13 +747,13 @@ body::-webkit-scrollbar-thumb:hover {
 }
 
 .schedule-status.active {
-	background: rgba(76, 175, 80, 0.2);
-	color: #81c784;
+	background: rgba(22, 163, 74, 0.08);
+	color: var(--color-status-success);
 }
 
 .schedule-status.inactive {
-	background: rgba(255, 255, 255, 0.1);
-	color: rgba(255, 255, 255, 0.5);
+	background: var(--color-bg-secondary);
+	color: var(--color-text-tertiary);
 }
 
 /* Dim inactive schedule items */
