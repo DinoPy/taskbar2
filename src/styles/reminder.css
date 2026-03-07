@@ -1,24 +1,4 @@
-:root {
-	color-scheme: dark;
-	--surface: rgba(18, 22, 32, 0.78);
-	--surface-strong: rgba(28, 33, 47, 0.92);
-	--border: rgba(255, 255, 255, 0.08);
-	--border-hover: rgba(255, 255, 255, 0.18);
-	--text: #f2f5ff;
-	--text-muted: rgba(240, 242, 252, 0.68);
-	--accent: #7a9bff;
-	--accent-strong: #9dc1ff;
-	--shadow: 0 24px 60px rgba(7, 9, 14, 0.45);
-	--danger: #ff6f7d;
-	--ok: #51d1a1;
-	--warn: #ffd27f;
-	--pill-bg: rgba(255, 255, 255, 0.08);
-	--pill-active: rgba(255, 255, 255, 0.18);
-	--input-bg: rgba(22, 26, 38, 0.88);
-	--input-border: rgba(255, 255, 255, 0.08);
-	--input-border-focus: rgba(122, 155, 255, 0.65);
-	--font: "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-}
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600&display=swap');
 
 * {
 	box-sizing: border-box;
@@ -28,8 +8,8 @@ body {
 	margin: 0;
 	padding: 80px 52px;
 	background: transparent;
-	font-family: var(--font);
-	color: var(--text);
+	font-family: 'Nunito', sans-serif;
+	color: var(--color-text-primary);
 	overflow: hidden;
 }
 
@@ -41,11 +21,11 @@ body {
 	gap: 18px;
 	padding: 24px 28px 26px;
 	border-radius: 20px;
-	background: var(--surface);
+	background: var(--color-bg-elevated);
 	backdrop-filter: blur(30px);
 	-webkit-backdrop-filter: blur(30px);
-	border: 1px solid var(--border);
-	box-shadow: var(--shadow);
+	border: 1px solid var(--color-border-subtle);
+	box-shadow: 0 20px 48px rgba(0, 0, 0, 0.08);
 }
 
 .reminder-header {
@@ -58,7 +38,7 @@ body {
 .reminder-heading {
 	margin: 0;
 	font-size: 13px;
-	color: var(--text-muted);
+	color: var(--color-text-tertiary);
 	font-weight: 500;
 	letter-spacing: 0.04em;
 	text-transform: uppercase;
@@ -78,7 +58,7 @@ body {
 
 .reminder-progress {
 	font-size: 13px;
-	color: var(--text-muted);
+	color: var(--color-text-tertiary);
 }
 
 .icon-button {
@@ -86,8 +66,8 @@ body {
 	height: 30px;
 	border-radius: 50%;
 	border: 1px solid transparent;
-	background: rgba(255, 255, 255, 0.08);
-	color: var(--text-muted);
+	background: var(--color-bg-secondary);
+	color: var(--color-text-tertiary);
 	font-size: 18px;
 	line-height: 1;
 	display: inline-flex;
@@ -98,9 +78,9 @@ body {
 }
 
 .icon-button:hover {
-	background: rgba(255, 255, 255, 0.18);
-	color: var(--text);
-	border-color: rgba(255, 255, 255, 0.16);
+	background: var(--color-bg-tertiary);
+	color: var(--color-text-primary);
+	border-color: var(--color-border-primary);
 }
 
 .pill-bar {
@@ -113,21 +93,21 @@ body {
 .pill {
 	padding: 4px 12px;
 	border-radius: 12px;
-	background: var(--pill-bg);
-	color: var(--text-muted);
+	background: var(--color-bg-secondary);
+	color: var(--color-text-tertiary);
 	font-size: 13px;
 	font-weight: 500;
 	transition: background 0.2s ease, color 0.2s ease;
 }
 
 .pill.active {
-	background: var(--pill-active);
-	color: var(--text);
+	background: var(--color-bg-tertiary);
+	color: var(--color-text-primary);
 }
 
 .pill.completed {
-	color: var(--accent-strong);
-	border: 1px solid var(--border);
+	color: var(--color-accent-hover);
+	border: 1px solid var(--color-border-subtle);
 }
 
 .pill.hidden {
@@ -146,9 +126,8 @@ body {
 	gap: 12px;
 	padding: 18px 20px;
 	border-radius: 16px;
-	background: var(--surface-strong);
-	border: 1px solid rgba(255, 255, 255, 0.05);
-	box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
+	background: var(--color-bg-secondary);
+	border: 1px solid var(--color-border-subtle);
 	animation: fadeIn 0.18s ease;
 }
 
@@ -166,13 +145,13 @@ body {
 .step-hint {
 	margin: 4px 0 0;
 	font-size: 13px;
-	color: var(--text-muted);
+	color: var(--color-text-tertiary);
 }
 
 .step-error {
 	margin: 0;
 	font-size: 13px;
-	color: var(--danger);
+	color: var(--color-status-error);
 }
 
 input[type="text"],
@@ -180,10 +159,10 @@ input[type="number"],
 select {
 	width: 100%;
 	border-radius: 12px;
-	border: 1px solid var(--input-border);
-	background: var(--input-bg);
+	border: 1px solid var(--color-border-primary);
+	background: var(--color-bg-input);
 	padding: 14px 16px;
-	color: var(--text);
+	color: var(--color-text-primary);
 	font-size: 15px;
 	font-weight: 500;
 	outline: none;
@@ -193,19 +172,19 @@ select {
 input[type="text"]:focus,
 input[type="number"]:focus,
 select:focus {
-	border-color: var(--input-border-focus);
-	box-shadow: 0 0 0 3px rgba(122, 155, 255, 0.25);
+	border-color: var(--color-border-focus);
+	box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
 }
 
 input[type="text"].invalid,
 input[type="number"].invalid,
 select.invalid {
-	border-color: var(--danger);
-	box-shadow: 0 0 0 2px rgba(255, 111, 125, 0.35);
+	border-color: var(--color-status-error);
+	box-shadow: 0 0 0 2px rgba(220, 38, 38, 0.15);
 }
 
 .category-field {
-	background: rgba(24, 28, 40, 0.82);
+	background: var(--color-bg-input);
 }
 
 .category-select {
@@ -217,8 +196,8 @@ select.invalid {
 }
 
 .category-select option {
-	background: var(--input-bg);
-	color: var(--text);
+	background: var(--color-bg-input);
+	color: var(--color-text-primary);
 	max-height: 200px;
 	overflow-y: auto;
 }
@@ -234,9 +213,9 @@ select.invalid {
 	margin: 0;
 	padding: 16px 18px;
 	border-radius: 14px;
-	border: 1px solid var(--input-border);
-	background: linear-gradient(180deg, rgba(30, 35, 48, 0.9), rgba(24, 28, 40, 0.76));
-	color: var(--text);
+	border: 1px solid var(--color-border-primary);
+	background: var(--color-bg-elevated);
+	color: var(--color-text-primary);
 	text-align: left;
 	cursor: pointer;
 	transition: border-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease;
@@ -244,15 +223,15 @@ select.invalid {
 
 .type-option:hover,
 .type-option:focus {
-	border-color: var(--border-hover);
+	border-color: var(--color-border-primary);
 	transform: translateY(-1px);
-	box-shadow: 0 12px 24px rgba(8, 10, 16, 0.35);
+	box-shadow: 0 12px 24px rgba(0, 0, 0, 0.06);
 	outline: none;
 }
 
 .type-option.selected {
-	border-color: var(--accent);
-	box-shadow: 0 16px 36px rgba(68, 103, 200, 0.3);
+	border-color: var(--color-accent-primary);
+	box-shadow: 0 16px 36px rgba(0, 0, 0, 0.08);
 }
 
 .option-label {
@@ -265,15 +244,15 @@ select.invalid {
 .option-detail {
 	display: block;
 	font-size: 13px;
-	color: var(--text-muted);
+	color: var(--color-text-tertiary);
 }
 
 .schedule-preview {
 	margin-top: 6px;
 	padding: 12px 14px;
 	border-radius: 12px;
-	background: rgba(12, 15, 24, 0.65);
-	border: 1px solid rgba(255, 255, 255, 0.04);
+	background: var(--color-bg-secondary);
+	border: 1px solid var(--color-border-subtle);
 	display: flex;
 	flex-direction: column;
 	gap: 12px;
@@ -294,7 +273,7 @@ select.invalid {
 
 .schedule-option-label {
 	font-size: 11px;
-	color: var(--text-muted);
+	color: var(--color-text-tertiary);
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
 }
@@ -309,19 +288,19 @@ select.invalid {
 .schedule-status {
 	margin: 0;
 	font-size: 13px;
-	color: var(--text-muted);
+	color: var(--color-text-tertiary);
 }
 
 .schedule-status.ok {
-	color: var(--ok);
+	color: var(--color-status-success);
 }
 
 .schedule-status.warn {
-	color: var(--warn);
+	color: var(--color-status-warning);
 }
 
 .schedule-status.error {
-	color: var(--danger);
+	color: var(--color-status-error);
 }
 
 .schedule-cards {
@@ -333,15 +312,15 @@ select.invalid {
 .preview-card {
 	padding: 12px 14px;
 	border-radius: 12px;
-	background: rgba(24, 28, 40, 0.9);
-	border: 1px solid rgba(255, 255, 255, 0.06);
+	background: var(--color-bg-elevated);
+	border: 1px solid var(--color-border-subtle);
 }
 
 .preview-card .preview-label {
 	font-size: 12px;
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
-	color: var(--text-muted);
+	color: var(--color-text-tertiary);
 	margin-bottom: 6px;
 	display: block;
 }
@@ -349,28 +328,28 @@ select.invalid {
 .preview-card .preview-value {
 	font-size: 15px;
 	font-weight: 600;
-	color: var(--text);
+	color: var(--color-text-primary);
 }
 
 .preview-card .preview-meta {
 	margin-top: 4px;
 	font-size: 13px;
-	color: var(--text-muted);
+	color: var(--color-text-tertiary);
 }
 
 .preview-card.ok {
-	border-color: rgba(81, 209, 161, 0.3);
-	background: rgba(35, 61, 52, 0.85);
+	border-color: rgba(22, 163, 74, 0.3);
+	background: rgba(22, 163, 74, 0.06);
 }
 
 .preview-card.info {
-	border-color: rgba(122, 155, 255, 0.25);
-	background: rgba(34, 46, 72, 0.85);
+	border-color: rgba(59, 130, 246, 0.25);
+	background: rgba(59, 130, 246, 0.06);
 }
 
 .preview-card.warn {
-	border-color: rgba(255, 210, 127, 0.25);
-	background: rgba(70, 57, 28, 0.85);
+	border-color: rgba(234, 88, 12, 0.25);
+	background: rgba(234, 88, 12, 0.06);
 }
 
 .lead-inputs {
@@ -393,14 +372,14 @@ select.invalid {
 	flex: 1;
 	padding: 10px 12px;
 	border-radius: 12px;
-	background: rgba(24, 28, 40, 0.82);
-	border: 1px solid var(--input-border);
+	background: var(--color-bg-input);
+	border: 1px solid var(--color-border-primary);
 	transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .lead-field:focus-within {
-	border-color: var(--input-border-focus);
-	box-shadow: 0 0 0 2px rgba(122, 155, 255, 0.25);
+	border-color: var(--color-border-focus);
+	box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.08);
 }
 
 .lead-field input {
@@ -415,7 +394,7 @@ select.invalid {
 }
 
 .suffix {
-	color: var(--text-muted);
+	color: var(--color-text-tertiary);
 	font-size: 13px;
 	text-transform: uppercase;
 	letter-spacing: 0.08em;
@@ -426,7 +405,7 @@ select.invalid {
 	justify-content: space-between;
 	align-items: center;
 	font-size: 12px;
-	color: var(--text-muted);
+	color: var(--color-text-tertiary);
 }
 
 .footer-hints {
