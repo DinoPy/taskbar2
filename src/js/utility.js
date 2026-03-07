@@ -509,12 +509,12 @@ export class Task {
             if (incompleteCount > 0) {
                 badge.classList.add('incomplete');
                 badge.classList.remove('complete');
-                badge.textContent = `${completed}/${totalRequired}`;
+                badge.textContent = `\u2610 ${completed}/${totalRequired}`;
                 badge.title = `${completed} of ${totalRequired} required items complete`;
             } else {
                 badge.classList.add('complete');
                 badge.classList.remove('incomplete');
-                badge.textContent = `${totalRequired}/${totalRequired}`;
+                badge.textContent = `\u2713 ${totalRequired}/${totalRequired}`;
                 badge.title = 'All list items complete';
             }
         }

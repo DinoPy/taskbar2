@@ -114,6 +114,7 @@ body {
 
 .taskListBadge.incomplete {
     color: var(--color-text-secondary);
+    opacity: 0.6;
 }
 
 .taskListBadge.complete {
