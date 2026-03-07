@@ -442,11 +442,11 @@ body {
 }
 
 .calendar-event--schedule {
-    background: rgba(249, 115, 22, 0.12);
-    border-left-color: #f97316;
+    background: rgba(79, 248, 210, 0.12);
+    border-left-color: var(--color-accent-primary);
 }
 .calendar-event--schedule:hover {
-    background: rgba(249, 115, 22, 0.20);
+    background: rgba(79, 248, 210, 0.20);
 }
 
 .calendar-event--reminder {

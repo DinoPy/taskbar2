@@ -21,7 +21,7 @@ export const createHelpWindow = ({ onClose } = {}) => {
 		},
 	});
 
-	helpWindow.setBackgroundColor("#faf9f7");
+	helpWindow.setBackgroundColor("#121B22");
 	helpWindow.loadFile("./src/html/help.html");
 
 	if (onClose) {

@@ -26,7 +26,7 @@ export function createTemplateWindow({ screenIndex, onClose } = {}) {
 		frame: false,
 		resizable: true,
 		title: "Task Templates",
-		backgroundColor: "#faf9f7",
+		backgroundColor: "#121B22",
 		webPreferences: {
 			nodeIntegration: true,
 			contextIsolation: false,

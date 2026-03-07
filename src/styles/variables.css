@@ -1,53 +1,54 @@
 /* CSS Custom Properties - Design System */
 :root {
 	box-sizing: content-box;
+	color-scheme: dark;
 	/* ===========================================
-	   OKLCH LIGHT THEME COLOR SYSTEM
+	   DARK THEME - TURSO-INSPIRED GREEN ACCENT
 	   =========================================== */
 
 	/* Hue Parameters */
-	--hue-primary: 65;
-	/* True warm hue */
-	--hue-accent: 38;
-	/* Warm orange hue */
+	--hue-primary: 210;
+	/* Cool dark blue-teal */
+	--hue-accent: 165;
+	/* Mint/teal green */
 
-	/* Background Colors */
-	--color-bg-root: oklch(0.98 0.005 var(--hue-primary));
-	--color-bg-primary: oklch(0.96 0.008 var(--hue-primary));
-	--color-bg-secondary: oklch(0.93 0.010 var(--hue-primary));
-	--color-bg-tertiary: oklch(0.89 0.012 var(--hue-primary));
-	--color-bg-elevated: oklch(0.99 0.003 var(--hue-primary));
-	--color-bg-hover: oklch(0.95 0.010 var(--hue-primary));
-	--color-bg-sidebar: oklch(0.96 0.006 var(--hue-primary));
-	--color-bg-header: oklch(0.97 0.006 var(--hue-primary));
-	--color-bg-overlay: rgba(0, 0, 0, 0.35);
-	--color-bg-input: oklch(0.99 0.003 var(--hue-primary));
+	/* Background Colors - Deep dark with blue-teal tint */
+	--color-bg-root: oklch(0.16 0.015 var(--hue-primary));
+	--color-bg-primary: oklch(0.19 0.015 var(--hue-primary));
+	--color-bg-secondary: oklch(0.23 0.015 var(--hue-primary));
+	--color-bg-tertiary: oklch(0.28 0.015 var(--hue-primary));
+	--color-bg-elevated: oklch(0.21 0.018 var(--hue-primary));
+	--color-bg-hover: oklch(0.26 0.015 var(--hue-primary));
+	--color-bg-sidebar: oklch(0.18 0.012 var(--hue-primary));
+	--color-bg-header: oklch(0.17 0.012 var(--hue-primary));
+	--color-bg-overlay: rgba(0, 0, 0, 0.55);
+	--color-bg-input: oklch(0.15 0.012 var(--hue-primary));
 
 	/* Text Colors */
-	--color-text-primary: oklch(0.22 0.02 var(--hue-primary));
-	--color-text-secondary: oklch(0.45 0.015 var(--hue-primary));
-	--color-text-tertiary: oklch(0.58 0.01 var(--hue-primary));
-	--color-text-white: oklch(0.98 0.005 var(--hue-primary));
-	--color-text-warning: oklch(0.50 0.18 var(--hue-accent));
+	--color-text-primary: oklch(0.93 0.005 var(--hue-primary));
+	--color-text-secondary: oklch(0.70 0.010 var(--hue-primary));
+	--color-text-tertiary: oklch(0.53 0.010 var(--hue-primary));
+	--color-text-white: oklch(0.97 0.003 var(--hue-primary));
+	--color-text-warning: oklch(0.75 0.15 var(--hue-accent));
 
 	/* Border Colors */
-	--color-border-primary: oklch(0.87 0.008 var(--hue-primary));
-	--color-border-secondary: oklch(0.78 0.012 var(--hue-primary));
-	--color-border-focus: oklch(0.65 0.22 var(--hue-accent));
-	--color-border-subtle: oklch(0.92 0.005 var(--hue-primary));
-	--color-border-table: oklch(0.90 0.006 var(--hue-primary));
+	--color-border-primary: oklch(0.30 0.012 var(--hue-primary));
+	--color-border-secondary: oklch(0.38 0.015 var(--hue-primary));
+	--color-border-focus: oklch(0.75 0.18 var(--hue-accent));
+	--color-border-subtle: oklch(0.25 0.008 var(--hue-primary));
+	--color-border-table: oklch(0.28 0.010 var(--hue-primary));
 
 	/* Scrollbar Colors */
-	--color-scrollbar-thumb: oklch(0.80 0.008 var(--hue-primary));
-	--color-scrollbar-track: oklch(0.94 0.004 var(--hue-primary));
+	--color-scrollbar-thumb: oklch(0.35 0.012 var(--hue-primary));
+	--color-scrollbar-track: oklch(0.18 0.008 var(--hue-primary));
 
-	/* Accent Colors */
-	--color-accent-primary: oklch(0.65 0.22 var(--hue-accent));
-	--color-accent-hover: oklch(0.58 0.22 var(--hue-accent));
-	--color-accent-active: oklch(0.50 0.22 var(--hue-accent));
-	--color-accent-light: oklch(0.78 0.15 var(--hue-accent));
-	--color-accent-subtle: oklch(0.94 0.04 var(--hue-accent));
-	--color-accent-dark: oklch(0.40 0.22 var(--hue-accent));
+	/* Accent Colors - Mint/Teal Green */
+	--color-accent-primary: oklch(0.78 0.17 var(--hue-accent));
+	--color-accent-hover: oklch(0.72 0.17 var(--hue-accent));
+	--color-accent-active: oklch(0.65 0.17 var(--hue-accent));
+	--color-accent-light: oklch(0.85 0.12 var(--hue-accent));
+	--color-accent-subtle: oklch(0.25 0.04 var(--hue-accent));
+	--color-accent-dark: oklch(0.45 0.15 var(--hue-accent));
 
 	/* Component Colors */
 	--color-task-bg: var(--color-bg-elevated);
@@ -71,10 +72,10 @@
 	--color-hover-subtle: var(--color-bg-hover);
 
 	/* Status Colors */
-	--color-status-error: #dc2626;
-	--color-status-success: #16a34a;
-	--color-status-warning: #ea580c;
-	--color-status-info: #f97316;
+	--color-status-error: #ff6663;
+	--color-status-success: #4FF8D2;
+	--color-status-warning: #E0CA3C;
+	--color-status-info: #4FF8D2;
 
 	/* Backward Compatibility - Legacy Variables */
 	--color-primary: var(--color-bg-primary);
@@ -84,18 +85,18 @@
 	--color-bg-base: var(--color-bg-root);
 
 	/* Urgency Colors */
-	--color-urgency-low: #4CAF50;
-	--color-urgency-medium: #FFC107;
-	--color-urgency-medium-high: #FF9800;
-	--color-urgency-high: #FF5722;
+	--color-urgency-low: #4FF8D2;
+	--color-urgency-medium: #E0CA3C;
+	--color-urgency-medium-high: #E0953C;
+	--color-urgency-high: #ff6663;
 	--color-urgency-critical: #F44336;
 
-	/* Neon Colors */
-	--color-neon-red: #ff0000;
-	--color-neon-orange-red: #ff4500;
-	--color-neon-dark-orange: #ff8c00;
-	--color-neon-orange: #ffa500;
-	--color-neon-yellow: #ffff00;
+	/* Neon Colors - Bright against dark for urgency countdown */
+	--color-neon-red: #ff6663;
+	--color-neon-orange-red: #ff6663;
+	--color-neon-dark-orange: #E0953C;
+	--color-neon-orange: #E0CA3C;
+	--color-neon-yellow: #4FF8D2;
 
 	/* Dropdown Colors */
 	--color-dropdown-edit-bg: var(--color-bg-elevated);
@@ -218,12 +219,12 @@
 	--border-radius-button: 100%;
 
 	/* ===========================================
-	   SHADOWS
+	   SHADOWS - Deeper for dark theme
 	   =========================================== */
 
-	--shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
-	--shadow-md: 0 4px 6px rgba(0, 0, 0, 0.1);
-	--shadow-lg: 0 10px 15px rgba(0, 0, 0, 0.1);
+	--shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4);
+	--shadow-md: 0 4px 8px rgba(0, 0, 0, 0.5);
+	--shadow-lg: 0 10px 20px rgba(0, 0, 0, 0.6);
 
 	/* ===========================================
 	   ANIMATIONS & TRANSITIONS

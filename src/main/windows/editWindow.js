@@ -30,7 +30,7 @@ export const createEditWindow = ({
 		},
 	});
 
-	editWindow.setBackgroundColor("#faf9f7");
+	editWindow.setBackgroundColor("#121B22");
 	editWindow.loadFile("src/html/child.html");
 
 	editWindow.webContents.once("dom-ready", async () => {

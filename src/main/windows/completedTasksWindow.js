@@ -28,7 +28,7 @@ export const createCompletedTasksWindow = ({
 		},
 	});
 
-	completedTasksWindow.setBackgroundColor("#faf9f7");
+	completedTasksWindow.setBackgroundColor("#121B22");
 	completedTasksWindow.loadFile("./src/html/completedTasks.html");
 
 	if (onDidFinishLoad) {

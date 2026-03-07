@@ -25,7 +25,7 @@ export const createCustomCommandsWindow = ({
 		},
 	});
 
-	customWindow.setBackgroundColor("#faf9f7");
+	customWindow.setBackgroundColor("#121B22");
 	customWindow.loadFile("./src/html/customCommands.html");
 
 	customWindow.webContents.once("did-finish-load", () => {
