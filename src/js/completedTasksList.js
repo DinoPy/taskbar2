@@ -26,9 +26,6 @@ const createTableElement = () => {
 	const tableHeader = document.createElement('thead');
 	const tableHeadRow = document.createElement('tr');
 
-	const idHead = document.createElement('th');
-	idHead.textContent = 'id';
-
 	const titleHead = document.createElement('th');
 	titleHead.textContent = 'title';
 
@@ -48,7 +45,7 @@ const createTableElement = () => {
 	const actionsHead = document.createElement('th');
 	actionsHead.textContent = 'actions';
 
-	tableHeadRow.append(idHead, titleHead, tagsHead, categoryHead, durationHead, completedAtHead, actionsHead);
+	tableHeadRow.append(titleHead, tagsHead, categoryHead, durationHead, completedAtHead, actionsHead);
 	tableHeader.append(tableHeadRow);
 	TABLEEL.append(tableHeader);
 
@@ -81,10 +78,8 @@ const createTaskListElements = (data, tableBody) => {
 	
 	// Sort dates in descending order (most recent first)
 	const sortedDateKeys = Object.keys(groupedByDate).sort((a, b) => {
-		return new Date(b) - new Date(a);
+		return new Date(a) - new Date(b);
 	});
-	
-	let globalIndex = 1;
 	
 	sortedDateKeys.forEach((dateKey) => {
 		const dateGroup = groupedByDate[dateKey];
@@ -94,7 +89,7 @@ const createTaskListElements = (data, tableBody) => {
 		dateHeaderRow.classList.add('date-header-row');
 		
 		const dateHeaderCell = document.createElement('td');
-		dateHeaderCell.colSpan = 7; // Span all columns (id, title, tags, category, duration, completed_at, actions)
+		dateHeaderCell.colSpan = 6; // Span all columns (title, tags, category, duration, completed_at, actions)
 		
 		// Calculate daily stats
 		const taskCount = dateGroup.tasks.length;
@@ -118,9 +113,6 @@ const createTaskListElements = (data, tableBody) => {
 		
 		sortedTasks.forEach((t, taskIndex) => {
 				const tableRow = document.createElement('tr');
-
-				const indexField = document.createElement('td');
-				indexField.textContent = globalIndex++;
 
 				const titleField = document.createElement('td');
 				titleField.textContent = t.title;
@@ -156,7 +148,7 @@ const createTaskListElements = (data, tableBody) => {
 				const editBtn = document.createElement('button');
 				editBtn.classList.add('action-btn', 'edit-btn');
 				editBtn.title = 'Edit task';
-				editBtn.innerHTML = '✏️';
+				editBtn.textContent = 'Edit';
 				editBtn.addEventListener("click", (e) => {
 					e.stopPropagation();
 					ipc.send("toggle_given_task_edit", {
@@ -172,7 +164,7 @@ const createTaskListElements = (data, tableBody) => {
 				const duplicateBtn = document.createElement('button');
 				duplicateBtn.classList.add('action-btn', 'duplicate-btn');
 				duplicateBtn.title = 'Duplicate task';
-				duplicateBtn.innerHTML = '📋';
+				duplicateBtn.textContent = 'Copy';
 				duplicateBtn.addEventListener("click", (e) => {
 					e.stopPropagation();
 					ipc.send("duplicate_completed_task", {
@@ -189,7 +181,7 @@ const createTaskListElements = (data, tableBody) => {
 				const splitBtn = document.createElement('button');
 				splitBtn.classList.add('action-btn', 'split-btn');
 				splitBtn.title = 'Split task';
-				splitBtn.innerHTML = '✂️';
+				splitBtn.textContent = 'Split';
 				splitBtn.addEventListener("click", (e) => {
 					e.stopPropagation();
 					ipc.send("split_completed_task", {
@@ -202,26 +194,21 @@ const createTaskListElements = (data, tableBody) => {
 					});
 				});
 				
-				// Separator
-				const separator = document.createElement('span');
-				separator.classList.add('action-separator');
-				separator.innerHTML = '|';
-				
 				// Delete button
 				const deleteBtn = document.createElement('button');
 				deleteBtn.classList.add('action-btn', 'delete-btn');
 				deleteBtn.title = 'Delete task';
-				deleteBtn.innerHTML = '🗑️';
+				deleteBtn.textContent = 'Delete';
 				deleteBtn.addEventListener("click", (e) => {
 					e.stopPropagation();
 					showDeleteConfirmation(t);
 				});
 				
-				actionsContainer.append(editBtn, duplicateBtn, splitBtn, separator, deleteBtn);
+				actionsContainer.append(editBtn, duplicateBtn, splitBtn, deleteBtn);
 				actionsField.append(actionsContainer);
 
 				tableRow.title = t.title;
-				tableRow.append(indexField, titleField, tagsField, categoryField, durationField, completedAtField, actionsField);
+				tableRow.append(titleField, tagsField, categoryField, durationField, completedAtField, actionsField);
 				
 				// Add spacing class to last task row of each date group (except the last date group)
 				const isLastTaskOfGroup = taskIndex === sortedTasks.length - 1;
