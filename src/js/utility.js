@@ -472,14 +472,14 @@ export class Task {
             // List badge (hidden by default, shown when list data is available)
             this.children.listBadgeEl.className = 'taskListBadge';
 
-            // Add category, due date, badge, and timer to top row
+            // Add category, due date, and timer to top row
             topRowEl.append(this.children.categoryEl);
             topRowEl.append(dueDateEl);
-            topRowEl.append(this.children.listBadgeEl);
             topRowEl.append(this.children.timerEl);
 
             this.taskEl.append(topRowEl);
             this.taskEl.append(this.children.titleEl);
+            this.taskEl.append(this.children.listBadgeEl);
             this.taskEl.append(this.children.indexEl);
         };
 

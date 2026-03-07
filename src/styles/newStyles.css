@@ -100,30 +100,24 @@ body {
 
 .taskListBadge {
     display: none;
-    min-width: 16px;
-    height: 16px;
-    line-height: 16px;
-    text-align: center;
-    font-size: 9px;
-    font-weight: 700;
-    border-radius: 8px;
-    padding: 0 4px;
+    position: absolute;
+    bottom: 0px;
+    left: 3px;
+    font-size: var(--font-size-index);
+    line-height: 1;
     pointer-events: none;
-    flex-shrink: 0;
 }
 
 .taskListBadge.visible {
-    display: inline-block;
+    display: block;
 }
 
 .taskListBadge.incomplete {
-    background: oklch(0.55 0.18 55);
-    color: oklch(0.98 0.02 55);
+    color: var(--color-text-secondary);
 }
 
 .taskListBadge.complete {
-    background: oklch(0.50 0.14 145);
-    color: oklch(0.95 0.02 145);
+    color: oklch(0.55 0.14 145);
 }
 
 .mainContent {
