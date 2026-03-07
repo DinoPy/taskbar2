@@ -11,7 +11,7 @@ p {
 
 html {
 	height: 100%;
-	color: var(--color-text-secondary);
+	color: var(--color-text-primary);
 	background-color: var(--color-primary);
 	border: var(--border-width) solid var(--color-primary-border);
 }
@@ -127,7 +127,7 @@ body {
 	right: 8px;
 	font-size: 10px;
 	font-weight: normal;
-	color: var(--color-primary);
+	color: var(--color-text-white);
 }
 
 .addTaskContainer {
