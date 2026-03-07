@@ -54,7 +54,7 @@
 	/* Component Colors */
 	--color-task-bg: var(--color-bg-elevated);
 	--color-task-border: var(--color-border-primary);
-	--color-task-active-bg: var(--color-accent-primary);
+	--color-task-active-bg: oklch(0.45 0.12 var(--hue-accent));
 	--color-task-active-border: var(--color-accent-hover);
 
 	/* Input Colors */
