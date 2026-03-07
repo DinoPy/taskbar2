@@ -2,6 +2,10 @@ const { ipcRenderer } = require("electron");
 
 import * as state from "./financeState.js";
 import * as utils from "./financeUtils.js";
+import * as dashboard from "./financeDashboard.js";
+import * as accounts from "./financeAccounts.js";
+import * as transactions from "./financeTransactions.js";
+import * as transfers from "./financeTransfers.js";
 
 // =========================================
 // Send helper
@@ -42,11 +46,15 @@ function createPlaceholder(name) {
 	};
 }
 
-// Section modules — placeholders until real ones are built
+// Section modules — real implementations + placeholders for unbuilt ones
 const sections = {};
 for (const item of NAV_ITEMS) {
 	sections[item.id] = createPlaceholder(item.label);
 }
+sections["dashboard"] = dashboard;
+sections["accounts"] = accounts;
+sections["transactions"] = transactions;
+sections["transfers"] = transfers;
 
 // =========================================
 // State
@@ -268,6 +276,13 @@ document.getElementById("fin-close-btn").onclick = () => window.close();
 // =========================================
 // Init
 // =========================================
+
+// Init section modules with shared context
+const sharedCtx = { sendEvent, showToast, switchSection, state, utils };
+dashboard.init(sharedCtx);
+accounts.init(sharedCtx);
+transactions.init(sharedCtx);
+transfers.init(sharedCtx);
 
 renderSidebar();
 switchSection("dashboard");
