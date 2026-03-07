@@ -6,54 +6,48 @@
 	   =========================================== */
 
 	/* Hue Parameters */
-	--hue-primary: 80;
-	/* Olive/sage hue */
-	--hue-secondary: 100;
-	/* Yellow-green hue */
-	--hue-accent: 20;
-	/* Orange-red hue */
-	--hue-accent-light: 30;
-	/* Orange hue */
-	--hue-accent-dark: 15;
-	/* Red-orange hue */
+	--hue-primary: 65;
+	/* True warm hue */
+	--hue-accent: 38;
+	/* Warm orange hue */
 
 	/* Background Colors */
-	--color-bg-root: oklch(0.97 0.02 var(--hue-primary));
-	--color-bg-primary: oklch(0.95 0.03 var(--hue-primary));
-	--color-bg-secondary: oklch(0.90 0.04 var(--hue-primary));
-	--color-bg-tertiary: oklch(0.85 0.05 var(--hue-primary));
-	--color-bg-elevated: oklch(0.98 0.01 var(--hue-primary));
-	--color-bg-hover: oklch(0.88 0.06 var(--hue-primary));
-	--color-bg-sidebar: oklch(0.93 0.03 var(--hue-primary));
-	--color-bg-header: oklch(0.94 0.04 var(--hue-primary));
+	--color-bg-root: oklch(0.98 0.005 var(--hue-primary));
+	--color-bg-primary: oklch(0.96 0.008 var(--hue-primary));
+	--color-bg-secondary: oklch(0.93 0.010 var(--hue-primary));
+	--color-bg-tertiary: oklch(0.89 0.012 var(--hue-primary));
+	--color-bg-elevated: oklch(0.99 0.003 var(--hue-primary));
+	--color-bg-hover: oklch(0.95 0.010 var(--hue-primary));
+	--color-bg-sidebar: oklch(0.96 0.006 var(--hue-primary));
+	--color-bg-header: oklch(0.97 0.006 var(--hue-primary));
 	--color-bg-overlay: rgba(0, 0, 0, 0.35);
-	--color-bg-input: oklch(0.98 0.01 var(--hue-primary));
+	--color-bg-input: oklch(0.99 0.003 var(--hue-primary));
 
 	/* Text Colors */
-	--color-text-primary: oklch(0.25 0.06 var(--hue-primary));
-	--color-text-secondary: oklch(0.40 0.05 var(--hue-primary));
-	--color-text-tertiary: oklch(0.55 0.04 var(--hue-primary));
-	--color-text-white: oklch(0.95 0.02 var(--hue-primary));
-	--color-text-warning: oklch(0.35 0.15 var(--hue-accent));
+	--color-text-primary: oklch(0.22 0.02 var(--hue-primary));
+	--color-text-secondary: oklch(0.45 0.015 var(--hue-primary));
+	--color-text-tertiary: oklch(0.58 0.01 var(--hue-primary));
+	--color-text-white: oklch(0.98 0.005 var(--hue-primary));
+	--color-text-warning: oklch(0.50 0.18 var(--hue-accent));
 
 	/* Border Colors */
-	--color-border-primary: oklch(0.82 0.05 var(--hue-primary));
-	--color-border-secondary: oklch(0.72 0.07 var(--hue-primary));
-	--color-border-focus: oklch(0.35 0.15 var(--hue-accent));
-	--color-border-subtle: oklch(0.90 0.03 var(--hue-primary));
-	--color-border-table: oklch(0.88 0.03 var(--hue-primary));
+	--color-border-primary: oklch(0.87 0.008 var(--hue-primary));
+	--color-border-secondary: oklch(0.78 0.012 var(--hue-primary));
+	--color-border-focus: oklch(0.65 0.22 var(--hue-accent));
+	--color-border-subtle: oklch(0.92 0.005 var(--hue-primary));
+	--color-border-table: oklch(0.90 0.006 var(--hue-primary));
 
 	/* Scrollbar Colors */
-	--color-scrollbar-thumb: oklch(0.75 0.05 var(--hue-primary));
-	--color-scrollbar-track: oklch(0.92 0.02 var(--hue-primary));
+	--color-scrollbar-thumb: oklch(0.80 0.008 var(--hue-primary));
+	--color-scrollbar-track: oklch(0.94 0.004 var(--hue-primary));
 
 	/* Accent Colors */
-	--color-accent-primary: oklch(0.55 0.20 var(--hue-accent));
-	--color-accent-hover: oklch(0.45 0.20 var(--hue-accent));
-	--color-accent-active: oklch(0.35 0.20 var(--hue-accent));
-	--color-accent-light: oklch(0.75 0.20 var(--hue-accent-light));
-	--color-accent-subtle: oklch(0.90 0.10 var(--hue-accent-light));
-	--color-accent-dark: oklch(0.25 0.20 var(--hue-accent-dark));
+	--color-accent-primary: oklch(0.65 0.22 var(--hue-accent));
+	--color-accent-hover: oklch(0.58 0.22 var(--hue-accent));
+	--color-accent-active: oklch(0.50 0.22 var(--hue-accent));
+	--color-accent-light: oklch(0.78 0.15 var(--hue-accent));
+	--color-accent-subtle: oklch(0.94 0.04 var(--hue-accent));
+	--color-accent-dark: oklch(0.40 0.22 var(--hue-accent));
 
 	/* Component Colors */
 	--color-task-bg: var(--color-bg-elevated);
