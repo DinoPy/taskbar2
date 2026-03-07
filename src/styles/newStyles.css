@@ -283,6 +283,7 @@ body {
 .task.activeTask {
 	background-color: var(--color-task-active-bg);
 	border: none; /* Remove the old darker border */
+	border-left: 3px solid var(--color-accent-primary);
 	animation: 
 		bounce var(--animation-bounce-duration) ease-in-out infinite;
 	transform-origin: center;
@@ -445,14 +446,15 @@ body {
 }
 
 .noActiveTaskWarning {
-	color: var(--color-text-warning);
-	font-weight: 900;
-	font-size: var(--font-size-warning);
+	color: var(--color-text-tertiary);
+	font-size: var(--font-size-xl);
+	font-weight: 600;
 	position: absolute;
-	left: 50%;
 	top: 50%;
-	transform: translateX(-50%) translateY(-50%);
-	text-shadow: 0px 0px 1px rgba(0,0,0,0.1), 0px 0px 10px rgba(0,0,0,0.05);
+	left: 50%;
+	transform: translate(-50%, -50%);
+	text-align: center;
+	line-height: 1.6;
 }
 
 .invisible {
