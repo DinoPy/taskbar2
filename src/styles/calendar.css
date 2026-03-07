@@ -1,7 +1,7 @@
 @import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600&display=swap');
 
 :root {
-    --time-col-width: 60px;
+    --time-col-width: 72px;
     --header-height: 50px;
     --all-day-lane-height: 28px;
     --slot-height: 60px;
@@ -286,10 +286,12 @@ body {
     height: var(--slot-height);
     display: flex;
     align-items: flex-start;
-    justify-content: center;
+    justify-content: flex-end;
     font-size: 11px;
     color: var(--color-text-tertiary);
     transform: none;
+    text-align: right;
+    padding-right: 8px;
 }
 
 .time-slot-label--all-day {
@@ -440,20 +442,20 @@ body {
 }
 
 .calendar-event--schedule {
-    background: rgba(255, 186, 110, 0.25);
-    border-left-color: #ffb347;
+    background: rgba(249, 115, 22, 0.12);
+    border-left-color: #f97316;
 }
 .calendar-event--schedule:hover {
-    background: rgba(255, 186, 110, 0.35);
+    background: rgba(249, 115, 22, 0.20);
 }
 
 .calendar-event--reminder {
-    background: rgba(100, 120, 220, 0.12);
-    border-left-color: #7d86ff;
+    background: rgba(59, 130, 246, 0.12);
+    border-left-color: #3b82f6;
     min-height: 20px;
 }
 .calendar-event--reminder:hover {
-    background: rgba(100, 120, 220, 0.20);
+    background: rgba(59, 130, 246, 0.20);
 }
 
 .calendar-event--reminder .event-title {
@@ -470,11 +472,11 @@ body {
 }
 
 .calendar-event--task {
-    background: rgba(60, 170, 170, 0.18);
-    border-left-color: #5ac7c7;
+    background: rgba(20, 184, 166, 0.12);
+    border-left-color: #14b8a6;
 }
 .calendar-event--task:hover {
-    background: rgba(60, 170, 170, 0.25);
+    background: rgba(20, 184, 166, 0.20);
 }
 
 .calendar-event--canceled {
@@ -514,7 +516,7 @@ body {
     left: 0;
     right: 0;
     height: 2px;
-    background: #ff4d4d;
+    background: var(--color-accent-primary);
     z-index: 20;
     pointer-events: none;
 }
@@ -527,7 +529,7 @@ body {
     width: 10px;
     height: 10px;
     border-radius: 50%;
-    background: #ff4d4d;
+    background: var(--color-accent-primary);
 }
 
 .calendar-footer {
