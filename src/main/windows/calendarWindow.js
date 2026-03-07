@@ -28,7 +28,7 @@ export function createCalendarWindow({ screenIndex, onClose } = {}) {
 		frame: false,
 		resizable: true,
 		title: "Scheduler Calendar",
-		backgroundColor: "#f3f1ec",
+		backgroundColor: "#faf9f7",
 		webPreferences: {
 			nodeIntegration: true,
 			contextIsolation: false,

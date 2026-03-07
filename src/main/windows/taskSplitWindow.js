@@ -26,7 +26,7 @@ export const createTaskSplitWindow = ({
 			devTools: true,
 		},
 	});
-	splitWindow.setBackgroundColor = "#1b1d23";
+	splitWindow.setBackgroundColor("#faf9f7");
 	splitWindow.loadFile("src/html/taskSplit.html");
 
 	splitWindow.webContents.once("dom-ready", async () => {

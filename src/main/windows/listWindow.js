@@ -25,7 +25,7 @@ export const createListWindow = ({ props, onClose } = {}) => {
 			devTools: true,
 		},
 	});
-	listWindow.setBackgroundColor("#f3f1ec");
+	listWindow.setBackgroundColor("#faf9f7");
 	listWindow.loadFile("src/html/list.html");
 	listWindow.webContents.once("dom-ready", () => {
 		listWindow.show();
