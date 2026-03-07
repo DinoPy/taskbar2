@@ -43,12 +43,13 @@
 	--color-scrollbar-track: oklch(0.18 0.008 var(--hue-primary));
 
 	/* Accent Colors - Mint/Teal Green */
-	--color-accent-primary: oklch(0.78 0.17 var(--hue-accent));
-	--color-accent-hover: oklch(0.72 0.17 var(--hue-accent));
-	--color-accent-active: oklch(0.65 0.17 var(--hue-accent));
-	--color-accent-light: oklch(0.85 0.12 var(--hue-accent));
+	--color-accent-primary: oklch(0.72 0.17 var(--hue-accent));
+	--color-accent-hover: oklch(0.65 0.17 var(--hue-accent));
+	--color-accent-active: oklch(0.58 0.17 var(--hue-accent));
+	--color-accent-light: oklch(0.82 0.14 var(--hue-accent));
 	--color-accent-subtle: oklch(0.25 0.04 var(--hue-accent));
 	--color-accent-dark: oklch(0.45 0.15 var(--hue-accent));
+	--color-accent-glow: oklch(0.90 0.18 var(--hue-accent));
 
 	/* Component Colors */
 	--color-task-bg: var(--color-bg-elevated);
@@ -65,8 +66,11 @@
 	--color-button-primary: var(--color-accent-primary);
 	--color-button-primary-hover: var(--color-accent-hover);
 	--color-button-primary-active: var(--color-accent-active);
+	--color-button-primary-text: var(--color-bg-root);
 	--color-button-secondary: var(--color-bg-tertiary);
 	--color-button-secondary-hover: var(--color-border-secondary);
+	--color-button-hover: var(--color-bg-hover);
+	--color-button-active: var(--color-bg-tertiary);
 
 	/* Hover Colors */
 	--color-hover-subtle: var(--color-bg-hover);
