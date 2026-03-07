@@ -8,7 +8,7 @@ body {
 	margin: 0;
 	padding: var(--spacing-xl);
 	font-family: 'Nunito', sans-serif;
-	color: var(--color-text-white);
+	color: var(--color-text-primary);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -24,20 +24,20 @@ body {
 	display: flex;
 	flex-direction: column;
 	gap: var(--spacing-md);
-	box-shadow: 0 20px 48px rgba(0, 0, 0, 0.45);
-	border: 1px solid rgba(255, 255, 255, 0.05);
+	box-shadow: 0 20px 48px rgba(0, 0, 0, 0.08);
+	border: 1px solid var(--color-border-primary);
 }
 
 .confirm-card h1 {
 	font-size: var(--font-size-3xl);
 	margin: 0;
-	color: var(--color-text-white);
+	color: var(--color-text-primary);
 }
 
 .confirm-summary {
 	font-size: var(--font-size-md);
 	margin: 0;
-	color: rgba(255, 255, 255, 0.72);
+	color: var(--color-text-secondary);
 }
 
 .confirm-task-list {
@@ -47,7 +47,7 @@ body {
 	flex-direction: column;
 	gap: var(--spacing-xs);
 	font-size: var(--font-size-md);
-	color: rgba(255, 255, 255, 0.88);
+	color: var(--color-text-primary);
 	max-height: 180px;
 	overflow-y: auto;
 }
@@ -75,12 +75,13 @@ body {
 }
 
 .confirm-button.cancel {
-	background: rgba(255, 255, 255, 0.08);
-	border-color: rgba(255, 255, 255, 0.12);
+	background: var(--color-bg-secondary);
+	border-color: var(--color-border-primary);
+	color: var(--color-text-primary);
 }
 
 .confirm-button.cancel:hover {
-	background: rgba(255, 255, 255, 0.18);
+	background: var(--color-bg-tertiary);
 }
 
 .confirm-button.danger {
@@ -99,7 +100,7 @@ body {
 .confirm-button:focus-visible {
 	outline: 2px solid var(--color-status-error);
 	outline-offset: 3px;
-	box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.2);
+	box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.1);
 }
 
 /* List status section */
@@ -114,7 +115,7 @@ body {
 .list-status-header {
 	font-size: var(--font-size-md);
 	font-weight: 600;
-	color: rgba(255, 255, 255, 0.82);
+	color: var(--color-text-primary);
 	margin: 0 0 var(--spacing-xs) 0;
 }
 
@@ -124,21 +125,21 @@ body {
 	gap: var(--spacing-sm);
 	padding: var(--spacing-xs) var(--spacing-sm);
 	border-radius: 6px;
-	background: rgba(255, 255, 255, 0.04);
+	background: var(--color-bg-elevated);
 	margin-bottom: var(--spacing-xs);
 	font-size: var(--font-size-sm);
 }
 
 .list-status-name {
 	flex-shrink: 0;
-	color: rgba(255, 255, 255, 0.85);
+	color: var(--color-text-primary);
 	font-weight: 500;
 }
 
 .list-status-progress-bar {
 	flex: 1;
 	height: 5px;
-	background: rgba(255, 255, 255, 0.1);
+	background: var(--color-bg-secondary);
 	border-radius: 3px;
 	overflow: hidden;
 	min-width: 40px;
@@ -151,15 +152,15 @@ body {
 }
 
 .list-status-progress-fill.complete {
-	background: oklch(0.70 0.18 145);
+	background: var(--color-status-success);
 }
 
 .list-status-progress-fill.incomplete {
-	background: oklch(0.65 0.18 55);
+	background: var(--color-status-warning);
 }
 
 .list-status-count {
-	color: rgba(255, 255, 255, 0.6);
+	color: var(--color-text-tertiary);
 	font-size: 11px;
 	font-variant-numeric: tabular-nums;
 	white-space: nowrap;
@@ -168,10 +169,10 @@ body {
 .list-status-blocked-msg {
 	margin-top: var(--spacing-xs);
 	padding: var(--spacing-xs) var(--spacing-sm);
-	background: oklch(0.30 0.12 25 / 0.5);
-	border: 1px solid oklch(0.45 0.15 25 / 0.4);
+	background: rgba(220, 38, 38, 0.08);
+	border: 1px solid rgba(220, 38, 38, 0.2);
 	border-radius: 6px;
-	color: oklch(0.85 0.10 25);
+	color: var(--color-status-error);
 	font-size: var(--font-size-sm);
 }
 
@@ -185,7 +186,7 @@ body {
 	gap: 6px;
 	padding: 3px 0;
 	font-size: 12px;
-	color: rgba(255, 255, 255, 0.7);
+	color: var(--color-text-secondary);
 }
 
 .list-status-remaining-icon {
@@ -205,18 +206,18 @@ body {
 .list-status-remaining-timer {
 	font-size: 11px;
 	font-variant-numeric: tabular-nums;
-	color: rgba(255, 255, 255, 0.5);
+	color: var(--color-text-tertiary);
 	flex-shrink: 0;
 }
 
 .list-status-remaining-timer.past-target {
-	color: oklch(0.70 0.18 145);
+	color: var(--color-status-success);
 }
 
 .list-status-complete-timer-btn {
 	padding: 2px 8px;
 	font-size: 11px;
-	background: oklch(0.40 0.12 145);
+	background: var(--color-status-success);
 	color: #fff;
 	border: none;
 	border-radius: 4px;
@@ -241,7 +242,7 @@ body {
 
 .tags-label {
 	font-size: var(--font-size-md);
-	color: rgba(255, 255, 255, 0.72);
+	color: var(--color-text-secondary);
 	margin: 0 0 var(--spacing-sm) 0;
 }
 
@@ -257,11 +258,11 @@ body {
 	display: inline-flex;
 	align-items: center;
 	padding: 4px 10px;
-	background: rgba(255, 255, 255, 0.1);
-	border: 1px solid rgba(255, 255, 255, 0.15);
+	background: var(--color-bg-secondary);
+	border: 1px solid var(--color-border-primary);
 	border-radius: 14px;
 	font-size: var(--font-size-sm);
-	color: rgba(255, 255, 255, 0.9);
+	color: var(--color-text-primary);
 	cursor: pointer;
 	transition: background 0.15s ease, transform 0.15s ease;
 }
@@ -279,45 +280,45 @@ body {
 .tags-input {
 	flex: 1;
 	padding: var(--spacing-xs) var(--spacing-sm);
-	background: rgba(255, 255, 255, 0.06);
-	border: 1px solid rgba(255, 255, 255, 0.15);
+	background: var(--color-bg-input);
+	border: 1px solid var(--color-border-primary);
 	border-radius: 6px;
-	color: var(--color-text-white);
+	color: var(--color-text-primary);
 	font-size: var(--font-size-sm);
 }
 
 .tags-input:focus {
 	outline: none;
-	border-color: rgba(255, 255, 255, 0.3);
+	border-color: var(--color-border-focus);
 }
 
 .tags-add-btn {
 	padding: var(--spacing-xs) var(--spacing-md);
-	background: rgba(255, 255, 255, 0.1);
-	border: 1px solid rgba(255, 255, 255, 0.15);
+	background: var(--color-bg-secondary);
+	border: 1px solid var(--color-border-primary);
 	border-radius: 6px;
-	color: var(--color-text-white);
+	color: var(--color-text-primary);
 	font-size: var(--font-size-sm);
 	cursor: pointer;
 	transition: background 0.15s ease;
 }
 
 .tags-add-btn:hover {
-	background: rgba(255, 255, 255, 0.18);
+	background: var(--color-bg-tertiary);
 }
 
 /* Fuzzy Finder Suggestions */
 .suggestions-list {
 	position: absolute;
 	background-color: var(--color-dropdown-delete-bg);
-	border: 1px solid rgba(255, 255, 255, 0.15);
+	border: 1px solid var(--color-border-primary);
 	border-radius: 4px;
 	max-height: 150px;
 	overflow-y: auto;
 	z-index: 1000;
 	min-width: 200px;
 	display: none;
-	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .suggestions-list.visible {
@@ -329,7 +330,7 @@ body {
 	cursor: pointer;
 	color: var(--color-dropdown-delete-text);
 	font-size: var(--font-size-sm);
-	border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+	border-bottom: 1px solid var(--color-border-subtle);
 }
 
 .suggestion-item:last-child {
@@ -339,5 +340,5 @@ body {
 .suggestion-item:hover,
 .suggestion-item.selected {
 	background-color: var(--color-dropdown-delete-hover);
-	color: white;
+	color: var(--color-text-primary);
 }
