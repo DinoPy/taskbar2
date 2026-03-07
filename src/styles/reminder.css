@@ -178,6 +178,13 @@ select:focus {
 	box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.08);
 }
 
+input[type="text"]:focus-visible,
+input[type="number"]:focus-visible,
+select:focus-visible {
+	outline: 2px solid var(--color-accent-primary);
+	outline-offset: 2px;
+}
+
 input[type="text"].invalid,
 input[type="number"].invalid,
 select.invalid {
@@ -232,6 +239,11 @@ select.invalid {
 	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 	outline: none;
 	transform: none;
+}
+
+.type-option:focus-visible {
+	outline: 2px solid var(--color-accent-primary);
+	outline-offset: 2px;
 }
 
 .type-option.selected {

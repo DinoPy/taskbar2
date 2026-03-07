@@ -59,7 +59,7 @@ body {
 	padding: 8px 10px;
 	font-size: 14px;
 	border: 1px solid var(--color-border-primary);
-	border-radius: 6px;
+	border-radius: 10px;
 	background: var(--color-bg-primary);
 	color: var(--color-text-primary);
 	outline: none;
@@ -69,6 +69,11 @@ body {
 
 .vp-field input:focus {
 	border-color: var(--color-border-focus);
+}
+
+.vp-field input:focus-visible {
+	outline: 2px solid var(--color-accent-primary);
+	outline-offset: 2px;
 }
 
 .vp-field input.vp-error {
@@ -85,8 +90,9 @@ body {
 .vp-btn {
 	padding: 7px 18px;
 	font-size: 13px;
-	font-weight: 500;
-	border-radius: 6px;
+	font-weight: 600;
+	height: 36px;
+	border-radius: 8px;
 	cursor: pointer;
 	transition: background 0.15s, border-color 0.15s;
 	font-family: inherit;

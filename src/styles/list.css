@@ -174,6 +174,11 @@
 	box-shadow: inset 2px 0 0 var(--color-accent-primary);
 }
 
+.list-sidebar-item:focus-visible {
+	outline: 2px solid var(--color-accent-primary);
+	outline-offset: 2px;
+}
+
 .list-sidebar-item:focus .list-sidebar-item-actions {
 	display: flex;
 }
@@ -488,6 +493,11 @@
 	box-shadow: inset 3px 0 0 var(--color-accent-primary);
 }
 
+.list-run-item:focus-visible {
+	outline: 2px solid var(--color-accent-primary);
+	outline-offset: 2px;
+}
+
 .list-run-item.child {
 	margin-left: 24px;
 }
@@ -586,6 +596,11 @@
 	border-color: var(--color-accent-primary);
 }
 
+.list-run-item-note-textarea:focus-visible {
+	outline: 2px solid var(--color-accent-primary);
+	outline-offset: 2px;
+}
+
 /* ============================================
    Footer
    ============================================ */
@@ -657,6 +672,11 @@
 	border-color: var(--color-accent-primary);
 }
 
+.list-dialog-input:focus-visible {
+	outline: 2px solid var(--color-accent-primary);
+	outline-offset: 2px;
+}
+
 .list-dialog-textarea {
 	width: 100%;
 	padding: 8px 10px;
@@ -673,6 +693,11 @@
 .list-dialog-textarea:focus {
 	outline: none;
 	border-color: var(--color-accent-primary);
+}
+
+.list-dialog-textarea:focus-visible {
+	outline: 2px solid var(--color-accent-primary);
+	outline-offset: 2px;
 }
 
 .list-dialog-fieldset {
@@ -1028,6 +1053,11 @@
 }
 .list-attach-input:focus {
 	border-color: var(--color-accent-primary);
+}
+
+.list-attach-input:focus-visible {
+	outline: 2px solid var(--color-accent-primary);
+	outline-offset: 2px;
 }
 .list-attach-results {
 	flex: 1;
