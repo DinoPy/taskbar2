@@ -469,17 +469,17 @@ export class Task {
                 dueDateEl.textContent = '';
             }
 
-            // Add category, due date, and timer to top row
-            topRowEl.append(this.children.categoryEl);
-            topRowEl.append(dueDateEl);
-            topRowEl.append(this.children.timerEl);
-
             // List badge (hidden by default, shown when list data is available)
             this.children.listBadgeEl.className = 'taskListBadge';
 
+            // Add category, due date, badge, and timer to top row
+            topRowEl.append(this.children.categoryEl);
+            topRowEl.append(dueDateEl);
+            topRowEl.append(this.children.listBadgeEl);
+            topRowEl.append(this.children.timerEl);
+
             this.taskEl.append(topRowEl);
             this.taskEl.append(this.children.titleEl);
-            this.taskEl.append(this.children.listBadgeEl);
             this.taskEl.append(this.children.indexEl);
         };
 
@@ -496,24 +496,25 @@ export class Task {
             this.children.indexEl.textContent = (num);
         }
 
-        updateListStatus ({ incompleteCount, listCount }) {
+        updateListStatus ({ incompleteCount, totalRequired, listCount }) {
             const badge = this.children.listBadgeEl;
             if (!badge) return;
-            if (listCount === 0) {
+            if (listCount === 0 || totalRequired === 0) {
                 badge.classList.remove('visible', 'incomplete', 'complete');
                 badge.textContent = '';
                 return;
             }
+            const completed = totalRequired - incompleteCount;
             badge.classList.add('visible');
             if (incompleteCount > 0) {
                 badge.classList.add('incomplete');
                 badge.classList.remove('complete');
-                badge.textContent = incompleteCount;
-                badge.title = `${incompleteCount} required list item${incompleteCount === 1 ? '' : 's'} incomplete`;
+                badge.textContent = `${completed}/${totalRequired}`;
+                badge.title = `${completed} of ${totalRequired} required items complete`;
             } else {
                 badge.classList.add('complete');
                 badge.classList.remove('incomplete');
-                badge.textContent = '\u2713';
+                badge.textContent = `${totalRequired}/${totalRequired}`;
                 badge.title = 'All list items complete';
             }
         }

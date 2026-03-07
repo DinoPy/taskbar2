@@ -100,18 +100,16 @@ body {
 
 .taskListBadge {
     display: none;
-    position: absolute;
-    top: 2px;
-    right: 3px;
     min-width: 16px;
     height: 16px;
     line-height: 16px;
     text-align: center;
-    font-size: 10px;
+    font-size: 9px;
     font-weight: 700;
     border-radius: 8px;
     padding: 0 4px;
     pointer-events: none;
+    flex-shrink: 0;
 }
 
 .taskListBadge.visible {

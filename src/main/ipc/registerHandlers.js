@@ -839,6 +839,14 @@ export function registerIpcHandlers({
 
     // ---- Lists IPC handlers ----
 
+    ipc.on("fetch-all-task-list-status", (_, taskIds) => {
+        if (!Array.isArray(taskIds)) return;
+        for (const taskId of taskIds) {
+            if (!taskId) continue;
+            sendEvent?.("lists_fetch", { target: { kind: "task", id: taskId } });
+        }
+    });
+
     ipc.on("lists-fetch", (event, data) => {
         const target = data?.target;
         if (!target?.kind) return;

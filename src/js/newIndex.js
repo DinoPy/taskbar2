@@ -213,6 +213,12 @@ ipc.on("resume-tasks", (e, data) => {
 	// Apply visibility filter to all tasks after resume
 	renderTasksByCategory();
 	tasks_compl_or_del_while_nocon = [];
+
+	// Fetch list status for all tasks
+	const taskIds = Object.keys(tasks);
+	if (taskIds.length > 0) {
+		ipc.send("fetch-all-task-list-status", taskIds);
+	}
 })
 
 ipc.on("refresh_tasks", (e, data) => {
@@ -228,6 +234,12 @@ ipc.on("refresh_tasks", (e, data) => {
 
 	// Apply visibility filter to all tasks after refresh
 	renderTasksByCategory();
+
+	// Fetch list status for all tasks
+	const taskIds = Object.keys(tasks);
+	if (taskIds.length > 0) {
+		ipc.send("fetch-all-task-list-status", taskIds);
+	}
 })
 
 // -------------- FROM RELATED APP ----------------- //
@@ -276,6 +288,11 @@ ipc.on("new_task_from_relative", (e, data) => {
 	}
 	
 	renderTasksByCategory();
+
+	// Fetch list status for the new task
+	if (data.id) {
+		ipc.send("fetch-all-task-list-status", [data.id]);
+	}
 })
 
 
