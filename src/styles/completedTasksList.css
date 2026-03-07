@@ -168,7 +168,6 @@ input, select {
     border-radius: 3px;
     border: var(--border-width) solid var(--color-input-border);
     color: var(--color-text-primary);
-    color-scheme: dark;
 }
 
 input:focus-visible, select:focus-visible {
@@ -234,7 +233,6 @@ input:focus-visible, select:focus-visible {
     border-radius: 3px;
     border: var(--border-width) solid var(--color-input-border);
     color: var(--color-text-primary);
-    color-scheme: dark;
 }
 
 .stats-right {
@@ -268,7 +266,7 @@ input:focus-visible, select:focus-visible {
 .tags-item:hover {
     background-color: var(--color-hover-subtle);
     transform: scale(1.05);
-    color: white;
+    color: var(--color-text-white);
 }
 
 button {
