@@ -34,7 +34,7 @@ export function render(ct) {
 
 export function onEvent(event, data) {
 	if (event === "fin_payee_results") {
-		searchResults = Array.isArray(data) ? data : (data.payees || []);
+		searchResults = Array.isArray(data) ? data : [];
 		renderContent();
 	}
 	if (event === "fin_payee_created") {

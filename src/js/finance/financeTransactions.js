@@ -12,6 +12,7 @@ let searchTimer = null;
 let _initialFetchDone = false;
 let _expandedSplits = new Set();
 let _splitsData = {};
+let _pendingSplitsTxId = null;
 
 // Payee search state
 let _payeeResults = [];
@@ -57,24 +58,29 @@ export function onEvent(event, data) {
 		showToast("Transaction created", "info");
 		formVisible = false;
 		editingTx = null;
+		sendEvent("fin_accounts_fetch", {});
 		renderContent();
 	}
 	if (event === "fin_transaction_updated") {
 		showToast("Transaction updated", "info");
 		formVisible = false;
 		editingTx = null;
+		sendEvent("fin_accounts_fetch", {});
 		renderContent();
 	}
 	if (event === "fin_transaction_deleted") {
 		showToast("Transaction deleted", "info");
+		sendEvent("fin_accounts_fetch", {});
 	}
 	if (event === "fin_payee_results") {
 		_payeeResults = Array.isArray(data) ? data : [];
 		renderPayeeDropdown();
 	}
 	if (event === "fin_transaction_splits_list") {
-		if (data && data.transaction_id) {
-			_splitsData[data.transaction_id] = data.splits || [];
+		// Server sends a direct array; use the tracked transaction_id
+		if (_pendingSplitsTxId) {
+			_splitsData[_pendingSplitsTxId] = Array.isArray(data) ? data : [];
+			_pendingSplitsTxId = null;
 			renderContent();
 		}
 	}
@@ -98,6 +104,7 @@ export function destroy() {
 	_initialFetchDone = false;
 	_expandedSplits.clear();
 	_splitsData = {};
+	_pendingSplitsTxId = null;
 	_payeeResults = [];
 	_payeeDropdown = null;
 	if (searchTimer) clearTimeout(searchTimer);
@@ -313,6 +320,7 @@ function buildTxRow(tx, s) {
 			} else {
 				_expandedSplits.add(tx.id);
 				if (!_splitsData[tx.id]) {
+					_pendingSplitsTxId = tx.id;
 					sendEvent("fin_transaction_splits_fetch", { transaction_id: tx.id });
 				}
 			}
