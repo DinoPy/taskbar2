@@ -17,6 +17,7 @@ export function createWindowManager({
 	createTemplateWindow,
 	createVariablePromptWindow,
 	createFinanceWindow,
+	createRecipesWindow,
 }) {
 	const state = {
 		taskbar: null,
@@ -35,6 +36,7 @@ export function createWindowManager({
 		template: null,
 		variablePrompt: null,
 		finance: null,
+		recipes: null,
 		commandWindows: new Map(),
 		listWindows: new Map(),
 	};
@@ -500,6 +502,31 @@ export function createWindowManager({
 		closeFinanceWindow() {
 			if (state.finance && !state.finance.isDestroyed()) {
 				state.finance.close();
+			}
+		},
+
+		openRecipesWindow(options = {}) {
+			if (state.recipes && !state.recipes.isDestroyed()) {
+				state.recipes.focus();
+				return state.recipes;
+			}
+			state.recipes = createRecipesWindow({
+				...options,
+				onClose: () => {
+					state.recipes = null;
+					options?.onClose?.();
+				},
+			});
+			return state.recipes;
+		},
+
+		getRecipesWindow() {
+			return state.recipes;
+		},
+
+		closeRecipesWindow() {
+			if (state.recipes && !state.recipes.isDestroyed()) {
+				state.recipes.close();
 			}
 		},
 	};

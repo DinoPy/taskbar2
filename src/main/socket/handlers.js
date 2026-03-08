@@ -10,6 +10,7 @@ export function createSocketHandlers({
 	calendarController,
 	listsController,
 	financeController,
+	recipesController,
 }) {
 	function handleSocketConnect() {
 		const win = getTaskbarWindow();
@@ -123,6 +124,8 @@ export function createSocketHandlers({
 		// Notify finance window to re-fetch visible data
 		financeController?.forwardToFinanceWindow?.("fin_reconnected", {});
 
+		recipesController?.forwardToRecipesWindow?.("recipes_reconnected", {});
+
 		// Refetch templates if the template window is open
 		const templateWin = windowManager.getTemplateWindow?.();
 		if (templateWin && !templateWin.isDestroyed()) {
@@ -195,6 +198,7 @@ export function createSocketHandlers({
 			const normalized = payload && typeof payload === "object" ? payload : {};
 			calendarController?.handleConnectionError?.(normalized);
 			financeController?.forwardToFinanceWindow?.("connection_error", normalized);
+			recipesController?.forwardToRecipesWindow?.("connection_error", normalized);
 			// Forward list-related errors to listsController.
 			// Includes list-specific types and generic types that list handlers may emit.
 			const listErrorTypes = new Set([
@@ -696,6 +700,7 @@ export function createSocketHandlers({
 			}
 		},
 		...(financeController?.getSocketEventHandlers?.() ?? {}),
+		...(recipesController?.getSocketEventHandlers?.() ?? {}),
 		schedule_deleted: ({ data }) => {
 			let payload = data;
 			if (typeof data === "string") {

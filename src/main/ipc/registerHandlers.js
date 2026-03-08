@@ -26,6 +26,7 @@ export function registerIpcHandlers({
     requestTaskCompletionConfirmation,
     openCalendarWindow,
     financeController,
+    recipesController,
 }) {
     const logger = log ?? console.log;
     const RFC3339_TIMESTAMP_REGEX =
@@ -1017,5 +1018,22 @@ export function registerIpcHandlers({
         windowManager.openFinanceWindow?.({
             screenIndex: appState.currentlySelectedScreenIndex ?? 0,
         });
+    });
+
+    // ---- Recipes IPC handlers ----
+
+    ipc.on("recipes-send", (_, data) => {
+        if (!data?.event) return;
+        recipesController?.handleRendererSend?.(data.event, data.data ?? {});
+    });
+
+    ipc.on("open-recipes-window", () => {
+        windowManager.openRecipesWindow?.({
+            screenIndex: appState.currentlySelectedScreenIndex ?? 0,
+        });
+    });
+
+    ipc.on("get-server-user-id", (event) => {
+        event.returnValue = appState.serverUserId ?? null;
     });
 }

@@ -20,6 +20,7 @@ import { createReminderWindow as createReminderBrowserWindow } from "./src/main/
 import { createDeleteConfirmWindow as createDeleteConfirmBrowserWindow } from "./src/main/windows/deleteConfirmWindow.js";
 import { createCalendarWindow as createCalendarBrowserWindow } from "./src/main/windows/calendarWindow.js";
 import { createFinanceWindow as createFinanceBrowserWindow } from "./src/main/windows/financeWindow.js";
+import { createRecipesWindow as createRecipesBrowserWindow } from "./src/main/windows/recipesWindow.js";
 import { createCompletionConfirmWindow as createCompletionConfirmBrowserWindow } from "./src/main/windows/completionConfirmWindow.js";
 import { createAddDueWindow as createAddDueBrowserWindow } from "./src/main/windows/addDueWindow.js";
 import { createListWindow as createListBrowserWindow } from "./src/main/windows/listWindow.js";
@@ -36,6 +37,7 @@ import { createSchedulesController } from "./src/main/controllers/schedulesContr
 import { createCalendarController } from "./src/main/controllers/calendarController.js";
 import { createListsController } from "./src/main/controllers/listsController.js";
 import { createFinanceController } from "./src/main/controllers/financeController.js";
+import { createRecipesController } from "./src/main/controllers/recipesController.js";
 
 const logDir = path.dirname(config.logFilePath);
 if (!fs.existsSync(logDir)) {
@@ -121,6 +123,7 @@ const windowManager = createWindowManager({
 	createTemplateWindow: createTemplateBrowserWindow,
 	createVariablePromptWindow: createVariablePromptBrowserWindow,
 	createFinanceWindow: createFinanceBrowserWindow,
+	createRecipesWindow: createRecipesBrowserWindow,
 });
 
 const commandsController = createCommandsController({
@@ -240,6 +243,11 @@ const financeController = createFinanceController({
 	sendEvent: (eventName, data) => sendEvent?.(eventName, data),
 });
 
+const recipesController = createRecipesController({
+	windowManager,
+	sendEvent: (eventName, data) => sendEvent?.(eventName, data),
+});
+
 const scheduleCompletedTasksRefresh = () => {
 	setTimeout(() => {
 		sendEvent("get_completed_tasks", appState.fromCompletedData);
@@ -324,6 +332,7 @@ const showMainMenu = () =>
 		createCalendarWindow: openCalendarWindowOnFocusedScreen,
 		openTemplateWindow,
 		openFinanceWindow,
+		openRecipesWindow,
 		openListsWindow: () => windowManager.openListWindow({ target: { kind: "standalone_home" }, props: { currentUserId: appState.serverUserId ?? null } }),
 		toggleAlwaysOnTop,
 		notificationReminderIntervalMinutes: appState.notificationReminderIntervalMinutes,
@@ -378,6 +387,7 @@ const {
 	calendarController,
 	listsController,
 	financeController,
+	recipesController,
 });
 
 socketClient = createSocketClient({
@@ -425,6 +435,7 @@ registerIpcHandlers({
 	requestTaskCompletionConfirmation,
 	openCalendarWindow: openCalendarWindowOnFocusedScreen,
 	financeController,
+	recipesController,
 });
 
 ipc.on("completion-confirmation-confirmed", (_, payload) => {
@@ -462,6 +473,7 @@ const handleCloseAppRequest = () => {
 	windowManager.closeTemplateWindow();
 	windowManager.closeVariablePromptWindow();
 	windowManager.closeFinanceWindow();
+	windowManager.closeRecipesWindow();
 	windowManager.getTaskbarWindow()?.close();
 };
 
@@ -517,6 +529,7 @@ app.whenReady().then(async () => {
 		});
 		windowManager.getTemplateWindow()?.webContents.openDevTools();
 		windowManager.getFinanceWindow()?.webContents.openDevTools();
+		windowManager.getRecipesWindow()?.webContents.openDevTools();
 		const calendarWindow = openCalendarWindowOnFocusedScreen();
 		calendarWindow?.webContents.openDevTools();
 	});
@@ -733,6 +746,23 @@ function openTemplateWindow(options = {}) {
 	const normalizedIndex = Math.min(Math.max(requestedIndex, 0), maxIndex);
 	try {
 		return windowManager.openTemplateWindow({
+			...options,
+			screenIndex: normalizedIndex,
+		});
+	} catch (e) {
+		console.error(e);
+	}
+}
+
+function openRecipesWindow(options = {}) {
+	const displays = screen.getAllDisplays();
+	const requestedIndex = Number.isInteger(options.screenIndex)
+		? options.screenIndex
+		: appState.currentlySelectedScreenIndex ?? 0;
+	const maxIndex = Math.max(displays.length - 1, 0);
+	const normalizedIndex = Math.min(Math.max(requestedIndex, 0), maxIndex);
+	try {
+		return windowManager.openRecipesWindow({
 			...options,
 			screenIndex: normalizedIndex,
 		});
