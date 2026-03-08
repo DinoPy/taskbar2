@@ -240,10 +240,15 @@ function renderTagsSection(tags, owner, recipeId) {
 }
 
 function removeTag(recipeId, tags, tagToRemove) {
-	const remaining = tags.filter(t => t.tag !== tagToRemove).map(t => t.tag);
+	const remaining = tags.filter(t => t.tag !== tagToRemove);
+	// Optimistic UI update — remove tag immediately
+	if (detailData) {
+		detailData.tags = remaining;
+		renderDetail();
+	}
 	send("recipe_tags_update", {
 		recipe_id: recipeId,
-		tags: remaining,
+		tags: remaining.map(t => t.tag),
 		last_modified_at: Date.now(),
 	});
 }
@@ -634,7 +639,7 @@ function handleEvent(event, data) {
 			if (data.ingredients && data.recipe_id === activeRecipeId) {
 				// Ingredients updated -- re-fetch full detail
 				send("recipe_get", { id: activeRecipeId });
-			} else if (data.tags && data.recipe_id === activeRecipeId) {
+			} else if ("tags" in data && data.recipe_id === activeRecipeId) {
 				// Tags updated -- re-fetch full detail
 				send("recipe_get", { id: activeRecipeId });
 			} else if (data.image && data.recipe_id === activeRecipeId) {
