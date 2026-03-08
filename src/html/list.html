@@ -26,6 +26,15 @@
 		<div class="list-container">
 			<!-- Left sidebar: list definitions -->
 			<aside class="list-sidebar" id="listSidebar">
+				<div class="list-sidebar-filter hidden" id="sidebarFilter">
+					<input class="list-sidebar-search" id="sidebarSearch" type="text" placeholder="Search lists..." autocomplete="off" />
+					<select class="list-sidebar-status-filter" id="sidebarStatusFilter">
+						<option value="active">Active</option>
+						<option value="">All</option>
+						<option value="completed">Completed</option>
+						<option value="archived">Archived</option>
+					</select>
+				</div>
 				<div class="list-sidebar-items" id="sidebarItems"></div>
 				<button class="list-sidebar-add-btn" id="addListBtn" title="Add a new list">+ Add List</button>
 			</aside>

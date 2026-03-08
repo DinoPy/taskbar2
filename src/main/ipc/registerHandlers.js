@@ -861,7 +861,9 @@ export function registerIpcHandlers({
                 }
             },
         };
-        listsController?.fetchForTarget?.(target, windowRef);
+        const search_text = data?.search_text;
+        const status_filter = data?.status_filter;
+        listsController?.fetchForTarget?.(target, windowRef, { search_text, status_filter });
     });
 
     ipc.on("lists-unsubscribe", (event) => {

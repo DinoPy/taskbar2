@@ -157,9 +157,12 @@ export function createListsController({ sendEvent, log = console.log, onTaskList
 		windowSubscriptions.delete(windowRef._id);
 	};
 
-	const fetchForTarget = (target, windowRef) => {
+	const fetchForTarget = (target, windowRef, options = {}) => {
 		subscribe(target, windowRef);
-		sendEvent?.("lists_fetch", { target });
+		const payload = { target };
+		if (options.search_text) payload.search_text = options.search_text;
+		if (options.status_filter) payload.status_filter = options.status_filter;
+		sendEvent?.("lists_fetch", payload);
 	};
 
 	const sendMutation = (event, data) => {

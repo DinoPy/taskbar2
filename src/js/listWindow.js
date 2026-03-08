@@ -15,6 +15,9 @@ let timerIntervalId = null;
 let noteDebounceTimers = new Map();
 let focusPanel = "run"; // "sidebar" | "run"
 let focusIndex = -1;
+let searchText = "";
+let statusFilter = "active";
+let searchDebounceTimer = null;
 
 // ---------------------------------------------------------------
 // DOM refs
@@ -42,6 +45,9 @@ const footerStatus = document.getElementById("footerStatus");
 const errorToast = document.getElementById("errorToast");
 const helpPanel = document.getElementById("helpPanel");
 const helpCloseBtn = document.getElementById("helpCloseBtn");
+const sidebarFilter = document.getElementById("sidebarFilter");
+const sidebarSearch = document.getElementById("sidebarSearch");
+const sidebarStatusFilter = document.getElementById("sidebarStatusFilter");
 
 // Dialogs
 const addListDialog = document.getElementById("addListDialog");
@@ -122,6 +128,14 @@ const sendMutation = (event, data) => {
 	ipc.send("lists-mutation", { event, data });
 };
 
+const refetchLists = () => {
+	if (!isStandalone) return;
+	const payload = { target };
+	if (searchText) payload.search_text = searchText;
+	if (statusFilter) payload.status_filter = statusFilter;
+	ipc.send("lists-fetch", payload);
+};
+
 // ---------------------------------------------------------------
 // Toast
 // ---------------------------------------------------------------
@@ -165,6 +179,10 @@ const render = () => {
 	}
 
 	renderSidebar(lists);
+
+	if (sidebarFilter) {
+		sidebarFilter.classList.toggle("hidden", !isStandalone);
+	}
 
 	if (!hasLists) {
 		emptyState.classList.remove("hidden");
@@ -1025,6 +1043,19 @@ itemDialogCancel.addEventListener("click", () => {
 
 deleteConfirmSubmit.addEventListener("click", confirmDelete);
 deleteConfirmCancel.addEventListener("click", closeDeleteConfirmDialog);
+
+sidebarSearch.addEventListener("input", () => {
+	clearTimeout(searchDebounceTimer);
+	searchDebounceTimer = setTimeout(() => {
+		searchText = sidebarSearch.value.trim();
+		refetchLists();
+	}, 300);
+});
+
+sidebarStatusFilter.addEventListener("change", () => {
+	statusFilter = sidebarStatusFilter.value;
+	refetchLists();
+});
 
 attachCloseBtn.addEventListener("click", closeAttachPicker);
 attachInput.addEventListener("input", (e) => {
