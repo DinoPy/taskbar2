@@ -928,6 +928,11 @@ const parseCommand = (input) => {
 		return { type: 'open_templates' };
 	}
 
+	// Finance command
+	if (trimmed === 'finance') {
+		return { type: 'open_finance' };
+	}
+
 	// List current task: llc
 	if (trimmed === 'llc') {
 		return { type: 'list_current' };
@@ -1135,6 +1140,10 @@ const executeCommand = (command) => {
 			ipc.send('open-template-window');
 			return { success: true, message: "Opening templates window" };
 
+		case 'open_finance':
+			ipc.send('open-finance-window');
+			return { success: true, message: "Opening finance window" };
+
 		case 'invalid':
 			return { success: false, message: `Invalid command: ${command.input}` };
 			
@@ -1167,7 +1176,8 @@ const getCommandSuggestions = (input) => {
 		{ command: 'llc', description: 'open list for current task' },
 		{ command: 'll1', description: 'open list for task 1' },
 		{ command: 'lists', description: 'open standalone lists' },
-		{ command: 'templates', description: 'open task templates' }
+		{ command: 'templates', description: 'open task templates' },
+		{ command: 'finance', description: 'open finance window' }
 	];
 	}
 
@@ -1185,6 +1195,9 @@ const getCommandSuggestions = (input) => {
 	}
 	if ('templates'.startsWith(trimmed) && trimmed.startsWith('te')) {
 		suggestions.push({ command: 'templates', description: 'open task templates' });
+	}
+	if ('finance'.startsWith(trimmed) && trimmed.startsWith('fi')) {
+		suggestions.push({ command: 'finance', description: 'open finance window' });
 	}
 	if (trimmed.startsWith('ll') && trimmed.match(/^ll\d*$/)) {
 		if (trimmed.match(/^ll\d+$/)) {
