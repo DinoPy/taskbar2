@@ -99,6 +99,7 @@ export function destroy() {
 	_expandedSplits.clear();
 	_splitsData = {};
 	_payeeResults = [];
+	_payeeDropdown = null;
 	if (searchTimer) clearTimeout(searchTimer);
 }
 

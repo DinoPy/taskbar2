@@ -262,8 +262,8 @@ function buildIncomeExpensePanel() {
 		return panel;
 	}
 
-	const income = Number(_incomeVsExpenseData.income || 0);
-	const expense = Math.abs(Number(_incomeVsExpenseData.expense || 0));
+	const income = Number(_incomeVsExpenseData.total_income || 0);
+	const expense = Math.abs(Number(_incomeVsExpenseData.total_expense || 0));
 
 	const chartData = [
 		{ label: "Income", value: income / 100 },

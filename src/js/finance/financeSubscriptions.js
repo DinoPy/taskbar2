@@ -26,9 +26,11 @@ export function render(ct) {
 	container = ct;
 	unsubs.push(state.on("subscriptions", () => renderContent()));
 	unsubs.push(state.on("categories", () => { if (formVisible) renderContent(); }));
+	unsubs.push(state.on("payees", () => { if (formVisible) renderContent(); }));
 
 	sendEvent("fin_subscriptions_fetch", {});
 	sendEvent("fin_subscriptions_summary", {});
+	sendEvent("fin_payees_fetch", {});
 	renderContent();
 }
 
@@ -288,7 +290,7 @@ function buildForm(editing) {
 
 	const dueDateInput = el("input", { class: "fin-input", type: "date" });
 	if (editing && editing.next_due_date) {
-		dueDateInput.value = editing.next_due_date.slice(0, 10);
+		dueDateInput.value = String(editing.next_due_date).slice(0, 10);
 	}
 	form.appendChild(formRow("Next Due Date", dueDateInput));
 
@@ -310,9 +312,14 @@ function buildForm(editing) {
 	}
 	form.appendChild(formRow("Account", accountSelect));
 
-	const payeeInput = el("input", { class: "fin-input", type: "text", placeholder: "Payee (optional)" });
-	if (editing) payeeInput.value = editing.payee_id || "";
-	form.appendChild(formRow("Payee", payeeInput));
+	const payeeSelect = el("select", { class: "fin-select" });
+	payeeSelect.appendChild(el("option", { value: "" }, "-- None --"));
+	for (const p of state.getState().payees.values()) {
+		const opt = el("option", { value: p.id }, p.name);
+		if (editing && editing.payee_id === p.id) opt.selected = true;
+		payeeSelect.appendChild(opt);
+	}
+	form.appendChild(formRow("Payee", payeeSelect));
 
 	const notesInput = el("textarea", { class: "fin-textarea", placeholder: "Notes (optional)" });
 	if (editing) notesInput.value = editing.notes || "";
@@ -343,8 +350,8 @@ function buildForm(editing) {
 				frequency_interval: parseInt(intervalInput.value, 10) || 1,
 				next_due_date: dueDateInput.value ? dueDateInput.value + "T00:00:00Z" : "",
 				category: catSelect.value,
-				account_id: accountSelect.value || undefined,
-				payee_id: payeeInput.value.trim() || undefined,
+				account_id: accountSelect.value || null,
+				payee_id: payeeSelect.value || null,
 				notes: notesInput.value.trim(),
 				auto_create_transaction: autoCreateCb.checked,
 				icon: iconInput.value.trim(),
