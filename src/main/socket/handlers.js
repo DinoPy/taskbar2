@@ -202,6 +202,7 @@ export function createSocketHandlers({
 				"not_found",
 				"already_shared",
 				"unauthorized",
+				"forbidden",
 				"database_error",
 			]);
 			if (normalized.type && listErrorTypes.has(normalized.type)) {

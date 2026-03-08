@@ -7,6 +7,7 @@ const ipc = ipcRenderer;
 
 let target = null;
 let isStandalone = false;
+let currentUserId = null;
 let listsPayload = null; // Full ListsTargetPayload
 let selectedListId = null;
 let isOwnerFrozen = false;
@@ -118,6 +119,12 @@ const getSelectedBundle = () => {
 	return listsPayload.lists.find((b) => b.definition?.id === selectedListId) ?? null;
 };
 
+const isListOwner = (def) => {
+	if (!isStandalone || !currentUserId) return true; // Non-standalone or no user — assume owner
+	if (!def?.owner?.user_id) return true; // No owner info — assume owner
+	return def.owner.user_id === currentUserId;
+};
+
 const isRunReadonly = (bundle) => {
 	if (!bundle?.run) return true;
 	const status = bundle.run.status;
@@ -191,58 +198,70 @@ const showContextMenu = (e, def) => {
 
 	if (!isStandalone) return;
 
-	addMenuItem(def.is_pinned ? "Unpin" : "Pin", () => {
-		sendMutation("list_pin", {
-			list_id: def.id,
-			is_pinned: !def.is_pinned,
-			last_modified_at: Date.now(),
-		});
-	});
+	const owner = isListOwner(def);
 
-	const statusSub = document.createElement("div");
-	statusSub.className = "list-context-menu-item has-submenu";
-	statusSub.textContent = "Set Status";
-	const subMenu = document.createElement("div");
-	subMenu.className = "list-context-submenu";
-	for (const s of ["active", "completed", "archived"]) {
-		const si = document.createElement("div");
-		si.className = "list-context-menu-item" + (def.status === s ? " active" : "");
-		si.textContent = s.charAt(0).toUpperCase() + s.slice(1);
-		si.addEventListener("click", () => {
-			sendMutation("list_set_status", {
+	if (owner) {
+		addMenuItem(def.is_pinned ? "Unpin" : "Pin", () => {
+			sendMutation("list_pin", {
 				list_id: def.id,
-				status: s,
+				is_pinned: !def.is_pinned,
 				last_modified_at: Date.now(),
 			});
-			closeContextMenu();
 		});
-		subMenu.appendChild(si);
+
+		const statusSub = document.createElement("div");
+		statusSub.className = "list-context-menu-item has-submenu";
+		statusSub.textContent = "Set Status";
+		const subMenu = document.createElement("div");
+		subMenu.className = "list-context-submenu";
+		for (const s of ["active", "completed", "archived"]) {
+			const si = document.createElement("div");
+			si.className = "list-context-menu-item" + (def.status === s ? " active" : "");
+			si.textContent = s.charAt(0).toUpperCase() + s.slice(1);
+			si.addEventListener("click", () => {
+				sendMutation("list_set_status", {
+					list_id: def.id,
+					status: s,
+					last_modified_at: Date.now(),
+				});
+				closeContextMenu();
+			});
+			subMenu.appendChild(si);
+		}
+		statusSub.appendChild(subMenu);
+		menu.appendChild(statusSub);
+
+		addMenuItem("Duplicate", () => {
+			const lists = listsPayload?.lists ?? [];
+			const maxPos = lists.reduce((max, b) => Math.max(max, b.definition?.position ?? 0), -1);
+			sendMutation("list_duplicate", {
+				list_id: def.id,
+				position: maxPos + 1,
+				last_modified_at: Date.now(),
+			});
+		});
+
+		addMenuItem("Share...", () => {
+			openShareDialog(def.id);
+		});
+
+		// Separator
+		const sep = document.createElement("div");
+		sep.className = "list-context-menu-separator";
+		menu.appendChild(sep);
+
+		addMenuItem("Delete", () => {
+			openDeleteConfirmDialog(def.id, def.title);
+		});
+	} else {
+		// Shared user can only leave
+		addMenuItem("Leave list", () => {
+			sendMutation("list_share_remove", {
+				list_id: def.id,
+				user_id: currentUserId,
+			});
+		});
 	}
-	statusSub.appendChild(subMenu);
-	menu.appendChild(statusSub);
-
-	addMenuItem("Duplicate", () => {
-		const lists = listsPayload?.lists ?? [];
-		const maxPos = lists.reduce((max, b) => Math.max(max, b.definition?.position ?? 0), -1);
-		sendMutation("list_duplicate", {
-			list_id: def.id,
-			position: maxPos + 1,
-			last_modified_at: Date.now(),
-		});
-	});
-
-	addMenuItem("Share...", () => {
-		openShareDialog(def.id);
-	});
-
-	// Separator
-	const sep = document.createElement("div");
-	sep.className = "list-context-menu-separator";
-	menu.appendChild(sep);
-
-	addMenuItem("Delete", () => {
-		openDeleteConfirmDialog(def.id, def.title);
-	});
 
 	document.body.appendChild(menu);
 	contextMenuEl = menu;
@@ -368,10 +387,21 @@ const renderSidebar = (lists) => {
 		if (def.status === "completed") item.classList.add("status-completed");
 		if (def.status === "archived") item.classList.add("status-archived");
 
+		const owner = isListOwner(def);
+
+		// Shared indicator for non-owned lists
+		if (!owner) {
+			const sharedIcon = document.createElement("span");
+			sharedIcon.className = "list-sidebar-shared-icon";
+			sharedIcon.textContent = "\u{1F465}";
+			sharedIcon.title = "Shared with you";
+			item.appendChild(sharedIcon);
+		}
+
 		const actionsDiv = document.createElement("div");
 		actionsDiv.className = "list-sidebar-item-actions";
 
-		if (isStandalone) {
+		if (isStandalone && owner) {
 			const attachBtn = document.createElement("button");
 			attachBtn.className = "list-sidebar-item-action attach";
 			attachBtn.textContent = "\u21B1";
@@ -384,20 +414,22 @@ const renderSidebar = (lists) => {
 			actionsDiv.appendChild(attachBtn);
 		}
 
-		const deleteBtn = document.createElement("button");
-		deleteBtn.className = "list-sidebar-item-action delete";
-		deleteBtn.textContent = "\u2715";
-		deleteBtn.title = "Delete list";
-		deleteBtn.setAttribute("tabindex", "-1");
-		deleteBtn.addEventListener("click", (e) => {
-			e.stopPropagation();
-			if (isStandalone) {
-				openDeleteConfirmDialog(def.id, def.title);
-			} else {
-				sendMutation("list_delete", { id: def.id });
-			}
-		});
-		actionsDiv.appendChild(deleteBtn);
+		if (owner) {
+			const deleteBtn = document.createElement("button");
+			deleteBtn.className = "list-sidebar-item-action delete";
+			deleteBtn.textContent = "\u2715";
+			deleteBtn.title = "Delete list";
+			deleteBtn.setAttribute("tabindex", "-1");
+			deleteBtn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				if (isStandalone) {
+					openDeleteConfirmDialog(def.id, def.title);
+				} else {
+					sendMutation("list_delete", { id: def.id });
+				}
+			});
+			actionsDiv.appendChild(deleteBtn);
+		}
 		item.appendChild(actionsDiv);
 
 		item.addEventListener("click", () => {
@@ -420,10 +452,10 @@ const renderTemplateItems = (bundle) => {
 	templateTitle.textContent = def.title || "(untitled)";
 	templateKind.textContent = def.kind || "";
 
-	// Add share button for standalone lists
+	// Add share button for standalone lists (owner only)
 	const existingShareBtn = templateSection.querySelector(".list-share-btn");
 	if (existingShareBtn) existingShareBtn.remove();
-	if (isStandalone && def) {
+	if (isStandalone && def && isListOwner(def)) {
 		const shareBtn = document.createElement("button");
 		shareBtn.className = "list-share-btn";
 		shareBtn.textContent = "Share";
@@ -1197,6 +1229,7 @@ ipc.on("data-from-parent", (_, data) => {
 	if (!data?.target) return;
 	target = data.target;
 	isStandalone = target.kind === "standalone_home";
+	currentUserId = data.currentUserId ?? null;
 
 	// Standalone lists are never frozen
 	isOwnerFrozen = false;

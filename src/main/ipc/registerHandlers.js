@@ -20,6 +20,7 @@ export function registerIpcHandlers({
     schedulesController,
     calendarController,
     listsController,
+    getUserId,
     log,
     requestTaskDeletion,
     requestTaskCompletionConfirmation,
@@ -886,7 +887,7 @@ export function registerIpcHandlers({
 
     ipc.on("open-list-window", (_, data) => {
         const target = data?.target;
-        const props = data?.props ?? {};
+        const props = { ...(data?.props ?? {}), currentUserId: getUserId?.() ?? null };
         windowManager.openListWindow?.({ target, props });
     });
 

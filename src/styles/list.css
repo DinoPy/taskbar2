@@ -184,6 +184,12 @@
 	opacity: 0.7;
 }
 
+.list-sidebar-shared-icon {
+	font-size: 10px;
+	flex-shrink: 0;
+	opacity: 0.6;
+}
+
 .list-sidebar-item.status-completed {
 	opacity: 0.6;
 }
