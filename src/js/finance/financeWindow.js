@@ -6,6 +6,11 @@ import * as dashboard from "./financeDashboard.js";
 import * as accounts from "./financeAccounts.js";
 import * as transactions from "./financeTransactions.js";
 import * as transfers from "./financeTransfers.js";
+import * as subscriptions from "./financeSubscriptions.js";
+import * as budgets from "./financeBudgets.js";
+import * as reports from "./financeReports.js";
+import * as payees from "./financePayees.js";
+import * as categories from "./financeCategories.js";
 
 // =========================================
 // Send helper
@@ -55,6 +60,11 @@ sections["dashboard"] = dashboard;
 sections["accounts"] = accounts;
 sections["transactions"] = transactions;
 sections["transfers"] = transfers;
+sections["subscriptions"] = subscriptions;
+sections["budgets"] = budgets;
+sections["reports"] = reports;
+sections["payees"] = payees;
+sections["categories"] = categories;
 
 // =========================================
 // State
@@ -283,6 +293,11 @@ dashboard.init(sharedCtx);
 accounts.init(sharedCtx);
 transactions.init(sharedCtx);
 transfers.init(sharedCtx);
+subscriptions.init(sharedCtx);
+budgets.init(sharedCtx);
+reports.init(sharedCtx);
+payees.init(sharedCtx);
+categories.init(sharedCtx);
 
 renderSidebar();
 switchSection("dashboard");
