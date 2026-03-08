@@ -189,60 +189,60 @@ const showContextMenu = (e, def) => {
 		menu.appendChild(item);
 	};
 
-	if (isStandalone) {
-		addMenuItem(def.is_pinned ? "Unpin" : "Pin", () => {
-			sendMutation("list_pin", {
+	if (!isStandalone) return;
+
+	addMenuItem(def.is_pinned ? "Unpin" : "Pin", () => {
+		sendMutation("list_pin", {
+			list_id: def.id,
+			is_pinned: !def.is_pinned,
+			last_modified_at: Date.now(),
+		});
+	});
+
+	const statusSub = document.createElement("div");
+	statusSub.className = "list-context-menu-item has-submenu";
+	statusSub.textContent = "Set Status";
+	const subMenu = document.createElement("div");
+	subMenu.className = "list-context-submenu";
+	for (const s of ["active", "completed", "archived"]) {
+		const si = document.createElement("div");
+		si.className = "list-context-menu-item" + (def.status === s ? " active" : "");
+		si.textContent = s.charAt(0).toUpperCase() + s.slice(1);
+		si.addEventListener("click", () => {
+			sendMutation("list_set_status", {
 				list_id: def.id,
-				is_pinned: !def.is_pinned,
+				status: s,
 				last_modified_at: Date.now(),
 			});
+			closeContextMenu();
 		});
-
-		const statusSub = document.createElement("div");
-		statusSub.className = "list-context-menu-item has-submenu";
-		statusSub.textContent = "Set Status";
-		const subMenu = document.createElement("div");
-		subMenu.className = "list-context-submenu";
-		for (const s of ["active", "completed", "archived"]) {
-			const si = document.createElement("div");
-			si.className = "list-context-menu-item" + (def.status === s ? " active" : "");
-			si.textContent = s.charAt(0).toUpperCase() + s.slice(1);
-			si.addEventListener("click", () => {
-				sendMutation("list_set_status", {
-					list_id: def.id,
-					status: s,
-					last_modified_at: Date.now(),
-				});
-				closeContextMenu();
-			});
-			subMenu.appendChild(si);
-		}
-		statusSub.appendChild(subMenu);
-		menu.appendChild(statusSub);
-
-		addMenuItem("Duplicate", () => {
-			const lists = listsPayload?.lists ?? [];
-			const maxPos = lists.reduce((max, b) => Math.max(max, b.definition?.position ?? 0), -1);
-			sendMutation("list_duplicate", {
-				list_id: def.id,
-				position: maxPos + 1,
-				last_modified_at: Date.now(),
-			});
-		});
-
-		addMenuItem("Share...", () => {
-			openShareDialog(def.id);
-		});
-
-		// Separator
-		const sep = document.createElement("div");
-		sep.className = "list-context-menu-separator";
-		menu.appendChild(sep);
-
-		addMenuItem("Delete", () => {
-			openDeleteConfirmDialog(def.id, def.title);
-		});
+		subMenu.appendChild(si);
 	}
+	statusSub.appendChild(subMenu);
+	menu.appendChild(statusSub);
+
+	addMenuItem("Duplicate", () => {
+		const lists = listsPayload?.lists ?? [];
+		const maxPos = lists.reduce((max, b) => Math.max(max, b.definition?.position ?? 0), -1);
+		sendMutation("list_duplicate", {
+			list_id: def.id,
+			position: maxPos + 1,
+			last_modified_at: Date.now(),
+		});
+	});
+
+	addMenuItem("Share...", () => {
+		openShareDialog(def.id);
+	});
+
+	// Separator
+	const sep = document.createElement("div");
+	sep.className = "list-context-menu-separator";
+	menu.appendChild(sep);
+
+	addMenuItem("Delete", () => {
+		openDeleteConfirmDialog(def.id, def.title);
+	});
 
 	document.body.appendChild(menu);
 	contextMenuEl = menu;
@@ -1226,9 +1226,13 @@ ipc.on("lists-error", (_, errorPayload) => {
 	const msg = errorPayload?.message || errorPayload?.type || "An error occurred";
 	showToast(msg);
 
-	// Refetch
+	// Refetch (preserving search/filter state for standalone)
 	if (target) {
-		ipc.send("lists-fetch", { target });
+		if (isStandalone) {
+			refetchLists();
+		} else {
+			ipc.send("lists-fetch", { target });
+		}
 	}
 });
 
@@ -1247,10 +1251,13 @@ ipc.on("lists-shares-list", (_, data) => {
 
 ipc.on("lists-share-created", (_, data) => {
 	if (data?.list_share && shareDialog.open && data.list_share.list_id === shareListId) {
-		currentShares.push(data.list_share);
+		// Avoid duplicates on replay/reconnect
+		if (!currentShares.some(s => s.shared_with_user_id === data.list_share.shared_with_user_id)) {
+			currentShares.push(data.list_share);
+		}
 		renderShareList();
+		showToast("List shared successfully", 2000, "success");
 	}
-	showToast("List shared successfully", 2000, "success");
 });
 
 ipc.on("lists-share-removed", (_, data) => {
@@ -1503,4 +1510,8 @@ window.addEventListener("beforeunload", () => {
 		clearTimeout(timer);
 	}
 	noteDebounceTimers.clear();
+	if (searchDebounceTimer) {
+		clearTimeout(searchDebounceTimer);
+		searchDebounceTimer = null;
+	}
 });
