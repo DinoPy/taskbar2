@@ -122,7 +122,7 @@ function fetchTransactions(append) {
 	if (filters.date_from) payload.date_from = filters.date_from + "T00:00:00Z";
 	if (filters.date_to) payload.date_to = filters.date_to + "T23:59:59Z";
 	if (filters.category) payload.category = filters.category;
-	if (filters.search) payload.search = filters.search;
+	if (filters.search) payload.search_text = filters.search;
 
 	sendEvent("fin_transactions_fetch", payload);
 	_initialFetchDone = true;
@@ -476,7 +476,7 @@ function buildForm(s, editing) {
 	payeeInput.addEventListener("input", () => {
 		const q = payeeInput.value.trim();
 		if (q.length >= 2) {
-			sendEvent("fin_payee_search", { query: q });
+			sendEvent("fin_payee_search", { search_query: q });
 		} else {
 			_payeeResults = [];
 			removePayeeDropdown();
@@ -540,9 +540,11 @@ function buildForm(s, editing) {
 
 			if (editing) {
 				payload.id = editing.id;
-				payload.last_modified_at = editing.last_modified_at;
+				payload.is_split = !!editing.is_split;
+				payload.last_modified_at = editing.last_modified_at || Date.now();
 				sendEvent("fin_transaction_edit", payload);
 			} else {
+				payload.last_modified_at = Date.now();
 				sendEvent("fin_transaction_create", payload);
 			}
 		} }, editing ? "Save" : "Create"),

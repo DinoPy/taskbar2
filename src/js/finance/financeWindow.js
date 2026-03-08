@@ -271,13 +271,23 @@ function handleStateEvent(event, data) {
 			}
 			break;
 
+		// Transaction splits
+		case "fin_transaction_split_updated": {
+			const tx = state.getState().transactions.find(t => t.id === data.transaction_id);
+			if (tx) {
+				tx.is_split = !!data.is_split;
+				state.emit("transactions");
+			}
+			break;
+		}
+
 		default:
 			// fin_report_* events
 			if (event.startsWith("fin_report_")) {
 				state.setReport(event, data);
 			}
 			// fin_payee_results, fin_subscriptions_upcoming, fin_subscriptions_summary,
-			// fin_transaction_split_updated, fin_transaction_splits_list
+			// fin_transaction_splits_list
 			// — forwarded to active section only (handled below in IPC listener)
 			break;
 	}

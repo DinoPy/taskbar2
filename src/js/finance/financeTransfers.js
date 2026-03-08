@@ -111,7 +111,7 @@ function buildTransferForm(accounts) {
 	fromSelect.appendChild(el("option", { value: "" }, "Select source..."));
 	for (const a of accounts) {
 		const opt = el("option", { value: a.id },
-			a.name + " (" + formatCurrency(Number(a.balance || 0), a.currency || "RON") + ")");
+			a.name + " (" + formatCurrency(Number(a.computed_balance || 0), a.currency || "RON") + ")");
 		if (formState.from_account_id === a.id) opt.selected = true;
 		fromSelect.appendChild(opt);
 	}
@@ -129,7 +129,7 @@ function buildTransferForm(accounts) {
 	toSelect.appendChild(el("option", { value: "" }, "Select target..."));
 	for (const a of accounts) {
 		const opt = el("option", { value: a.id },
-			a.name + " (" + formatCurrency(Number(a.balance || 0), a.currency || "RON") + ")");
+			a.name + " (" + formatCurrency(Number(a.computed_balance || 0), a.currency || "RON") + ")");
 		if (formState.to_account_id === a.id) opt.selected = true;
 		toSelect.appendChild(opt);
 	}
@@ -191,6 +191,7 @@ function buildTransferForm(accounts) {
 				date: formState.date ? new Date(formState.date).toISOString() : new Date().toISOString(),
 				description: formState.description.trim(),
 				notes: formState.notes.trim(),
+				last_modified_at: Date.now(),
 			});
 		} }, "Transfer"),
 		el("button", { class: "fin-btn fin-btn-secondary", onClick: () => {

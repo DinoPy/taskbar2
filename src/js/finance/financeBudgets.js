@@ -84,7 +84,7 @@ function renderContent() {
 		el("h2", {}, "Budgets"),
 		el("div", { class: "fin-section-actions" },
 			el("button", { class: "fin-btn fin-btn-sm fin-btn-secondary", onClick: () => {
-				sendEvent("fin_budget_copy_previous", { year: currentYear, month: currentMonth });
+				sendEvent("fin_budget_copy_previous", { year: currentYear, month: currentMonth, last_modified_at: Date.now() });
 			} }, "Copy from Previous Month"),
 		),
 	));
@@ -107,7 +107,7 @@ function renderContent() {
 			el("div", { class: "fin-flex-col", style: { alignItems: "center", gap: "var(--spacing-sm)" } },
 				el("span", {}, "No budget for this month."),
 				el("button", { class: "fin-btn fin-btn-primary", onClick: () => {
-					sendEvent("fin_budget_set", { year: currentYear, month: currentMonth });
+					sendEvent("fin_budget_set", { year: currentYear, month: currentMonth, last_modified_at: Date.now() });
 				} }, "Create Budget"),
 			),
 		));
@@ -171,6 +171,7 @@ function buildBudgetRow(cat) {
 				category: cat.category,
 				budgeted_amount: displayToCents(inp.value),
 				rollover: !!cat.rollover,
+				rollover_amount: Number(cat.rollover_amount || 0),
 			});
 		};
 		inp.addEventListener("blur", save);
@@ -185,6 +186,7 @@ function buildBudgetRow(cat) {
 			category: cat.category,
 			budgeted_amount: budgeted,
 			rollover: rolloverCb.checked,
+			rollover_amount: Number(cat.rollover_amount || 0),
 		});
 	});
 
@@ -215,7 +217,7 @@ function buildBudgetRow(cat) {
 
 function handleDeleteCat(cat, btnEl) {
 	if (btnEl.dataset.confirming) {
-		sendEvent("fin_budget_category_delete", { id: cat.id });
+		sendEvent("fin_budget_category_delete", { id: cat.id, budget_id: state.getState().budget?.id });
 		return;
 	}
 	btnEl.dataset.confirming = "true";
@@ -256,6 +258,7 @@ function buildAddCategoryRow(existingCats) {
 			category,
 			budgeted_amount: displayToCents(amtInput.value),
 			rollover: false,
+			rollover_amount: 0,
 		});
 	} }, "Add"));
 

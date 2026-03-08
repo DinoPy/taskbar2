@@ -202,20 +202,20 @@ function buildSubCard(sub) {
 
 	if (status === "active") {
 		actions.appendChild(el("button", { class: "fin-btn fin-btn-sm fin-btn-primary", onClick: () => {
-			sendEvent("fin_subscription_confirm", { id: sub.id });
+			sendEvent("fin_subscription_confirm", { id: sub.id, last_modified_at: sub.last_modified_at || Date.now() });
 		} }, "Confirm Payment"));
 		actions.appendChild(el("button", { class: "fin-btn fin-btn-sm fin-btn-secondary", onClick: () => {
-			sendEvent("fin_subscription_pause", { id: sub.id });
+			sendEvent("fin_subscription_pause", { id: sub.id, last_modified_at: sub.last_modified_at || Date.now() });
 		} }, "Pause"));
 	}
 	if (status === "paused") {
 		actions.appendChild(el("button", { class: "fin-btn fin-btn-sm fin-btn-primary", onClick: () => {
-			sendEvent("fin_subscription_resume", { id: sub.id });
+			sendEvent("fin_subscription_resume", { id: sub.id, last_modified_at: sub.last_modified_at || Date.now() });
 		} }, "Resume"));
 	}
 	if (status !== "cancelled") {
 		actions.appendChild(el("button", { class: "fin-btn fin-btn-sm fin-btn-secondary", onClick: () => {
-			sendEvent("fin_subscription_cancel", { id: sub.id });
+			sendEvent("fin_subscription_cancel", { id: sub.id, last_modified_at: sub.last_modified_at || Date.now() });
 		} }, "Cancel"));
 	}
 
@@ -238,7 +238,7 @@ function buildSubCard(sub) {
 
 function handleDelete(sub, btnEl) {
 	if (btnEl.dataset.confirming) {
-		sendEvent("fin_subscription_delete", { id: sub.id });
+		sendEvent("fin_subscription_delete", { id: sub.id, last_modified_at: sub.last_modified_at || Date.now() });
 		return;
 	}
 	btnEl.dataset.confirming = "true";
@@ -356,8 +356,10 @@ function buildForm(editing) {
 			}
 			if (editing) {
 				payload.id = editing.id;
+				payload.last_modified_at = editing.last_modified_at || Date.now();
 				sendEvent("fin_subscription_edit", payload);
 			} else {
+				payload.last_modified_at = Date.now();
 				sendEvent("fin_subscription_create", payload);
 			}
 		} }, editing ? "Save" : "Create"),

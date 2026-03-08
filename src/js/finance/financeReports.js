@@ -156,7 +156,7 @@ function renderReportContent() {
 // =========================================
 
 function renderSpendingByCategory(area, data) {
-	const items = Array.isArray(data) ? data : (data.categories || []);
+	const items = Array.isArray(data) ? data : [];
 	if (items.length === 0) {
 		area.appendChild(el("div", { class: "fin-empty-state" }, "No spending data for this period."));
 		return;
@@ -268,25 +268,30 @@ function renderNetWorth(area, data) {
 		),
 	));
 
-	// Account breakdown table
-	const accounts = Array.isArray(data.accounts) ? data.accounts : [];
-	if (accounts.length > 0) {
-		const table = el("table", { class: "fin-table", style: { marginTop: "var(--spacing-md)" } });
-		table.appendChild(el("thead", {}, el("tr", {},
-			el("th", {}, "Account"),
-			el("th", { class: "fin-col-right" }, "Balance"),
-		)));
-		const tbody = el("tbody", {});
-		for (const acct of accounts) {
-			const bal = Number(acct.balance || 0);
-			const cls = bal >= 0 ? "fin-amount-positive" : "fin-amount-negative";
-			tbody.appendChild(el("tr", {},
-				el("td", {}, acct.name || acct.account_name || ""),
-				el("td", { class: "fin-col-right fin-text-mono " + cls }, centsToDisplay(bal)),
-			));
+	// Account breakdown from latest snapshot
+	if (history.length > 0) {
+		const latest = history[history.length - 1];
+		const breakdown = Array.isArray(latest.breakdown) ? latest.breakdown : [];
+		if (breakdown.length > 0) {
+			const table = el("table", { class: "fin-table", style: { marginTop: "var(--spacing-md)" } });
+			table.appendChild(el("thead", {}, el("tr", {},
+				el("th", {}, "Account"),
+				el("th", {}, "Type"),
+				el("th", { class: "fin-col-right" }, "Balance"),
+			)));
+			const tbody = el("tbody", {});
+			for (const acct of breakdown) {
+				const bal = Number(acct.balance || 0);
+				const cls = bal >= 0 ? "fin-amount-positive" : "fin-amount-negative";
+				tbody.appendChild(el("tr", {},
+					el("td", {}, acct.account_name || ""),
+					el("td", {}, acct.account_type || ""),
+					el("td", { class: "fin-col-right fin-text-mono " + cls }, centsToDisplay(bal)),
+				));
+			}
+			table.appendChild(tbody);
+			area.appendChild(table);
 		}
-		table.appendChild(tbody);
-		area.appendChild(table);
 	}
 }
 
@@ -295,7 +300,7 @@ function renderNetWorth(area, data) {
 // =========================================
 
 function renderSpendingTrends(area, data) {
-	const items = Array.isArray(data) ? data : (data.months || []);
+	const items = Array.isArray(data) ? data : [];
 	if (items.length === 0) {
 		area.appendChild(el("div", { class: "fin-empty-state" }, "No trend data for this period."));
 		return;
@@ -332,7 +337,7 @@ function renderSpendingTrends(area, data) {
 // =========================================
 
 function renderTopPayees(area, data) {
-	const items = Array.isArray(data) ? data : (data.payees || []);
+	const items = Array.isArray(data) ? data : [];
 	if (items.length === 0) {
 		area.appendChild(el("div", { class: "fin-empty-state" }, "No payee data for this period."));
 		return;

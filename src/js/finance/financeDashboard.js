@@ -112,7 +112,7 @@ function buildNetWorthPanel(accounts) {
 	let liabilities = 0;
 
 	for (const a of accounts) {
-		const bal = Number(a.balance || 0);
+		const bal = Number(a.computed_balance || 0);
 		if (a.account_type === "credit_card" || a.account_type === "loan") {
 			liabilities += Math.abs(bal);
 		} else {
@@ -166,7 +166,7 @@ function buildAccountsPanel(accounts) {
 				el("span", { class: "fin-account-color-dot", style: { backgroundColor: a.color || "var(--color-accent-primary)" } }),
 				el("span", { class: "fin-truncate", style: { maxWidth: "140px" } }, a.name),
 			),
-			el("span", { class: "fin-text-mono fin-text-sm" }, formatCurrency(Number(a.balance || 0), a.currency || "RON")),
+			el("span", { class: "fin-text-mono fin-text-sm" }, formatCurrency(Number(a.computed_balance || 0), a.currency || "RON")),
 		);
 		row.addEventListener("click", () => switchSection("accounts"));
 		list.appendChild(row);

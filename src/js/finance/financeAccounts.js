@@ -136,7 +136,7 @@ function getSortedAccounts() {
 
 function buildAccountCard(a) {
 	const typeLabel = ACCOUNT_TYPES.find(t => t.value === a.account_type)?.label || a.account_type || "";
-	const balance = Number(a.balance || 0);
+	const balance = Number(a.computed_balance || 0);
 
 	const card = el("div", { class: "fin-card", "data-id": a.id, draggable: "true" },
 		el("div", { class: "fin-flex-row", style: { justifyContent: "space-between", marginBottom: "var(--spacing-sm)" } },
@@ -159,7 +159,7 @@ function buildAccountCard(a) {
 				renderContent();
 			} }, "Edit"),
 			el("button", { class: "fin-btn fin-btn-sm fin-btn-secondary", onClick: () => {
-				sendEvent("fin_account_archive", { id: a.id, is_archived: !a.is_archived });
+				sendEvent("fin_account_archive", { id: a.id, last_modified_at: a.last_modified_at || Date.now() });
 			} }, a.is_archived ? "Unarchive" : "Archive"),
 			el("button", { class: "fin-btn fin-btn-sm fin-btn-danger", onClick: (e) => {
 				handleDelete(a, e.currentTarget);
@@ -228,8 +228,8 @@ function handleReorder(draggedId, targetId) {
 	ids.splice(fromIdx, 1);
 	ids.splice(toIdx, 0, draggedId);
 
-	const positions = ids.map((id, i) => ({ id, position: i }));
-	sendEvent("fin_account_reorder", { positions });
+	const orders = ids.map((id, i) => ({ id, position: i }));
+	sendEvent("fin_account_reorder", { orders, last_modified_at: Date.now() });
 }
 
 // =========================================
@@ -266,8 +266,8 @@ function buildForm(editing) {
 
 	// Initial balance
 	const balInput = el("input", { class: "fin-input", type: "text", placeholder: "0.00" });
-	if (editing) balInput.value = centsToDisplay(Number(editing.balance || 0));
-	form.appendChild(formRow("Balance", balInput));
+	if (editing) balInput.value = centsToDisplay(Number(editing.initial_balance || 0));
+	form.appendChild(formRow("Initial Balance", balInput));
 
 	// Icon
 	const iconInput = el("input", { class: "fin-input", type: "text", placeholder: "Icon (optional)" });
@@ -302,9 +302,11 @@ function buildForm(editing) {
 			}
 			if (editing) {
 				payload.id = editing.id;
-				payload.last_modified_at = editing.last_modified_at;
+				payload.last_modified_at = editing.last_modified_at || Date.now();
 				sendEvent("fin_account_edit", payload);
 			} else {
+				payload.position = state.getState().accounts.size;
+				payload.last_modified_at = Date.now();
 				sendEvent("fin_account_create", payload);
 			}
 		} }, editing ? "Save" : "Create"),
