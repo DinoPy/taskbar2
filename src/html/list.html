@@ -167,6 +167,29 @@
 			</div>
 		</dialog>
 
+		<!-- Edit list dialog -->
+		<dialog class="list-dialog" id="editListDialog">
+			<h3 class="list-dialog-title" id="editListDialogTitle">Edit List</h3>
+			<label class="list-dialog-label" for="editListTitleInput">Title</label>
+			<input class="list-dialog-input" id="editListTitleInput" type="text" placeholder="List title" maxlength="120" />
+			<div class="list-dialog-row">
+				<div class="list-dialog-field">
+					<label class="list-dialog-label" for="editListIconInput">Icon</label>
+					<input class="list-dialog-input" id="editListIconInput" type="text" placeholder="e.g. cart, star" />
+				</div>
+				<div class="list-dialog-field">
+					<label class="list-dialog-label" for="editListColorInput">Color</label>
+					<input class="list-dialog-input" id="editListColorInput" type="color" value="#4A90D9" />
+				</div>
+			</div>
+			<label class="list-dialog-label" for="editListTagsInput">Tags</label>
+			<input class="list-dialog-input" id="editListTagsInput" type="text" placeholder="Comma-separated tags" />
+			<div class="list-dialog-actions">
+				<button class="list-dialog-btn list-dialog-btn-submit" id="editListSubmit">Save</button>
+				<button class="list-dialog-btn list-dialog-btn-cancel" id="editListCancel">Cancel</button>
+			</div>
+		</dialog>
+
 		<!-- Share dialog -->
 		<dialog class="list-dialog list-share-dialog" id="shareDialog">
 			<h3 class="list-dialog-title">Share List</h3>
@@ -218,6 +241,7 @@
 						<dt><kbd>Space</kbd> / <kbd>Enter</kbd></dt><dd>Activate item</dd>
 						<dt><kbd>n</kbd></dt><dd>New list</dd>
 						<dt><kbd>a</kbd></dt><dd>Add item</dd>
+						<dt><kbd>e</kbd></dt><dd>Edit selected list</dd>
 						<dt><kbd>x</kbd></dt><dd>Delete selected list</dd>
 					</dl>
 				</div>

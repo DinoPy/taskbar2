@@ -21,6 +21,7 @@ let statusFilter = "active";
 let searchDebounceTimer = null;
 let shareListId = null;
 let currentShares = [];
+let runItemAssignments = new Map(); // run_item_id -> [{id, assigned_user_id}]
 
 // ---------------------------------------------------------------
 // DOM refs
@@ -73,6 +74,15 @@ const itemDialogSubmit = document.getElementById("itemDialogSubmit");
 const itemDialogCancel = document.getElementById("itemDialogCancel");
 const itemQuantityInput = document.getElementById("itemQuantityInput");
 const itemUnitInput = document.getElementById("itemUnitInput");
+
+const editListDialog = document.getElementById("editListDialog");
+const editListTitleInput = document.getElementById("editListTitleInput");
+const editListIconInput = document.getElementById("editListIconInput");
+const editListColorInput = document.getElementById("editListColorInput");
+const editListTagsInput = document.getElementById("editListTagsInput");
+const editListSubmit = document.getElementById("editListSubmit");
+const editListCancel = document.getElementById("editListCancel");
+let editingListId = null;
 
 const shareDialog = document.getElementById("shareDialog");
 const shareEmailInput = document.getElementById("shareEmailInput");
@@ -201,6 +211,10 @@ const showContextMenu = (e, def) => {
 	const owner = isListOwner(def);
 
 	if (owner) {
+		addMenuItem("Edit...", () => {
+			openEditListDialog(def);
+		});
+
 		addMenuItem(def.is_pinned ? "Unpin" : "Pin", () => {
 			sendMutation("list_pin", {
 				list_id: def.id,
@@ -208,6 +222,39 @@ const showContextMenu = (e, def) => {
 				last_modified_at: Date.now(),
 			});
 		});
+
+		// Move up/down in sidebar
+		const defs = (listsPayload?.lists ?? []).map(b => b.definition).filter(Boolean);
+		const sorted = [...defs].sort((a, b) => {
+			if (a.is_pinned && !b.is_pinned) return -1;
+			if (!a.is_pinned && b.is_pinned) return 1;
+			const tA = a.updated_at ?? "";
+			const tB = b.updated_at ?? "";
+			return tB < tA ? -1 : tB > tA ? 1 : 0;
+		});
+		const idx = sorted.findIndex(d => d.id === def.id);
+		if (idx > 0) {
+			addMenuItem("Move Up", () => {
+				const prev = sorted[idx - 1];
+				const newPos = Math.max(0, (prev.position ?? 0) - 1);
+				sendMutation("list_edit", {
+					id: def.id,
+					position: newPos,
+					last_modified_at: Date.now(),
+				});
+			});
+		}
+		if (idx < sorted.length - 1) {
+			addMenuItem("Move Down", () => {
+				const next = sorted[idx + 1];
+				const newPos = (next.position ?? 0) + 1;
+				sendMutation("list_edit", {
+					id: def.id,
+					position: newPos,
+					last_modified_at: Date.now(),
+				});
+			});
+		}
 
 		const statusSub = document.createElement("div");
 		statusSub.className = "list-context-menu-item has-submenu";
@@ -436,6 +483,12 @@ const renderSidebar = (lists) => {
 			selectedListId = def.id;
 			render();
 		});
+
+		if (isStandalone && owner) {
+			item.addEventListener("dblclick", () => {
+				openEditListDialog(def);
+			});
+		}
 
 		item.addEventListener("contextmenu", (e) => showContextMenu(e, def));
 
@@ -666,6 +719,50 @@ const renderRunItems = (bundle) => {
 	}
 };
 
+const renderRunItemAssignment = (el, ri, run, readonly) => {
+	const assignments = runItemAssignments.get(ri.id) ?? [];
+	const meta = document.createElement("div");
+	meta.className = "list-run-item-meta";
+
+	if (assignments.length > 0) {
+		const badge = document.createElement("span");
+		badge.className = "list-run-item-assigned-badge";
+		badge.textContent = assignments.map(a => a.assigned_user_id?.substring(0, 6)).join(", ");
+		badge.title = "Assigned: " + assignments.map(a => a.assigned_user_id).join(", ");
+		meta.appendChild(badge);
+
+		if (!readonly) {
+			const unassignBtn = document.createElement("button");
+			unassignBtn.className = "list-run-item-assign-btn";
+			unassignBtn.textContent = "Unassign";
+			unassignBtn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				for (const a of assignments) {
+					sendMutation("list_run_item_unassign", {
+						run_item_id: ri.id,
+						assigned_user_id: a.assigned_user_id,
+					});
+				}
+			});
+			meta.appendChild(unassignBtn);
+		}
+	} else if (!readonly && isStandalone && currentUserId) {
+		const assignBtn = document.createElement("button");
+		assignBtn.className = "list-run-item-assign-btn";
+		assignBtn.textContent = "Assign me";
+		assignBtn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			sendMutation("list_run_item_assign", {
+				run_item_id: ri.id,
+				assigned_user_id: currentUserId,
+			});
+		});
+		meta.appendChild(assignBtn);
+	}
+
+	if (meta.childNodes.length > 0) el.appendChild(meta);
+};
+
 const renderCheckboxRunItem = (el, ri, snap, run, readonly) => {
 	const checkbox = document.createElement("input");
 	checkbox.type = "checkbox";
@@ -733,6 +830,7 @@ const renderCheckboxRunItem = (el, ri, snap, run, readonly) => {
 			el.appendChild(cancelBtn);
 		}
 	}
+	renderRunItemAssignment(el, ri, run, readonly);
 };
 
 const renderTimerRunItem = (el, ri, snap, run, readonly) => {
@@ -814,6 +912,7 @@ const renderTimerRunItem = (el, ri, snap, run, readonly) => {
 
 	content.appendChild(timerRow);
 	el.appendChild(content);
+	renderRunItemAssignment(el, ri, run, readonly);
 };
 
 const renderNoteRunItem = (el, ri, snap, run, readonly) => {
@@ -863,6 +962,7 @@ const renderNoteRunItem = (el, ri, snap, run, readonly) => {
 
 	content.appendChild(textarea);
 	el.appendChild(content);
+	renderRunItemAssignment(el, ri, run, readonly);
 };
 
 const computeTimerElapsed = (ts) => {
@@ -1093,6 +1193,42 @@ const renderShareList = () => {
 };
 
 // ---------------------------------------------------------------
+// Edit list dialog
+// ---------------------------------------------------------------
+
+const openEditListDialog = (def) => {
+	editingListId = def.id;
+	editListTitleInput.value = def.title || "";
+	editListIconInput.value = def.icon || "";
+	editListColorInput.value = def.color || "#4A90D9";
+	editListTagsInput.value = (def.tags ?? []).join(", ");
+	editListDialog.showModal();
+	editListTitleInput.focus();
+};
+
+const closeEditListDialog = () => {
+	editingListId = null;
+	editListDialog.close();
+};
+
+const submitEditList = () => {
+	const title = editListTitleInput.value.trim();
+	if (!title) {
+		editListTitleInput.focus();
+		return;
+	}
+	sendMutation("list_edit", {
+		id: editingListId,
+		title,
+		icon: editListIconInput.value.trim() || "list",
+		color: editListColorInput.value || "#4A90D9",
+		tags: editListTagsInput.value.split(",").map(t => t.trim()).filter(Boolean),
+		last_modified_at: Date.now(),
+	});
+	closeEditListDialog();
+};
+
+// ---------------------------------------------------------------
 // Attach picker (standalone mode)
 // ---------------------------------------------------------------
 
@@ -1297,6 +1433,26 @@ ipc.on("lists-share-removed", (_, data) => {
 	}
 });
 
+ipc.on("lists-run-item-assigned", (_, data) => {
+	if (!data?.run_item_id) return;
+	const existing = runItemAssignments.get(data.run_item_id) ?? [];
+	if (!existing.some(a => a.assigned_user_id === data.assigned_user_id)) {
+		existing.push(data);
+		runItemAssignments.set(data.run_item_id, existing);
+	}
+	render();
+});
+
+ipc.on("lists-run-item-unassigned", (_, data) => {
+	if (!data?.run_item_id) return;
+	const existing = runItemAssignments.get(data.run_item_id) ?? [];
+	runItemAssignments.set(
+		data.run_item_id,
+		existing.filter(a => a.assigned_user_id !== data.assigned_user_id)
+	);
+	render();
+});
+
 // ---------------------------------------------------------------
 // Event listeners
 // ---------------------------------------------------------------
@@ -1335,6 +1491,9 @@ deleteConfirmCancel.addEventListener("click", closeDeleteConfirmDialog);
 
 shareInviteBtn.addEventListener("click", submitShareInvite);
 shareCloseBtn.addEventListener("click", closeShareDialog);
+
+editListSubmit.addEventListener("click", submitEditList);
+editListCancel.addEventListener("click", closeEditListDialog);
 shareEmailInput.addEventListener("keydown", (e) => {
 	if (e.key === "Enter") submitShareInvite();
 });
@@ -1393,6 +1552,7 @@ addListDialog.addEventListener("cancel", (e) => e.preventDefault());
 itemDialog.addEventListener("cancel", (e) => e.preventDefault());
 deleteConfirmDialog.addEventListener("cancel", (e) => e.preventDefault());
 shareDialog.addEventListener("cancel", (e) => e.preventDefault());
+editListDialog.addEventListener("cancel", (e) => e.preventDefault());
 
 // ---------------------------------------------------------------
 // Keyboard Navigation
@@ -1433,13 +1593,14 @@ const activateFocusedRunItem = (el) => {
 };
 
 document.addEventListener("keydown", (e) => {
-	const inDialog = addListDialog.open || itemDialog.open || deleteConfirmDialog.open || (shareDialog && shareDialog.open) || !attachOverlay.classList.contains("hidden");
+	const inDialog = addListDialog.open || itemDialog.open || deleteConfirmDialog.open || (shareDialog && shareDialog.open) || (editListDialog && editListDialog.open) || !attachOverlay.classList.contains("hidden");
 	const inInput = document.activeElement?.tagName === "INPUT" ||
 		document.activeElement?.tagName === "TEXTAREA";
 
 	// Dialog handling
 	if (e.key === "Escape") {
 		if (!attachOverlay.classList.contains("hidden")) { closeAttachPicker(); return; }
+		if (editListDialog && editListDialog.open) { closeEditListDialog(); return; }
 		if (shareDialog && shareDialog.open) { closeShareDialog(); return; }
 		if (deleteConfirmDialog.open) { closeDeleteConfirmDialog(); return; }
 		if (helpPanel.classList.contains("visible")) {
@@ -1456,6 +1617,11 @@ document.addEventListener("keydown", (e) => {
 
 	if (e.key === "Enter" && !e.shiftKey) {
 		if (deleteConfirmDialog.open) { confirmDelete(); return; }
+		if (editListDialog && editListDialog.open) {
+			e.preventDefault();
+			submitEditList();
+			return;
+		}
 		if (addListDialog.open) {
 			e.preventDefault();
 			submitAddList();
@@ -1517,6 +1683,11 @@ document.addEventListener("keydown", (e) => {
 	} else if (e.key === "x" && isStandalone && selectedListId) {
 		const bundle = getSelectedBundle();
 		openDeleteConfirmDialog(selectedListId, bundle?.definition?.title);
+	} else if (e.key === "e" && isStandalone && selectedListId) {
+		const bundle = getSelectedBundle();
+		if (bundle?.definition && isListOwner(bundle.definition)) {
+			openEditListDialog(bundle.definition);
+		}
 	} else if (e.key === "?") {
 		helpPanel.classList.toggle("visible");
 	}

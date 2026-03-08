@@ -514,6 +514,100 @@ Previously: `position ASC, created_at ASC`.
 
 ---
 
+## Shared User Experience
+
+### Detecting ownership
+
+Every list payload includes an `owner` field:
+```json
+{ "owner": { "kind": "standalone", "user_id": "<uuid>" } }
+```
+
+Compare `owner.user_id` with the current user's ID:
+- **Match** → you are the owner
+- **No match** → you are a shared user
+
+This check drives the entire UI: which actions to show, which to hide.
+
+### What the owner sees
+
+The owner has full control over the list:
+
+| UI Element | Available |
+|------------|-----------|
+| Edit title, icon, color, tags | Yes |
+| Delete list | Yes |
+| Pin/unpin | Yes |
+| Set status (active/completed/archived) | Yes |
+| Duplicate list | Yes |
+| Reorder list position | Yes |
+| Share management (invite/remove users) | Yes |
+| View shares list | Yes |
+| Create/edit/delete items | Yes |
+| Reorder items | Yes |
+| Toggle/cancel/restore run items | Yes |
+| Assign/unassign users to items | Yes |
+
+### What the shared user sees
+
+The shared user has item-level access but no list-level management:
+
+| UI Element | Available | Notes |
+|------------|-----------|-------|
+| Edit title, icon, color, tags | **No** — hide/disable | Returns `403` if attempted |
+| Delete list | **No** — hide | Returns `403` |
+| Pin/unpin | **No** — hide | Returns `403` |
+| Set status | **No** — hide | Returns `403` |
+| Duplicate list | **No** — hide | Returns `403` |
+| Reorder list position | **No** — hide | Returns `403` |
+| Share management | **No** — hide | Returns `403` |
+| View shares list | **No** — hide | Returns `403` |
+| **Leave list** | **Yes** — show | Send `list_share_remove` with own `user_id` |
+| Create/edit/delete items | Yes | |
+| Reorder items | Yes | |
+| Toggle/cancel/restore run items | Yes | |
+| Assign/unassign users to items | Yes | |
+
+### Shared user lifecycle
+
+**1. Receiving a shared list:**
+- The invitee receives a `list_share_created` event containing the full `lists` response
+- The list appears in their `lists_fetch` (standalone_home) response alongside owned lists
+- The shared list has `owner.user_id` set to the owner's ID (not the shared user's)
+
+**2. Working with a shared list:**
+- All item-level operations work identically to owned lists
+- Real-time updates from other users (owner or other shared users) arrive via the same broadcast events
+- The shared user's mutations are broadcast to all list users including the owner
+
+**3. Leaving a shared list:**
+```json
+{
+  "event": "list_share_remove",
+  "data": {
+    "list_id": "<uuid>",
+    "user_id": "<your_own_user_id>"
+  }
+}
+```
+- After leaving, the user receives `list_share_removed` and should remove the list from local state
+- The list no longer appears in `lists_fetch` responses
+- This action is irreversible — the owner must re-invite to restore access
+
+**4. Being removed by the owner:**
+- The user receives `list_share_removed` — same as leaving voluntarily
+- Handle identically: remove the list from local state
+
+### Suggested UI patterns
+
+- Show a **"Shared with you"** badge or indicator on lists where `owner.user_id !== currentUser.id`
+- Show the owner's name/avatar on shared lists so the user knows who owns it
+- Replace the "Delete" / "Edit" / "Share" buttons with a single **"Leave list"** action for shared users
+- When a shared user opens list settings, show read-only metadata (title, icon, color) with a "Leave list" button
+- Optionally show "Shared list — you can add and check off items" as a subtitle or tooltip
+
+---
+
 ## FAQ
 
 **Q: How does a shared user detect they have access to a shared list?**
