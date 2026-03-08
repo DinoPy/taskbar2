@@ -256,6 +256,21 @@ function handleStateEvent(event, data) {
 			showToast(data.message || "Connection error", "error");
 			break;
 
+		case "fin_reconnected":
+			// Re-fetch core data after WebSocket reconnect
+			sendEvent("fin_accounts_fetch", {});
+			sendEvent("fin_categories_fetch", {});
+			// Re-render active section so it re-fetches its own data
+			if (activeSectionId) {
+				const contentEl = document.getElementById("fin-content");
+				if (contentEl && activeSection) {
+					activeSection.destroy();
+					contentEl.innerHTML = "";
+					activeSection.render(contentEl);
+				}
+			}
+			break;
+
 		default:
 			// fin_report_* events
 			if (event.startsWith("fin_report_")) {

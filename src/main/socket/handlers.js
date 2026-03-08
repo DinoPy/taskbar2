@@ -115,6 +115,9 @@ export function createSocketHandlers({
 
 		listsController?.refetchAllActive?.();
 
+		// Notify finance window to re-fetch visible data
+		financeController?.forwardToFinanceWindow?.("fin_reconnected", {});
+
 		// Refetch templates if the template window is open
 		const templateWin = windowManager.getTemplateWindow?.();
 		if (templateWin && !templateWin.isDestroyed()) {
