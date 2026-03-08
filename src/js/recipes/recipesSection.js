@@ -299,8 +299,6 @@ function uploadImage(recipeId) {
 			const result = await ipcRenderer.invoke("recipes:upload-image", {
 				recipeId,
 				filePath: file.path,
-				googleUid: "",
-				email: "",
 			});
 			if (result && result.id) {
 				send("recipe_get", { id: recipeId });

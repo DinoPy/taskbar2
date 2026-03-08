@@ -21,6 +21,7 @@ export function registerIpcHandlers({
     calendarController,
     listsController,
     getUserId,
+    getUserInfo,
     log,
     requestTaskDeletion,
     requestTaskCompletionConfirmation,
@@ -1046,10 +1047,13 @@ export function registerIpcHandlers({
         return wsUrl.replace("wss://", "https://").replace("ws://", "http://");
     }
 
-    ipc.handle("recipes:upload-image", async (_, { recipeId, filePath, googleUid, email }) => {
+    ipc.handle("recipes:upload-image", async (_, { recipeId, filePath }) => {
         const { net } = require("electron");
         const fs = require("fs");
         const path = require("path");
+        const info = getUserInfo?.() ?? {};
+        const googleUid = info.id ?? "";
+        const email = info.email ?? "";
         const baseUrl = getRecipesHttpBaseUrl();
         const url = `${baseUrl}/api/recipes/${recipeId}/images`;
         const boundary = "----RecipesFormBoundary" + Date.now();
@@ -1081,10 +1085,13 @@ export function registerIpcHandlers({
         return response.json();
     });
 
-    ipc.handle("recipes:replace-image", async (_, { recipeId, imageId, filePath, googleUid, email }) => {
+    ipc.handle("recipes:replace-image", async (_, { recipeId, imageId, filePath }) => {
         const { net } = require("electron");
         const fs = require("fs");
         const path = require("path");
+        const info = getUserInfo?.() ?? {};
+        const googleUid = info.id ?? "";
+        const email = info.email ?? "";
         const baseUrl = getRecipesHttpBaseUrl();
         const url = `${baseUrl}/api/recipes/${recipeId}/images/${imageId}`;
         const boundary = "----RecipesFormBoundary" + Date.now();
@@ -1116,8 +1123,11 @@ export function registerIpcHandlers({
         return response.json();
     });
 
-    ipc.handle("recipes:delete-image", async (_, { recipeId, imageId, googleUid, email }) => {
+    ipc.handle("recipes:delete-image", async (_, { recipeId, imageId }) => {
         const { net } = require("electron");
+        const info = getUserInfo?.() ?? {};
+        const googleUid = info.id ?? "";
+        const email = info.email ?? "";
         const baseUrl = getRecipesHttpBaseUrl();
         const url = `${baseUrl}/api/recipes/${recipeId}/images/${imageId}`;
 

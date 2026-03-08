@@ -430,6 +430,7 @@ registerIpcHandlers({
 	calendarController,
 	listsController,
 	getUserId: () => appState.serverUserId ?? null,
+	getUserInfo: () => userInfo,
 	log: (...args) => console.log(...args),
 	requestTaskDeletion,
 	requestTaskCompletionConfirmation,
