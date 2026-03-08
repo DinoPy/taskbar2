@@ -240,7 +240,7 @@ function buildSubCard(sub) {
 
 function handleDelete(sub, btnEl) {
 	if (btnEl.dataset.confirming) {
-		sendEvent("fin_subscription_delete", { id: sub.id, last_modified_at: sub.last_modified_at || Date.now() });
+		sendEvent("fin_subscription_delete", { id: sub.id });
 		return;
 	}
 	btnEl.dataset.confirming = "true";

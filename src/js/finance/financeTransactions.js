@@ -356,7 +356,7 @@ function buildSplitRow(split) {
 	const amt = Number(split.amount || 0);
 	return el("tr", { style: { background: "var(--color-bg-secondary)" } },
 		el("td", {}),
-		el("td", { style: { paddingLeft: "var(--spacing-lg)" } }, split.description || "Split"),
+		el("td", { style: { paddingLeft: "var(--spacing-lg)" } }, split.notes || "Split"),
 		el("td", {}, split.category || ""),
 		el("td", {}),
 		el("td", { class: "fin-col-right fin-text-mono fin-text-sm" }, centsToDisplay(Math.abs(amt))),
@@ -542,7 +542,7 @@ function buildForm(s, editing) {
 				date: dateInput.value ? new Date(dateInput.value).toISOString() : new Date().toISOString(),
 				description: descInput.value.trim(),
 				category: catSelect.value,
-				payee_id: selectedPayeeId || undefined,
+				payee_id: selectedPayeeId || null,
 				tags,
 				notes: notesInput.value.trim(),
 			};

@@ -198,7 +198,7 @@ function buildUpcomingPanel() {
 			el("span", { class: "fin-truncate", style: { maxWidth: "140px" } }, sub.name || sub.description || "Subscription"),
 			el("div", { class: "fin-flex-row fin-gap-sm" },
 				el("span", { class: "fin-amount-negative fin-text-mono fin-text-sm" }, formatCurrency(Number(sub.amount || 0))),
-				el("span", { class: "fin-text-muted fin-text-sm" }, sub.next_billing_date ? formatDateShort(sub.next_billing_date) : ""),
+				el("span", { class: "fin-text-muted fin-text-sm" }, sub.next_due_date ? formatDateShort(sub.next_due_date) : ""),
 			),
 		);
 		row.addEventListener("click", () => switchSection("subscriptions"));
