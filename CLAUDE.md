@@ -86,7 +86,6 @@ These are reserved and registered in `main.js`:
 - `Cmd+Shift+c` - Completed tasks
 - `Cmd+Shift+s` - Task switch
 - `Cmd+Shift+y` - Complete current task
-- `Cmd+Shift+r` - Recipes window
 - `Cmd+Shift+z` - Custom commands window
 
 ## Environment Variables

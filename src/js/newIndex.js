@@ -933,6 +933,11 @@ const parseCommand = (input) => {
 		return { type: 'open_finance' };
 	}
 
+	// Recipes command
+	if (trimmed === 'recipes') {
+		return { type: 'open_recipes' };
+	}
+
 	// List current task: llc
 	if (trimmed === 'llc') {
 		return { type: 'list_current' };
@@ -1144,6 +1149,10 @@ const executeCommand = (command) => {
 			ipc.send('open-finance-window');
 			return { success: true, message: "Opening finance window" };
 
+		case 'open_recipes':
+			ipc.send('open-recipes-window');
+			return { success: true, message: "Opening recipes window" };
+
 		case 'invalid':
 			return { success: false, message: `Invalid command: ${command.input}` };
 			
@@ -1177,7 +1186,8 @@ const getCommandSuggestions = (input) => {
 		{ command: 'll1', description: 'open list for task 1' },
 		{ command: 'lists', description: 'open standalone lists' },
 		{ command: 'templates', description: 'open task templates' },
-		{ command: 'finance', description: 'open finance window' }
+		{ command: 'finance', description: 'open finance window' },
+		{ command: 'recipes', description: 'open recipes window' }
 	];
 	}
 
@@ -1198,6 +1208,9 @@ const getCommandSuggestions = (input) => {
 	}
 	if ('finance'.startsWith(trimmed) && trimmed.startsWith('fi')) {
 		suggestions.push({ command: 'finance', description: 'open finance window' });
+	}
+	if ('recipes'.startsWith(trimmed) && trimmed.startsWith('re')) {
+		suggestions.push({ command: 'recipes', description: 'open recipes window' });
 	}
 	if (trimmed.startsWith('ll') && trimmed.match(/^ll\d*$/)) {
 		if (trimmed.match(/^ll\d+$/)) {
@@ -1226,7 +1239,8 @@ const getCommandSuggestions = (input) => {
 		{ command: 'll', description: 'open list for task', pattern: /^ll(\d+)$/ },
 		{ command: 'llc', description: 'open list for current task', pattern: /^llc$/ },
 		{ command: 'lists', description: 'open standalone lists', pattern: /^lists$/ },
-		{ command: 'templates', description: 'open task templates', pattern: /^templates$/ }
+		{ command: 'templates', description: 'open task templates', pattern: /^templates$/ },
+		{ command: 'recipes', description: 'open recipes window', pattern: /^recipes$/ }
 	];
 	
 	// Handle all command types with consistent logic
@@ -1405,7 +1419,7 @@ const updateCommandHelp = (input) => {
 const handleTaskChangeSearch = () => {
 	searchContainer.style.display = "flex";
 	searchInput.focus();
-	searchInput.placeholder = "s1, e2, c3, d4, ddd5, ec, llc, ll1, lists, sat, sw0d, remind, calendar...";
+	searchInput.placeholder = "s1, e2, c3, d4, ddd5, ec, llc, ll1, lists, sat, sw0d, remind, calendar, recipes...";
 
 	const commandHelp = document.querySelector('.commandHelp');
 	
@@ -1437,7 +1451,7 @@ const handleTaskChangeSearch = () => {
 		setTimeout(() => {
 			searchInput.blur();
 			searchInput.value = "";
-			searchInput.placeholder = "s1, e2, c3, d4, ddd5, ec, llc, ll1, lists, sat, sw0d, remind, calendar...";
+			searchInput.placeholder = "s1, e2, c3, d4, ddd5, ec, llc, ll1, lists, sat, sw0d, remind, calendar, recipes...";
 			searchInput.style.backgroundColor = '';
 			searchInput.style.color = '';
 			searchContainer.style.display = "none";

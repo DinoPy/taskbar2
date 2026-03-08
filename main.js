@@ -558,9 +558,6 @@ app.whenReady().then(async () => {
 		win?.show();
 		win?.webContents.send("open-fuzzy-finder");
 	});
-	globalShortcut.register("CommandOrControl+Shift+r", () => {
-		openRecipesWindow();
-	});
 
 	try {
 		await login();
