@@ -132,6 +132,7 @@ const commandsController = createCommandsController({
 let tasksController;
 
 let win = null;
+let repositionTaskbar = () => {};
 let pendingDeleteTasks = [];
 let pendingCompletionTask = null;
 
@@ -557,44 +558,36 @@ app.whenReady().then(async () => {
 	}
 
 	console.log("from main.js", +new Date());
-	screen.on("display-added", (event, newDisplay) => {
-		console.log("Display added");
+
+	repositionTaskbar = () => {
+		if (!win || win.isDestroyed()) return;
 		const displays = screen.getAllDisplays();
-		while (appState.currentlySelectedScreenIndex > displays.length - 1) {
-			appState.currentlySelectedScreenIndex -= 1;
+		if (displays.length === 0) return;
+		// Clamp screen index to valid range
+		if (appState.currentlySelectedScreenIndex >= displays.length) {
+			appState.currentlySelectedScreenIndex = displays.length - 1;
 		}
-
+		if (appState.currentlySelectedScreenIndex < 0) {
+			appState.currentlySelectedScreenIndex = 0;
+		}
+		const display = displays[appState.currentlySelectedScreenIndex];
 		const y = appState.currentlySelectedScreenSide === "bottom"
-			? displays[appState.currentlySelectedScreenIndex].bounds.y + displays[appState.currentlySelectedScreenIndex].bounds.height - appState.taskbarHeight
-			: displays[appState.currentlySelectedScreenIndex].bounds.y;
-
-		win?.setBounds({
-			x: displays[appState.currentlySelectedScreenIndex].bounds.x,
+			? display.bounds.y + display.bounds.height - appState.taskbarHeight
+			: display.bounds.y;
+		win.setBounds({
+			x: display.bounds.x,
 			y,
 			height: appState.taskbarHeight,
-			width: displays[appState.currentlySelectedScreenIndex].bounds.width,
+			width: display.bounds.width,
 		});
-	});
+	};
 
-	// Listen for a display being removed
-	screen.on("display-removed", (event, oldDisplay) => {
-		console.log("Display removed");
-		const displays = screen.getAllDisplays();
-		const y = appState.currentlySelectedScreenSide === "bottom"
-			? displays[0].bounds.y + displays[0].bounds.height - appState.taskbarHeight
-			: displays[0].bounds.y;
-
-		win?.setBounds({
-			x: displays[0].bounds.x,
-			y,
-			height: appState.taskbarHeight,
-			width: displays[0].bounds.width,
-		});
-	});
-
-	// Listen for changes to metrics (like resolution or orientation)
-	screen.on("display-metrics-changed", (event, changedDisplay, changedMetrics) => {
-		console.log("Display metrics changed");
+	let displayMetricsTimer = null;
+	screen.on("display-added", () => repositionTaskbar());
+	screen.on("display-removed", () => repositionTaskbar());
+	screen.on("display-metrics-changed", () => {
+		clearTimeout(displayMetricsTimer);
+		displayMetricsTimer = setTimeout(repositionTaskbar, 300);
 	});
 });
 
@@ -632,12 +625,9 @@ app.on("window-all-closed", () => {
 });
 
 
-powerMonitor.on("suspend", () => {
-	console.log("system suspended");
-})
 powerMonitor.on("resume", () => {
-	console.log("system resumed");
-	sendEvent("request_hard_refresh", "")
+	repositionTaskbar();
+	sendEvent("request_hard_refresh", "");
 })
 
 // app.on("activate", () => {

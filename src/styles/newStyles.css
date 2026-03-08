@@ -553,8 +553,7 @@ body:hover .noActiveTaskWarning {
 
 .task.urgency-critical:not(.activeTask) {
     border-left: var(--size-urgency-border-width) solid var(--color-urgency-critical);
-    box-shadow: 0 0 10px rgba(244, 67, 54, 0.3); /* Subtle glow */
-    transition: border-left-color var(--animation-transition) ease-in-out, box-shadow var(--animation-transition) ease-in-out;
+    transition: border-left-color var(--animation-transition) ease-in-out;
 }
 
 
