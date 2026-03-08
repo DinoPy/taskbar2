@@ -153,6 +153,108 @@ const showToast = (message, duration = 3000, type = "error") => {
 };
 
 // ---------------------------------------------------------------
+// Context Menu
+// ---------------------------------------------------------------
+
+let contextMenuEl = null;
+
+const showContextMenu = (e, def) => {
+	e.preventDefault();
+	closeContextMenu();
+
+	const menu = document.createElement("div");
+	menu.className = "list-context-menu";
+	menu.style.left = e.clientX + "px";
+	menu.style.top = e.clientY + "px";
+
+	const addMenuItem = (label, onClick) => {
+		const item = document.createElement("div");
+		item.className = "list-context-menu-item";
+		item.textContent = label;
+		item.addEventListener("click", () => {
+			onClick();
+			closeContextMenu();
+		});
+		menu.appendChild(item);
+	};
+
+	if (isStandalone) {
+		addMenuItem(def.is_pinned ? "Unpin" : "Pin", () => {
+			sendMutation("list_pin", {
+				list_id: def.id,
+				is_pinned: !def.is_pinned,
+				last_modified_at: Date.now(),
+			});
+		});
+
+		const statusSub = document.createElement("div");
+		statusSub.className = "list-context-menu-item has-submenu";
+		statusSub.textContent = "Set Status";
+		const subMenu = document.createElement("div");
+		subMenu.className = "list-context-submenu";
+		for (const s of ["active", "completed", "archived"]) {
+			const si = document.createElement("div");
+			si.className = "list-context-menu-item" + (def.status === s ? " active" : "");
+			si.textContent = s.charAt(0).toUpperCase() + s.slice(1);
+			si.addEventListener("click", () => {
+				sendMutation("list_set_status", {
+					list_id: def.id,
+					status: s,
+					last_modified_at: Date.now(),
+				});
+				closeContextMenu();
+			});
+			subMenu.appendChild(si);
+		}
+		statusSub.appendChild(subMenu);
+		menu.appendChild(statusSub);
+
+		addMenuItem("Duplicate", () => {
+			const lists = listsPayload?.lists ?? [];
+			const maxPos = lists.reduce((max, b) => Math.max(max, b.definition?.position ?? 0), -1);
+			sendMutation("list_duplicate", {
+				list_id: def.id,
+				position: maxPos + 1,
+				last_modified_at: Date.now(),
+			});
+		});
+
+		addMenuItem("Share...", () => {
+			openShareDialog(def.id);
+		});
+
+		// Separator
+		const sep = document.createElement("div");
+		sep.className = "list-context-menu-separator";
+		menu.appendChild(sep);
+
+		addMenuItem("Delete", () => {
+			openDeleteConfirmDialog(def.id, def.title);
+		});
+	}
+
+	document.body.appendChild(menu);
+	contextMenuEl = menu;
+
+	// Adjust position if menu goes off-screen
+	const rect = menu.getBoundingClientRect();
+	if (rect.right > window.innerWidth) menu.style.left = (window.innerWidth - rect.width - 4) + "px";
+	if (rect.bottom > window.innerHeight) menu.style.top = (window.innerHeight - rect.height - 4) + "px";
+};
+
+const closeContextMenu = () => {
+	if (contextMenuEl) {
+		contextMenuEl.remove();
+		contextMenuEl = null;
+	}
+};
+
+document.addEventListener("click", closeContextMenu);
+document.addEventListener("contextmenu", (e) => {
+	if (!contextMenuEl?.contains(e.target)) closeContextMenu();
+});
+
+// ---------------------------------------------------------------
 // Render
 // ---------------------------------------------------------------
 
@@ -294,6 +396,8 @@ const renderSidebar = (lists) => {
 			selectedListId = def.id;
 			render();
 		});
+
+		item.addEventListener("contextmenu", (e) => showContextMenu(e, def));
 
 		sidebarItems.appendChild(item);
 	}
