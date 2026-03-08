@@ -426,7 +426,7 @@ const renderRunItems = (bundle) => {
 	const renderRunItem = (ri, isChild = false) => {
 		const snap = ri.snapshot ?? {};
 		const el = document.createElement("div");
-		el.className = "list-run-item" + (isChild ? " child" : "") + (ri.is_completed ? " completed" : "");
+		el.className = "list-run-item" + (isChild ? " child" : "") + (ri.status === "completed" ? " completed" : "") + (ri.status === "cancelled" ? " cancelled" : "");
 		el.setAttribute("tabindex", "0");
 		el.setAttribute("data-run-item-id-row", ri.id);
 		if (snap.item_id) el.setAttribute("data-item-id", snap.item_id);
@@ -459,7 +459,7 @@ const renderCheckboxRunItem = (el, ri, snap, run, readonly) => {
 	const checkbox = document.createElement("input");
 	checkbox.type = "checkbox";
 	checkbox.className = "list-run-item-checkbox";
-	checkbox.checked = !!ri.is_completed;
+	checkbox.checked = ri.status === "completed";
 	if (!readonly && snap.item_id) {
 		checkbox.addEventListener("change", () => {
 			sendMutation("list_run_item_toggle", {
