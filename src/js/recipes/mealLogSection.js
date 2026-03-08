@@ -1,5 +1,5 @@
 import { el, formatDate, MEAL_TYPES, mealTypeLabel } from "./recipesUtils.js";
-import { getState, on } from "./recipesState.js";
+import { getState, on, setMealsAppendNext } from "./recipesState.js";
 
 let ctx = null;
 let container = null;
@@ -60,6 +60,9 @@ export function onEvent(event, _data) {
 
 function fetchMeals(append) {
 	const s = getState();
+	if (append) {
+		setMealsAppendNext(true);
+	}
 	const payload = { limit: PAGE_SIZE, offset: append ? s.mealsOffset : 0 };
 	if (s.activeGroupId) payload.group_id = s.activeGroupId;
 	ctx.sendEvent("meal_list", payload);

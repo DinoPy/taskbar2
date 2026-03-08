@@ -61,13 +61,29 @@ export function render(ct) {
 	container = ct;
 	unsubs.push(ctx.state.on("plan", () => renderContent()));
 	unsubs.push(ctx.state.on("suggestions", () => renderSuggestionsPanel()));
+
+	// If no plan in state, try to load the last known plan from localStorage
+	if (!s().currentPlan) {
+		const lastPlanId = localStorage.getItem("recipes_last_plan_id");
+		if (lastPlanId) {
+			send("meal_plan_get", { id: lastPlanId });
+		}
+	}
+
 	renderContent();
 }
 
 export function onEvent(event, _data) {
 	switch (event) {
 		case "meal_plan_created":
-		case "meal_plan_data":
+		case "meal_plan_data": {
+			const plan = s().currentPlan;
+			if (plan && plan.id) {
+				localStorage.setItem("recipes_last_plan_id", plan.id);
+			}
+			renderContent();
+			break;
+		}
 		case "meal_plan_entry_updated":
 		case "meal_plan_entry_removed":
 			renderContent();

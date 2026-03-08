@@ -6,6 +6,7 @@ const state = {
 	meals: [],
 	mealsHasMore: true,
 	mealsOffset: 0,
+	mealsAppendNext: false,
 	currentPlan: null,
 	planEntries: new Map(),
 	suggestions: [],
@@ -92,14 +93,19 @@ export function removeGroupMember(groupId, userId) {
 }
 
 export function setMeals(list, append = false) {
-	if (append) {
+	if (append || state.mealsAppendNext) {
 		state.meals.push(...list);
 	} else {
 		state.meals = list;
 	}
+	state.mealsAppendNext = false;
 	state.mealsOffset = state.meals.length;
 	state.mealsHasMore = list.length >= 50;
 	emit("meals");
+}
+
+export function setMealsAppendNext(val) {
+	state.mealsAppendNext = !!val;
 }
 
 export function addMeal(meal) {
