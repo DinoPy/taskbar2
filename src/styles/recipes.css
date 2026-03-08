@@ -937,23 +937,18 @@ html, body {
 	display: flex;
 	align-items: center;
 	gap: var(--spacing-sm);
-	padding: var(--spacing-xs) var(--spacing-sm);
+	padding: 8px var(--spacing-sm);
 	cursor: pointer;
 	border-radius: var(--border-radius-md);
-	transition: background var(--transition-fast);
+	border: var(--border-width) solid var(--color-border-subtle);
+	background: var(--color-bg-input);
+	transition: background var(--transition-fast), border-color var(--transition-fast);
+	user-select: none;
 }
 
 .rcp-workspace-selector:hover {
 	background: var(--color-bg-hover);
-}
-
-.rcp-workspace-name {
-	font-size: var(--font-size-sm);
-	font-weight: var(--font-weight-medium);
-	color: var(--color-text-primary);
-	overflow: hidden;
-	text-overflow: ellipsis;
-	white-space: nowrap;
+	border-color: var(--color-border-primary);
 }
 
 .rcp-workspace-indicator {
@@ -962,18 +957,41 @@ html, body {
 	border-radius: 50%;
 	background: var(--color-accent-primary);
 	flex-shrink: 0;
+	box-shadow: 0 0 4px var(--color-accent-primary);
+}
+
+.rcp-workspace-name {
+	flex: 1;
+	font-size: var(--font-size-sm);
+	font-weight: var(--font-weight-medium);
+	color: var(--color-text-primary);
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+
+.rcp-workspace-icon {
+	font-size: 13px;
+	flex-shrink: 0;
+}
+
+.rcp-workspace-chevron {
+	font-size: 9px;
+	color: var(--color-text-tertiary);
+	flex-shrink: 0;
+	transition: transform var(--transition-fast);
 }
 
 .rcp-workspace-dropdown {
 	position: absolute;
-	left: 0;
-	right: 0;
+	left: var(--spacing-sm);
+	right: var(--spacing-sm);
 	background: var(--color-bg-elevated);
 	border: var(--border-width) solid var(--color-border-primary);
 	border-radius: var(--border-radius-lg);
 	box-shadow: var(--shadow-lg);
 	z-index: 50;
-	padding: var(--spacing-xs) 0;
+	padding: 4px;
 	max-height: 200px;
 	overflow-y: auto;
 }
@@ -982,10 +1000,11 @@ html, body {
 	display: flex;
 	align-items: center;
 	gap: var(--spacing-sm);
-	padding: 6px var(--spacing-md);
+	padding: 7px var(--spacing-sm);
 	font-size: var(--font-size-sm);
 	color: var(--color-text-secondary);
 	cursor: pointer;
+	border-radius: var(--border-radius-md);
 	transition: background var(--transition-fast), color var(--transition-fast);
 }
 
@@ -995,7 +1014,13 @@ html, body {
 }
 
 .rcp-workspace-option.active {
-	color: var(--color-accent-primary);
+	color: var(--color-accent-light);
+	background: var(--color-accent-subtle);
+}
+
+.rcp-workspace-option-icon {
+	font-size: 13px;
+	flex-shrink: 0;
 }
 
 /* =========================================

@@ -97,29 +97,84 @@ function renderWorkspaceSelector() {
 	const footer = document.getElementById("rcp-sidebar-footer");
 	if (!footer) return;
 
+	let dropdownOpen = false;
+
+	const switchWorkspace = (groupId) => {
+		state.setActiveGroup(groupId || null);
+		if (activeSectionId) {
+			const contentEl = document.getElementById("rcp-content");
+			if (contentEl && activeSection) {
+				activeSection.destroy();
+				contentEl.innerHTML = "";
+				activeSection.render(contentEl);
+			}
+		}
+	};
+
+	const closeDropdown = () => {
+		dropdownOpen = false;
+		const dd = footer.querySelector(".rcp-workspace-dropdown");
+		if (dd) dd.remove();
+		document.removeEventListener("click", onOutsideClick, true);
+	};
+
+	const onOutsideClick = (e) => {
+		if (!footer.contains(e.target)) closeDropdown();
+	};
+
+	const openDropdown = () => {
+		if (dropdownOpen) { closeDropdown(); return; }
+		dropdownOpen = true;
+
+		const s = state.getState();
+		const dd = utils.el("div", { class: "rcp-workspace-dropdown" });
+
+		// Personal option
+		const personalOpt = utils.el("div", {
+			class: "rcp-workspace-option" + (!s.activeGroupId ? " active" : ""),
+			onClick: () => { closeDropdown(); switchWorkspace(null); },
+		},
+			utils.el("span", { class: "rcp-workspace-option-icon" }, "\uD83D\uDC64"),
+			utils.el("span", null, "Personal"),
+		);
+		dd.appendChild(personalOpt);
+
+		// Group options
+		for (const [id, group] of s.groups) {
+			const opt = utils.el("div", {
+				class: "rcp-workspace-option" + (id === s.activeGroupId ? " active" : ""),
+				onClick: () => { closeDropdown(); switchWorkspace(id); },
+			},
+				utils.el("span", { class: "rcp-workspace-option-icon" }, "\uD83D\uDC65"),
+				utils.el("span", null, group.name),
+			);
+			dd.appendChild(opt);
+		}
+
+		footer.style.position = "relative";
+		dd.style.bottom = "100%";
+		dd.style.marginBottom = "4px";
+		footer.appendChild(dd);
+
+		setTimeout(() => document.addEventListener("click", onOutsideClick, true), 0);
+	};
+
 	const updateSelector = () => {
+		closeDropdown();
 		footer.innerHTML = "";
 		const s = state.getState();
-		const select = utils.el("select", { class: "rcp-workspace-select" });
-		select.appendChild(utils.el("option", { value: "" }, "Personal"));
-		for (const [id, group] of s.groups) {
-			const opt = utils.el("option", { value: id }, group.name);
-			if (id === s.activeGroupId) opt.selected = true;
-			select.appendChild(opt);
-		}
-		select.addEventListener("change", () => {
-			state.setActiveGroup(select.value || null);
-			if (activeSectionId) {
-				const contentEl = document.getElementById("rcp-content");
-				if (contentEl && activeSection) {
-					activeSection.destroy();
-					contentEl.innerHTML = "";
-					activeSection.render(contentEl);
-				}
-			}
-		});
-		footer.appendChild(utils.el("div", { class: "rcp-form-label", style: { marginBottom: "4px" } }, "Workspace"));
-		footer.appendChild(select);
+
+		const activeGroup = s.activeGroupId ? s.groups.get(s.activeGroupId) : null;
+		const label = activeGroup ? activeGroup.name : "Personal";
+		const icon = activeGroup ? "\uD83D\uDC65" : "\uD83D\uDC64";
+
+		const selector = utils.el("div", { class: "rcp-workspace-selector", onClick: openDropdown },
+			utils.el("span", { class: "rcp-workspace-indicator" }),
+			utils.el("span", { class: "rcp-workspace-name" }, label),
+			utils.el("span", { class: "rcp-workspace-icon" }, icon),
+			utils.el("span", { class: "rcp-workspace-chevron" }, "\u25B4"),
+		);
+		footer.appendChild(selector);
 	};
 
 	state.on("groups", updateSelector);
