@@ -261,9 +261,6 @@ const closeContextMenu = () => {
 };
 
 document.addEventListener("click", closeContextMenu);
-document.addEventListener("contextmenu", (e) => {
-	if (!contextMenuEl?.contains(e.target)) closeContextMenu();
-});
 
 // ---------------------------------------------------------------
 // Render
