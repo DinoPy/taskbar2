@@ -14,6 +14,7 @@ export function showMainContextMenu({
 	createCalendarWindow,
 	openTemplateWindow,
 	openFinanceWindow,
+	openListsWindow,
 }) {
 	const menu = new Menu();
 
@@ -161,6 +162,14 @@ export function showMainContextMenu({
 			label: "Finance",
 			toolTip: "Open the personal finance manager",
 			click: () => openFinanceWindow?.(),
+		})
+	);
+
+	menu.append(
+		new MenuItem({
+			label: "Lists",
+			toolTip: "Open standalone lists",
+			click: () => openListsWindow?.(),
 		})
 	);
 

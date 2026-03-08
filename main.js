@@ -324,6 +324,7 @@ const showMainMenu = () =>
 		createCalendarWindow: openCalendarWindowOnFocusedScreen,
 		openTemplateWindow,
 		openFinanceWindow,
+		openListsWindow: () => windowManager.openListWindow({ target: { kind: "standalone_home" } }),
 		toggleAlwaysOnTop,
 		notificationReminderIntervalMinutes: appState.notificationReminderIntervalMinutes,
 		setNotificationReminderInterval: (minutes) => {
