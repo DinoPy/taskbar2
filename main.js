@@ -324,7 +324,7 @@ const showMainMenu = () =>
 		createCalendarWindow: openCalendarWindowOnFocusedScreen,
 		openTemplateWindow,
 		openFinanceWindow,
-		openListsWindow: () => windowManager.openListWindow({ target: { kind: "standalone_home" }, props: { currentUserId: userInfo?.id ?? null } }),
+		openListsWindow: () => windowManager.openListWindow({ target: { kind: "standalone_home" }, props: { currentUserId: appState.serverUserId ?? null } }),
 		toggleAlwaysOnTop,
 		notificationReminderIntervalMinutes: appState.notificationReminderIntervalMinutes,
 		setNotificationReminderInterval: (minutes) => {
@@ -419,7 +419,7 @@ registerIpcHandlers({
 	schedulesController,
 	calendarController,
 	listsController,
-	getUserId: () => userInfo?.id ?? null,
+	getUserId: () => appState.serverUserId ?? null,
 	log: (...args) => console.log(...args),
 	requestTaskDeletion,
 	requestTaskCompletionConfirmation,

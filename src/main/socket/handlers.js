@@ -40,6 +40,11 @@ export function createSocketHandlers({
 		}
 		if (!payload || typeof payload !== "object") return;
 
+		// Store the server-assigned user UUID from the connected payload
+		if (payload.id) {
+			appState.serverUserId = payload.id;
+		}
+
 		if (Array.isArray(payload.categories)) {
 			appState.categories = payload.categories;
 			appState.selectedCategories = [];
