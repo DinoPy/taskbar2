@@ -214,7 +214,19 @@ const render = () => {
 };
 
 const renderSidebar = (lists) => {
-	const sorted = sortByPosition(lists.map((b) => b.definition).filter(Boolean));
+	let sorted;
+	if (isStandalone) {
+		// Pinned first, then by updated_at DESC
+		sorted = [...lists.map((b) => b.definition).filter(Boolean)].sort((a, b) => {
+			if (a.is_pinned && !b.is_pinned) return -1;
+			if (!a.is_pinned && b.is_pinned) return 1;
+			const tA = a.updated_at ?? "";
+			const tB = b.updated_at ?? "";
+			return tB < tA ? -1 : tB > tA ? 1 : 0;
+		});
+	} else {
+		sorted = sortByPosition(lists.map((b) => b.definition).filter(Boolean));
+	}
 	sidebarItems.innerHTML = "";
 
 	for (const def of sorted) {
@@ -223,10 +235,28 @@ const renderSidebar = (lists) => {
 		item.setAttribute("tabindex", "0");
 		item.setAttribute("data-sidebar-id", def.id);
 
+		// Color dot
+		const colorDot = document.createElement("span");
+		colorDot.className = "list-sidebar-color-dot";
+		colorDot.style.backgroundColor = def.color || "#4A90D9";
+		item.appendChild(colorDot);
+
 		const titleSpan = document.createElement("span");
 		titleSpan.className = "list-sidebar-item-title";
 		titleSpan.textContent = def.title || "(untitled)";
 		item.appendChild(titleSpan);
+
+		if (def.is_pinned) {
+			const pinIcon = document.createElement("span");
+			pinIcon.className = "list-sidebar-pin-icon";
+			pinIcon.textContent = "\uD83D\uDCCC";
+			pinIcon.title = "Pinned";
+			item.appendChild(pinIcon);
+		}
+
+		// Status styling
+		if (def.status === "completed") item.classList.add("status-completed");
+		if (def.status === "archived") item.classList.add("status-archived");
 
 		const actionsDiv = document.createElement("div");
 		actionsDiv.className = "list-sidebar-item-actions";

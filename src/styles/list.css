@@ -171,6 +171,27 @@
 	border-left-color: var(--color-accent-primary);
 }
 
+.list-sidebar-color-dot {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+	flex-shrink: 0;
+}
+
+.list-sidebar-pin-icon {
+	font-size: 10px;
+	flex-shrink: 0;
+	opacity: 0.7;
+}
+
+.list-sidebar-item.status-completed {
+	opacity: 0.6;
+}
+
+.list-sidebar-item.status-archived {
+	opacity: 0.4;
+}
+
 .list-sidebar-item-title {
 	flex: 1;
 	overflow: hidden;
