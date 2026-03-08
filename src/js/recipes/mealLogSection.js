@@ -199,7 +199,7 @@ function openLogDialog() {
 			nameInput.focus();
 			return;
 		}
-		const payload = { name };
+		const payload = { name, last_modified_at: Date.now() };
 		if (typeSelect.value) payload.meal_type = typeSelect.value;
 		if (recipeSelect.value) payload.recipe_id = recipeSelect.value;
 		if (s.activeGroupId) payload.group_id = s.activeGroupId;

@@ -295,6 +295,10 @@ function uploadImage(recipeId) {
 	input.onchange = async () => {
 		const file = input.files?.[0];
 		if (!file) return;
+		if (file.size > 10 * 1024 * 1024) {
+			toast("Image must be under 10 MB", "error");
+			return;
+		}
 		try {
 			const result = await ipcRenderer.invoke("recipes:upload-image", {
 				recipeId,

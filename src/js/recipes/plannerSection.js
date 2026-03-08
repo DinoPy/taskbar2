@@ -263,6 +263,7 @@ function openFillSlotDialog(plan, day, mealType) {
 			date: day,
 			meal_type: mealType,
 			name,
+			last_modified_at: Date.now(),
 		};
 		const recipeId = recipeSelect.value;
 		if (recipeId) payload.recipe_id = recipeId;
@@ -351,7 +352,7 @@ function openCreatePlanDialog() {
 			ctx.showToast("Days must be between 1 and 30", "error");
 			return;
 		}
-		const payload = { start_date: startDate, num_days: numDays };
+		const payload = { start_date: startDate, num_days: numDays, last_modified_at: Date.now() };
 		const groupId = s().activeGroupId;
 		if (groupId) payload.group_id = groupId;
 		send("meal_plan_create", payload);
