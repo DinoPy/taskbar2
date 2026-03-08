@@ -18,6 +18,8 @@ let focusIndex = -1;
 let searchText = "";
 let statusFilter = "active";
 let searchDebounceTimer = null;
+let shareListId = null;
+let currentShares = [];
 
 // ---------------------------------------------------------------
 // DOM refs
@@ -67,6 +69,12 @@ const itemDialogSubmit = document.getElementById("itemDialogSubmit");
 const itemDialogCancel = document.getElementById("itemDialogCancel");
 const itemQuantityInput = document.getElementById("itemQuantityInput");
 const itemUnitInput = document.getElementById("itemUnitInput");
+
+const shareDialog = document.getElementById("shareDialog");
+const shareEmailInput = document.getElementById("shareEmailInput");
+const shareInviteBtn = document.getElementById("shareInviteBtn");
+const shareList = document.getElementById("shareList");
+const shareCloseBtn = document.getElementById("shareCloseBtn");
 
 const deleteConfirmDialog = document.getElementById("deleteConfirmDialog");
 const deleteConfirmMessage = document.getElementById("deleteConfirmMessage");
@@ -411,6 +419,17 @@ const renderTemplateItems = (bundle) => {
 	templateSection.classList.remove("hidden");
 	templateTitle.textContent = def.title || "(untitled)";
 	templateKind.textContent = def.kind || "";
+
+	// Add share button for standalone lists
+	const existingShareBtn = templateSection.querySelector(".list-share-btn");
+	if (existingShareBtn) existingShareBtn.remove();
+	if (isStandalone && def) {
+		const shareBtn = document.createElement("button");
+		shareBtn.className = "list-share-btn";
+		shareBtn.textContent = "Share";
+		shareBtn.addEventListener("click", () => openShareDialog(def.id));
+		templateSection.querySelector(".list-template-header")?.appendChild(shareBtn);
+	}
 
 	// If there's a run, we show template items as reference but focus on run
 	const sorted = sortByPosition(items);
@@ -967,6 +986,74 @@ const confirmDelete = () => {
 };
 
 // ---------------------------------------------------------------
+// Share dialog
+// ---------------------------------------------------------------
+
+const openShareDialog = (listId) => {
+	shareListId = listId;
+	currentShares = [];
+	shareEmailInput.value = "";
+	renderShareList();
+	shareDialog.showModal();
+	shareEmailInput.focus();
+	// Fetch current shares
+	sendMutation("list_shares_fetch", { list_id: listId });
+};
+
+const closeShareDialog = () => {
+	shareListId = null;
+	shareDialog.close();
+};
+
+const submitShareInvite = () => {
+	const email = shareEmailInput.value.trim();
+	if (!email) {
+		shareEmailInput.focus();
+		return;
+	}
+	sendMutation("list_share_invite", {
+		list_id: shareListId,
+		email,
+	});
+	shareEmailInput.value = "";
+};
+
+const renderShareList = () => {
+	shareList.innerHTML = "";
+	if (currentShares.length === 0) {
+		shareList.innerHTML = '<p class="list-share-empty">No shares yet</p>';
+		return;
+	}
+	for (const share of currentShares) {
+		const row = document.createElement("div");
+		row.className = "list-share-row";
+
+		const info = document.createElement("span");
+		info.className = "list-share-user";
+		info.textContent = share.shared_with_user_id?.substring(0, 8) + "...";
+		row.appendChild(info);
+
+		const perm = document.createElement("span");
+		perm.className = "list-share-permission";
+		perm.textContent = share.permission || "edit";
+		row.appendChild(perm);
+
+		const removeBtn = document.createElement("button");
+		removeBtn.className = "list-share-remove-btn";
+		removeBtn.textContent = "Remove";
+		removeBtn.addEventListener("click", () => {
+			sendMutation("list_share_remove", {
+				list_id: shareListId,
+				user_id: share.shared_with_user_id,
+			});
+		});
+		row.appendChild(removeBtn);
+
+		shareList.appendChild(row);
+	}
+};
+
+// ---------------------------------------------------------------
 // Attach picker (standalone mode)
 // ---------------------------------------------------------------
 
@@ -1142,6 +1229,27 @@ ipc.on("lists-attach-success", (_, payload) => {
 	}
 });
 
+ipc.on("lists-shares-list", (_, data) => {
+	if (!shareDialog.open) return;
+	currentShares = Array.isArray(data) ? data : [];
+	renderShareList();
+});
+
+ipc.on("lists-share-created", (_, data) => {
+	if (data?.list_share && shareDialog.open && data.list_share.list_id === shareListId) {
+		currentShares.push(data.list_share);
+		renderShareList();
+	}
+	showToast("List shared successfully", 2000, "success");
+});
+
+ipc.on("lists-share-removed", (_, data) => {
+	if (shareDialog.open && data?.list_id === shareListId) {
+		currentShares = currentShares.filter(s => s.shared_with_user_id !== data.user_id);
+		renderShareList();
+	}
+});
+
 // ---------------------------------------------------------------
 // Event listeners
 // ---------------------------------------------------------------
@@ -1177,6 +1285,12 @@ itemDialogCancel.addEventListener("click", () => {
 
 deleteConfirmSubmit.addEventListener("click", confirmDelete);
 deleteConfirmCancel.addEventListener("click", closeDeleteConfirmDialog);
+
+shareInviteBtn.addEventListener("click", submitShareInvite);
+shareCloseBtn.addEventListener("click", closeShareDialog);
+shareEmailInput.addEventListener("keydown", (e) => {
+	if (e.key === "Enter") submitShareInvite();
+});
 
 sidebarSearch.addEventListener("input", () => {
 	clearTimeout(searchDebounceTimer);
@@ -1231,6 +1345,7 @@ itemDialog.querySelectorAll('input[name="itemType"]').forEach((radio) => {
 addListDialog.addEventListener("cancel", (e) => e.preventDefault());
 itemDialog.addEventListener("cancel", (e) => e.preventDefault());
 deleteConfirmDialog.addEventListener("cancel", (e) => e.preventDefault());
+shareDialog.addEventListener("cancel", (e) => e.preventDefault());
 
 // ---------------------------------------------------------------
 // Keyboard Navigation
@@ -1271,13 +1386,14 @@ const activateFocusedRunItem = (el) => {
 };
 
 document.addEventListener("keydown", (e) => {
-	const inDialog = addListDialog.open || itemDialog.open || deleteConfirmDialog.open || !attachOverlay.classList.contains("hidden");
+	const inDialog = addListDialog.open || itemDialog.open || deleteConfirmDialog.open || (shareDialog && shareDialog.open) || !attachOverlay.classList.contains("hidden");
 	const inInput = document.activeElement?.tagName === "INPUT" ||
 		document.activeElement?.tagName === "TEXTAREA";
 
 	// Dialog handling
 	if (e.key === "Escape") {
 		if (!attachOverlay.classList.contains("hidden")) { closeAttachPicker(); return; }
+		if (shareDialog && shareDialog.open) { closeShareDialog(); return; }
 		if (deleteConfirmDialog.open) { closeDeleteConfirmDialog(); return; }
 		if (helpPanel.classList.contains("visible")) {
 			helpPanel.classList.remove("visible");

@@ -1273,3 +1273,81 @@
 .list-context-menu-item.has-submenu:hover .list-context-submenu {
 	display: block;
 }
+
+/* ============================================
+   Share Dialog
+   ============================================ */
+
+.list-share-invite-row {
+	display: flex;
+	gap: var(--spacing-sm);
+	margin-bottom: var(--spacing-md);
+}
+
+.list-share-invite-row .list-dialog-input {
+	flex: 1;
+}
+
+.list-share-list {
+	max-height: 200px;
+	overflow-y: auto;
+	margin-bottom: var(--spacing-md);
+}
+
+.list-share-empty {
+	color: var(--color-text-tertiary);
+	font-size: 12px;
+	text-align: center;
+	margin: var(--spacing-md) 0;
+}
+
+.list-share-row {
+	display: flex;
+	align-items: center;
+	gap: var(--spacing-sm);
+	padding: 6px 0;
+	border-bottom: 1px solid var(--color-border-subtle, var(--color-border-primary));
+}
+
+.list-share-user {
+	flex: 1;
+	font-size: 12px;
+	color: var(--color-text-primary);
+}
+
+.list-share-permission {
+	font-size: 10px;
+	color: var(--color-text-tertiary);
+	text-transform: uppercase;
+}
+
+.list-share-remove-btn {
+	background: none;
+	border: 1px solid var(--color-border-primary);
+	color: var(--color-text-tertiary);
+	font-size: 10px;
+	padding: 2px 6px;
+	border-radius: 4px;
+	cursor: pointer;
+}
+
+.list-share-remove-btn:hover {
+	color: var(--color-urgency-high);
+	border-color: var(--color-urgency-high);
+}
+
+.list-share-btn {
+	background: none;
+	border: 1px solid var(--color-border-primary);
+	color: var(--color-text-secondary);
+	font-size: 11px;
+	padding: 3px 8px;
+	border-radius: 6px;
+	cursor: pointer;
+	margin-left: auto;
+}
+
+.list-share-btn:hover {
+	border-color: var(--color-accent-primary);
+	color: var(--color-accent-primary);
+}
