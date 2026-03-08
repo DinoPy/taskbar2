@@ -86,16 +86,17 @@ export function el(tag, attrs, ...children) {
 	const elem = document.createElement(tag);
 	if (attrs) {
 		for (const [key, value] of Object.entries(attrs)) {
+			if (value == null) continue;
 			if (key === "class" || key === "className") {
 				elem.className = value;
-			} else if (key.startsWith("data-") || key === "role" || key === "aria-label" || key === "title" || key === "type" || key === "placeholder" || key === "for" || key === "id") {
-				elem.setAttribute(key, value);
 			} else if (key === "style" && typeof value === "object") {
 				Object.assign(elem.style, value);
 			} else if (key.startsWith("on") && typeof value === "function") {
 				elem.addEventListener(key.slice(2).toLowerCase(), value);
-			} else {
+			} else if (key === "checked" || key === "selected" || key === "disabled" || key === "readOnly") {
 				elem[key] = value;
+			} else {
+				elem.setAttribute(key, value);
 			}
 		}
 	}

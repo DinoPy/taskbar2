@@ -547,23 +547,24 @@ html, body {
 	border-radius: var(--border-radius-md);
 	box-shadow: var(--shadow-md);
 	z-index: 200;
-	animation: fin-toast-in 0.25s ease-out;
+	transform: translateY(12px);
+	opacity: 0;
+	transition: transform 0.25s ease-out, opacity 0.25s ease-out;
 }
 
-.fin-toast.error {
+.fin-toast--visible {
+	transform: translateY(0);
+	opacity: 1;
+}
+
+.fin-toast--error {
 	background: var(--color-status-error);
 	color: #fff;
 }
 
-@keyframes fin-toast-in {
-	from {
-		transform: translateY(12px);
-		opacity: 0;
-	}
-	to {
-		transform: translateY(0);
-		opacity: 1;
-	}
+.fin-toast--warning {
+	background: var(--color-status-warning);
+	color: var(--color-bg-root);
 }
 
 /* Account color dot */

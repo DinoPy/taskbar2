@@ -90,7 +90,7 @@ function renderContent() {
 	container.appendChild(buildTransferForm(accounts));
 
 	// Recent transfers
-	container.appendChild(buildRecentTransfers(s, accounts));
+	container.appendChild(buildRecentTransfers(s));
 }
 
 // =========================================

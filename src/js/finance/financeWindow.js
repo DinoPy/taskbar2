@@ -175,7 +175,7 @@ function handleStateEvent(event, data) {
 
 		// Transactions
 		case "fin_transactions_list":
-			state.setTransactions(data, state.getState().transactionsOffset > 0);
+			state.setTransactions(data);
 			break;
 		case "fin_transaction_created":
 		case "fin_transaction_updated":

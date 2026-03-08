@@ -71,6 +71,8 @@ export function destroy() {
 	container = null;
 	editingId = null;
 	formVisible = false;
+	summaryData = null;
+	collapsedGroups.clear();
 }
 
 // =========================================

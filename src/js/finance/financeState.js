@@ -3,6 +3,7 @@ const state = {
 	transactions: [],
 	transactionsHasMore: true,
 	transactionsOffset: 0,
+	transactionsAppendNext: false,
 	payees: new Map(),
 	subscriptions: new Map(),
 	budget: null,
@@ -43,12 +44,12 @@ export function removeAccount(id) {
 }
 
 export function setTransactions(list, append = false) {
-	if (append) {
+	if (append || state.transactionsAppendNext) {
 		state.transactions.push(...list);
 	} else {
 		state.transactions = list;
-		state.transactionsOffset = 0;
 	}
+	state.transactionsAppendNext = false;
 	state.transactionsOffset = state.transactions.length;
 	state.transactionsHasMore = list.length >= 50;
 	emit("transactions");

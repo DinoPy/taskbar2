@@ -112,9 +112,10 @@ function fetchTransactions(append) {
 
 	if (!append) {
 		s.transactionsOffset = 0;
-	} else {
-		// offset is already set from state
 	}
+
+	// Signal state store to append the next result
+	s.transactionsAppendNext = append;
 
 	const payload = { limit: 50, offset };
 	if (filters.account_id) payload.account_id = filters.account_id;
@@ -133,6 +134,11 @@ function fetchTransactions(append) {
 
 function renderContent() {
 	if (!container) return;
+
+	// Preserve scroll position across re-renders
+	const scrollParent = container.closest(".fin-content");
+	const savedScroll = scrollParent ? scrollParent.scrollTop : 0;
+
 	container.innerHTML = "";
 
 	const s = state.getState();
@@ -160,6 +166,11 @@ function renderContent() {
 
 	// Table
 	container.appendChild(buildTable(s));
+
+	// Restore scroll position
+	if (scrollParent) {
+		scrollParent.scrollTop = savedScroll;
+	}
 
 	// Setup scroll listener on fin-content
 	setupScrollListener();
