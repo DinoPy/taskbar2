@@ -1012,6 +1012,75 @@ html, body {
 }
 
 /* =========================================
+   Meal Planner Grid
+   ========================================= */
+
+.rcp-plan-grid {
+	background: var(--color-border-primary);
+	border: var(--border-width) solid var(--color-border-primary);
+	border-radius: var(--border-radius-md);
+	overflow: hidden;
+}
+
+.rcp-plan-header {
+	background: var(--color-bg-tertiary);
+	padding: 8px 10px;
+	font-size: var(--font-size-xs);
+	font-weight: var(--font-weight-semibold);
+	color: var(--color-text-secondary);
+	text-align: center;
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+}
+
+.rcp-plan-corner {
+	background: var(--color-bg-tertiary);
+}
+
+.rcp-plan-day-label {
+	background: var(--color-bg-secondary);
+	padding: 8px 10px;
+	font-size: var(--font-size-xs);
+	font-weight: var(--font-weight-medium);
+	color: var(--color-text-secondary);
+	display: flex;
+	align-items: center;
+	white-space: nowrap;
+}
+
+.rcp-plan-cell {
+	background: var(--color-bg-root);
+	padding: 8px 10px;
+	font-size: var(--font-size-sm);
+	min-height: 40px;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	cursor: pointer;
+	transition: background var(--transition-fast);
+	-webkit-app-region: no-drag;
+}
+
+.rcp-plan-cell--filled {
+	color: var(--color-text-primary);
+	font-weight: var(--font-weight-medium);
+}
+
+.rcp-plan-cell--filled:hover {
+	background: oklch(0.30 0.06 25 / 0.3);
+}
+
+.rcp-plan-cell--empty {
+	color: var(--color-text-tertiary);
+	font-size: var(--font-size-lg);
+}
+
+.rcp-plan-cell--empty:hover {
+	background: var(--color-bg-hover);
+	color: var(--color-accent-primary);
+}
+
+/* =========================================
    Utility
    ========================================= */
 
