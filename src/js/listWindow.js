@@ -460,6 +460,9 @@ const renderCheckboxRunItem = (el, ri, snap, run, readonly) => {
 	checkbox.type = "checkbox";
 	checkbox.className = "list-run-item-checkbox";
 	checkbox.checked = ri.status === "completed";
+	if (ri.status === "cancelled") {
+		checkbox.disabled = true;
+	}
 	if (!readonly && snap.item_id) {
 		checkbox.addEventListener("change", () => {
 			sendMutation("list_run_item_toggle", {
@@ -483,6 +486,36 @@ const renderCheckboxRunItem = (el, ri, snap, run, readonly) => {
 		content.appendChild(desc);
 	}
 	el.appendChild(content);
+
+	if (!readonly && snap.item_id) {
+		if (ri.status === "cancelled") {
+			const restoreBtn = document.createElement("button");
+			restoreBtn.className = "list-run-item-restore-btn";
+			restoreBtn.textContent = "Restore";
+			restoreBtn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				sendMutation("list_run_item_restore", {
+					run_id: run.id,
+					item_id: snap.item_id,
+					last_modified_at: Date.now(),
+				});
+			});
+			el.appendChild(restoreBtn);
+		} else if (ri.status === "pending") {
+			const cancelBtn = document.createElement("button");
+			cancelBtn.className = "list-run-item-cancel-btn";
+			cancelBtn.textContent = "Cancel";
+			cancelBtn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				sendMutation("list_run_item_cancel", {
+					run_id: run.id,
+					item_id: snap.item_id,
+					last_modified_at: Date.now(),
+				});
+			});
+			el.appendChild(cancelBtn);
+		}
+	}
 };
 
 const renderTimerRunItem = (el, ri, snap, run, readonly) => {

@@ -506,6 +506,44 @@
 	opacity: 0.6;
 }
 
+.list-run-item.cancelled {
+	opacity: 0.5;
+}
+
+.list-run-item.cancelled .list-run-item-title {
+	text-decoration: line-through;
+	color: var(--color-text-tertiary);
+}
+
+.list-run-item-cancel-btn,
+.list-run-item-restore-btn {
+	background: none;
+	border: 1px solid var(--color-border-primary);
+	color: var(--color-text-tertiary);
+	font-size: 10px;
+	padding: 2px 6px;
+	border-radius: 4px;
+	cursor: pointer;
+	opacity: 0;
+	transition: opacity 0.15s ease;
+	flex-shrink: 0;
+}
+
+.list-run-item:hover .list-run-item-cancel-btn,
+.list-run-item:hover .list-run-item-restore-btn {
+	opacity: 1;
+}
+
+.list-run-item-cancel-btn:hover {
+	background: var(--color-bg-hover);
+	color: var(--color-urgency-high);
+}
+
+.list-run-item-restore-btn:hover {
+	background: var(--color-bg-hover);
+	color: var(--color-accent-primary);
+}
+
 /* Checkbox run item */
 .list-run-item-checkbox {
 	margin-top: 2px;
