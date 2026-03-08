@@ -200,6 +200,7 @@ export function createSocketHandlers({
 				"task_blocked_by_list",
 				"invalid_data",
 				"not_found",
+				"already_shared",
 				"unauthorized",
 				"database_error",
 			]);
@@ -589,6 +590,46 @@ export function createSocketHandlers({
 			}
 			if (!payload) return;
 			listsController?.handleStandaloneListAttached?.(payload);
+		},
+		list_share_created: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			if (!payload) return;
+			listsController?.handleShareCreated?.(payload);
+		},
+		list_share_removed: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			if (!payload) return;
+			listsController?.handleShareRemoved?.(payload);
+		},
+		list_shares_list: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			if (!payload) return;
+			listsController?.handleSharesList?.(payload);
+		},
+		list_run_item_assigned: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			if (!payload) return;
+			listsController?.handleRunItemAssigned?.(payload);
+		},
+		list_run_item_unassigned: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			if (!payload) return;
+			listsController?.handleRunItemUnassigned?.(payload);
 		},
 		// ---- Template events ----
 		template_created: ({ data }) => {
