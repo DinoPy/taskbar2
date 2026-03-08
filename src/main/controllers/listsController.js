@@ -257,6 +257,73 @@ export function createListsController({ sendEvent, log = console.log, onTaskList
 		}
 	};
 
+	const handleShareCreated = (payload) => {
+		// Share created — refetch standalone_home to pick up newly shared list
+		refetchAllActive();
+		// Forward to all subscribers for UI update
+		for (const [, subs] of surfaceSubscribers) {
+			for (const [, ref] of subs) {
+				try {
+					ref._pushFn("lists-share-created", payload);
+				} catch (err) {
+					log(`[ListsController] handleShareCreated push error: ${err}`);
+				}
+			}
+		}
+	};
+
+	const handleShareRemoved = (payload) => {
+		// Share removed — refetch standalone_home
+		refetchAllActive();
+		// Forward to subscribers
+		for (const [, subs] of surfaceSubscribers) {
+			for (const [, ref] of subs) {
+				try {
+					ref._pushFn("lists-share-removed", payload);
+				} catch (err) {
+					log(`[ListsController] handleShareRemoved push error: ${err}`);
+				}
+			}
+		}
+	};
+
+	const handleSharesList = (payload) => {
+		// Forward shares list to all subscribers
+		for (const [, subs] of surfaceSubscribers) {
+			for (const [, ref] of subs) {
+				try {
+					ref._pushFn("lists-shares-list", payload);
+				} catch (err) {
+					log(`[ListsController] handleSharesList push error: ${err}`);
+				}
+			}
+		}
+	};
+
+	const handleRunItemAssigned = (payload) => {
+		for (const [, subs] of surfaceSubscribers) {
+			for (const [, ref] of subs) {
+				try {
+					ref._pushFn("lists-run-item-assigned", payload);
+				} catch (err) {
+					log(`[ListsController] handleRunItemAssigned push error: ${err}`);
+				}
+			}
+		}
+	};
+
+	const handleRunItemUnassigned = (payload) => {
+		for (const [, subs] of surfaceSubscribers) {
+			for (const [, ref] of subs) {
+				try {
+					ref._pushFn("lists-run-item-unassigned", payload);
+				} catch (err) {
+					log(`[ListsController] handleRunItemUnassigned push error: ${err}`);
+				}
+			}
+		}
+	};
+
 	const handleListError = (errorPayload) => {
 		// Push error to all subscribers across all surfaces
 		for (const [key] of surfaceSubscribers) {
@@ -308,6 +375,11 @@ export function createListsController({ sendEvent, log = console.log, onTaskList
 		handleRunItemUpdated,
 		handleRunUpdated,
 		handleStandaloneListAttached,
+		handleShareCreated,
+		handleShareRemoved,
+		handleSharesList,
+		handleRunItemAssigned,
+		handleRunItemUnassigned,
 		handleListError,
 		refetchAllActive,
 		getSurface,
