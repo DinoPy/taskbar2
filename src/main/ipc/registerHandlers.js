@@ -1036,4 +1036,103 @@ export function registerIpcHandlers({
     ipc.on("get-server-user-id", (event) => {
         event.returnValue = appState.serverUserId ?? null;
     });
+
+    // ---- Recipes image HTTP handlers ----
+
+    function getRecipesHttpBaseUrl() {
+        const wsUrl = process.env.APP_STAGE === "production"
+            ? "wss://pythonws.dinodev.dev"
+            : "ws://localhost:8080";
+        return wsUrl.replace("wss://", "https://").replace("ws://", "http://");
+    }
+
+    ipc.handle("recipes:upload-image", async (_, { recipeId, filePath, googleUid, email }) => {
+        const { net } = require("electron");
+        const fs = require("fs");
+        const path = require("path");
+        const baseUrl = getRecipesHttpBaseUrl();
+        const url = `${baseUrl}/api/recipes/${recipeId}/images`;
+        const boundary = "----RecipesFormBoundary" + Date.now();
+        const fileBuffer = fs.readFileSync(filePath);
+        const fileName = path.basename(filePath);
+        const ext = path.extname(fileName).toLowerCase();
+        const mimeType = ext === ".png" ? "image/png" : "image/jpeg";
+
+        const prefix = Buffer.from(
+            `--${boundary}\r\nContent-Disposition: form-data; name="image"; filename="${fileName}"\r\nContent-Type: ${mimeType}\r\n\r\n`
+        );
+        const suffix = Buffer.from(`\r\n--${boundary}--\r\n`);
+        const body = Buffer.concat([prefix, fileBuffer, suffix]);
+
+        const response = await net.fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": `multipart/form-data; boundary=${boundary}`,
+                "X-Google-UID": googleUid,
+                "X-Email": email,
+            },
+            body,
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Upload failed (${response.status}): ${text}`);
+        }
+        return response.json();
+    });
+
+    ipc.handle("recipes:replace-image", async (_, { recipeId, imageId, filePath, googleUid, email }) => {
+        const { net } = require("electron");
+        const fs = require("fs");
+        const path = require("path");
+        const baseUrl = getRecipesHttpBaseUrl();
+        const url = `${baseUrl}/api/recipes/${recipeId}/images/${imageId}`;
+        const boundary = "----RecipesFormBoundary" + Date.now();
+        const fileBuffer = fs.readFileSync(filePath);
+        const fileName = path.basename(filePath);
+        const ext = path.extname(fileName).toLowerCase();
+        const mimeType = ext === ".png" ? "image/png" : "image/jpeg";
+
+        const prefix = Buffer.from(
+            `--${boundary}\r\nContent-Disposition: form-data; name="image"; filename="${fileName}"\r\nContent-Type: ${mimeType}\r\n\r\n`
+        );
+        const suffix = Buffer.from(`\r\n--${boundary}--\r\n`);
+        const body = Buffer.concat([prefix, fileBuffer, suffix]);
+
+        const response = await net.fetch(url, {
+            method: "PUT",
+            headers: {
+                "Content-Type": `multipart/form-data; boundary=${boundary}`,
+                "X-Google-UID": googleUid,
+                "X-Email": email,
+            },
+            body,
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Replace failed (${response.status}): ${text}`);
+        }
+        return response.json();
+    });
+
+    ipc.handle("recipes:delete-image", async (_, { recipeId, imageId, googleUid, email }) => {
+        const { net } = require("electron");
+        const baseUrl = getRecipesHttpBaseUrl();
+        const url = `${baseUrl}/api/recipes/${recipeId}/images/${imageId}`;
+
+        const response = await net.fetch(url, {
+            method: "DELETE",
+            headers: {
+                "X-Google-UID": googleUid,
+                "X-Email": email,
+            },
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Delete failed (${response.status}): ${text}`);
+        }
+        return { ok: true };
+    });
 }
