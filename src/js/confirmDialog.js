@@ -210,7 +210,7 @@ const renderListStatus = (payload) => {
 		// Show individual incomplete required items
 		const runItems = bundle.run_items ?? [];
 		const incompleteItems = runItems.filter(
-			(ri) => ri.snapshot?.required && !ri.is_completed
+			(ri) => ri.snapshot?.required && ri.status !== "completed"
 		);
 
 		if (incompleteItems.length > 0) {

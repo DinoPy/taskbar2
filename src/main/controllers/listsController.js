@@ -161,7 +161,7 @@ export function createListsController({ sendEvent, log = console.log, onTaskList
 		subscribe(target, windowRef);
 		const payload = { target };
 		if (options.search_text) payload.search_text = options.search_text;
-		if (options.status_filter) payload.status_filter = options.status_filter;
+		if (options.status_filter !== undefined) payload.status_filter = options.status_filter;
 		sendEvent?.("lists_fetch", payload);
 	};
 
