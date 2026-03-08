@@ -59,6 +59,8 @@ const itemRequiredInput = document.getElementById("itemRequiredInput");
 const itemDescriptionInput = document.getElementById("itemDescriptionInput");
 const itemDialogSubmit = document.getElementById("itemDialogSubmit");
 const itemDialogCancel = document.getElementById("itemDialogCancel");
+const itemQuantityInput = document.getElementById("itemQuantityInput");
+const itemUnitInput = document.getElementById("itemUnitInput");
 
 const deleteConfirmDialog = document.getElementById("deleteConfirmDialog");
 const deleteConfirmMessage = document.getElementById("deleteConfirmMessage");
@@ -284,6 +286,12 @@ const renderTemplateItems = (bundle) => {
 		const title = document.createElement("span");
 		title.className = "list-item-title";
 		title.textContent = item.title || "(untitled)";
+		if (item.quantity || item.unit) {
+			const qtySpan = document.createElement("span");
+			qtySpan.className = "list-item-quantity";
+			qtySpan.textContent = ` — ${item.quantity || ""}${item.unit ? " " + item.unit : ""}`;
+			title.appendChild(qtySpan);
+		}
 		row.appendChild(title);
 
 		const meta = document.createElement("span");
@@ -478,6 +486,12 @@ const renderCheckboxRunItem = (el, ri, snap, run, readonly) => {
 	const title = document.createElement("span");
 	title.className = "list-run-item-title";
 	title.textContent = snap.title || "(untitled)";
+	if (snap.quantity || snap.unit) {
+		const qtySpan = document.createElement("span");
+		qtySpan.className = "list-item-quantity";
+		qtySpan.textContent = ` — ${snap.quantity || ""}${snap.unit ? " " + snap.unit : ""}`;
+		title.appendChild(qtySpan);
+	}
 	content.appendChild(title);
 	if (snap.description) {
 		const desc = document.createElement("span");
@@ -530,6 +544,12 @@ const renderTimerRunItem = (el, ri, snap, run, readonly) => {
 	const title = document.createElement("span");
 	title.className = "list-run-item-title";
 	title.textContent = snap.title || "(untitled)";
+	if (snap.quantity || snap.unit) {
+		const qtySpan = document.createElement("span");
+		qtySpan.className = "list-item-quantity";
+		qtySpan.textContent = ` — ${snap.quantity || ""}${snap.unit ? " " + snap.unit : ""}`;
+		title.appendChild(qtySpan);
+	}
 	content.appendChild(title);
 
 	const timerRow = document.createElement("div");
@@ -605,6 +625,12 @@ const renderNoteRunItem = (el, ri, snap, run, readonly) => {
 	const title = document.createElement("span");
 	title.className = "list-run-item-title";
 	title.textContent = snap.title || "(untitled)";
+	if (snap.quantity || snap.unit) {
+		const qtySpan = document.createElement("span");
+		qtySpan.className = "list-item-quantity";
+		qtySpan.textContent = ` — ${snap.quantity || ""}${snap.unit ? " " + snap.unit : ""}`;
+		title.appendChild(qtySpan);
+	}
 	content.appendChild(title);
 
 	const textarea = document.createElement("textarea");
@@ -733,6 +759,8 @@ const openItemDialog = (existingItem = null) => {
 	itemDescriptionInput.value = existingItem?.description ?? "";
 	timerDurationInput.value = existingItem?.config?.duration_seconds ?? "";
 	itemRequiredInput.checked = existingItem ? !!existingItem.required : true;
+	itemQuantityInput.value = existingItem?.quantity ?? "";
+	itemUnitInput.value = existingItem?.unit ?? "";
 
 	const typeValue = existingItem?.type ?? "checkbox";
 	const radio = itemDialog.querySelector(`input[name="itemType"][value="${typeValue}"]`);
@@ -863,6 +891,8 @@ const submitItemDialog = () => {
 	const type = itemDialog.querySelector('input[name="itemType"]:checked')?.value ?? "checkbox";
 	const required = type === "note" ? false : itemRequiredInput.checked;
 	const description = itemDescriptionInput.value.trim() || null;
+	const quantity = itemQuantityInput.value.trim() || null;
+	const unit = itemUnitInput.value.trim() || "";
 	let config = {};
 	if (type === "timer") {
 		const dur = parseInt(timerDurationInput.value, 10);
@@ -888,6 +918,8 @@ const submitItemDialog = () => {
 			description,
 			required,
 			config,
+			quantity,
+			unit,
 		});
 	} else {
 		const bundle = getSelectedBundle();
@@ -903,6 +935,8 @@ const submitItemDialog = () => {
 			description,
 			required,
 			config,
+			quantity,
+			unit,
 		});
 	}
 

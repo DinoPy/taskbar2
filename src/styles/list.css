@@ -787,6 +787,21 @@
 	display: block;
 }
 
+.list-dialog-quantity-row {
+	display: flex;
+	gap: var(--spacing-sm);
+}
+
+.list-dialog-quantity-field {
+	flex: 1;
+}
+
+.list-item-quantity {
+	color: var(--color-text-tertiary);
+	font-weight: 400;
+	font-size: 11px;
+}
+
 .list-dialog-actions {
 	display: flex;
 	gap: 8px;
