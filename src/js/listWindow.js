@@ -56,6 +56,9 @@ const addListDialog = document.getElementById("addListDialog");
 const listTitleInput = document.getElementById("listTitleInput");
 const addListSubmit = document.getElementById("addListSubmit");
 const addListCancel = document.getElementById("addListCancel");
+const listIconInput = document.getElementById("listIconInput");
+const listColorInput = document.getElementById("listColorInput");
+const listTagsInput = document.getElementById("listTagsInput");
 
 const itemDialog = document.getElementById("itemDialog");
 const itemDialogTitle = document.getElementById("itemDialogTitle");
@@ -892,6 +895,9 @@ const startTimerTick = () => {
 
 const openAddListDialog = () => {
 	listTitleInput.value = "";
+	listIconInput.value = "";
+	listColorInput.value = "#4A90D9";
+	listTagsInput.value = "";
 	const checklist = addListDialog.querySelector('input[name="listKind"][value="checklist"]');
 	if (checklist) checklist.checked = true;
 	addListDialog.showModal();
@@ -917,6 +923,10 @@ const submitAddList = () => {
 		position: maxPos + 1,
 		title,
 		kind,
+		icon: listIconInput.value.trim() || "list",
+		color: listColorInput.value || "#4A90D9",
+		tags: listTagsInput.value.split(",").map(t => t.trim()).filter(Boolean),
+		last_modified_at: Date.now(),
 	});
 	closeAddListDialog();
 };

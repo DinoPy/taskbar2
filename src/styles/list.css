@@ -850,6 +850,15 @@
 	display: block;
 }
 
+.list-dialog-row {
+	display: flex;
+	gap: var(--spacing-sm);
+}
+
+.list-dialog-field {
+	flex: 1;
+}
+
 .list-dialog-quantity-row {
 	display: flex;
 	gap: var(--spacing-sm);
