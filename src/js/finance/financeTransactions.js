@@ -1,4 +1,5 @@
-import { sendEvent, showToast, switchSection, state, utils } from "./financeWindow.js";
+import { beginFinanceWrite, sendEvent, showToast, switchSection, state, utils } from "./financeWindow.js";
+import { resolveSingleReference } from "./financeReferenceState.js";
 
 const { el, formatCurrency, formatDateShort, formatDateISO, displayToCents, centsToDisplay, getCurrentMonthRange } = utils;
 
@@ -13,6 +14,7 @@ let _initialFetchDone = false;
 let _expandedSplits = new Set();
 let _splitsData = {};
 let _pendingSplitsTxId = null;
+let formDraft = null;
 
 // Payee search state
 let _payeeResults = [];
@@ -54,24 +56,6 @@ export function render(ct) {
 // =========================================
 
 export function onEvent(event, data) {
-	if (event === "fin_transaction_created") {
-		showToast("Transaction created", "info");
-		formVisible = false;
-		editingTx = null;
-		sendEvent("fin_accounts_fetch", {});
-		renderContent();
-	}
-	if (event === "fin_transaction_updated") {
-		showToast("Transaction updated", "info");
-		formVisible = false;
-		editingTx = null;
-		sendEvent("fin_accounts_fetch", {});
-		renderContent();
-	}
-	if (event === "fin_transaction_deleted") {
-		showToast("Transaction deleted", "info");
-		sendEvent("fin_accounts_fetch", {});
-	}
 	if (event === "fin_payee_results") {
 		_payeeResults = Array.isArray(data) ? data : [];
 		renderPayeeDropdown();
@@ -107,7 +91,55 @@ export function destroy() {
 	_pendingSplitsTxId = null;
 	_payeeResults = [];
 	_payeeDropdown = null;
+	formDraft = null;
 	if (searchTimer) clearTimeout(searchTimer);
+}
+
+function createTransactionDraft(tx) {
+	const dateValue = tx?.date
+		? new Date(tx.date).toISOString().slice(0, 16)
+		: new Date().toISOString().slice(0, 16);
+
+	return {
+		account_id: tx?.account_id || "",
+		transaction_type: tx?.transaction_type || "income",
+		amount: tx ? centsToDisplay(Math.abs(Number(tx.amount || 0))) : "",
+		date: dateValue,
+		description: tx?.description || "",
+		category: tx?.category || "",
+		payee_id: tx?.payee_id || "",
+		payee_label: tx?.payee_name || "",
+		tags: tx?.tags
+			? (Array.isArray(tx.tags) ? tx.tags.join(", ") : tx.tags)
+			: "",
+		notes: tx?.notes || "",
+		is_split: !!tx?.is_split,
+	};
+}
+
+function ensureFormDraft(tx) {
+	if (!formDraft) {
+		formDraft = createTransactionDraft(tx);
+	}
+	return formDraft;
+}
+
+function openForm(tx = null) {
+	editingTx = tx;
+	formDraft = createTransactionDraft(tx);
+	formVisible = true;
+	_payeeResults = [];
+	removePayeeDropdown();
+	renderContent();
+}
+
+function closeForm() {
+	formVisible = false;
+	editingTx = null;
+	formDraft = null;
+	_payeeResults = [];
+	removePayeeDropdown();
+	renderContent();
 }
 
 // =========================================
@@ -156,9 +188,8 @@ function renderContent() {
 		el("h2", {}, "Transactions"),
 		el("div", { class: "fin-section-actions" },
 			el("button", { class: "fin-btn fin-btn-primary", onClick: () => {
-				editingTx = null;
-				formVisible = !formVisible;
-				renderContent();
+				if (formVisible && !editingTx) closeForm();
+				else openForm(null);
 			} }, formVisible && !editingTx ? "Cancel" : "+ Add Transaction"),
 		),
 	);
@@ -266,6 +297,7 @@ function buildTable(s) {
 	const thead = el("thead", {},
 		el("tr", {},
 			el("th", {}, "Date"),
+			el("th", {}, "Account"),
 			el("th", {}, "Description"),
 			el("th", {}, "Category"),
 			el("th", {}, "Payee"),
@@ -281,7 +313,7 @@ function buildTable(s) {
 
 	if (txns.length === 0) {
 		const emptyRow = el("tr", {},
-			el("td", { colSpan: "7", style: { textAlign: "center", padding: "var(--spacing-lg)", color: "var(--color-text-tertiary)" } }, "No transactions found"),
+			el("td", { colSpan: "8", style: { textAlign: "center", padding: "var(--spacing-lg)", color: "var(--color-text-tertiary)" } }, "No transactions found"),
 		);
 		tbody.appendChild(emptyRow);
 	} else {
@@ -306,12 +338,26 @@ function buildTxRow(tx, s) {
 	const amt = Number(tx.amount || 0);
 	const isExpense = tx.transaction_type === "expense";
 	const isTransfer = tx.transaction_type === "transfer";
+	const isTransferIncoming = tx.transaction_type === "income" && tx.transfer_peer_id;
+	const isAnyTransfer = isTransfer || isTransferIncoming;
 	let amtClass = "fin-amount-positive";
-	if (isExpense) amtClass = "fin-amount-negative";
-	else if (isTransfer) amtClass = "fin-text-accent";
+	if (isExpense || isTransfer) amtClass = "fin-amount-negative";
+	else if (isTransferIncoming) amtClass = "fin-text-accent";
 
-	const prefix = isExpense ? "-" : isTransfer ? "" : "+";
+	const prefix = (isExpense || isTransfer) ? "-" : "+";
 	const account = s.accounts.get(tx.account_id);
+	const peerAccount = isAnyTransfer && tx.transfer_account_id ? s.accounts.get(tx.transfer_account_id) : null;
+
+	// Transfer description: "Transfer to/from [account]"
+	let description = tx.description || "";
+	if (isAnyTransfer && peerAccount) {
+		description = (isTransfer ? "Transfer to " : "Transfer from ") + peerAccount.name;
+	} else if (isAnyTransfer) {
+		description = description || "Transfer";
+	}
+
+	// Category: show "Transfer" for transfer transactions
+	const category = isAnyTransfer ? "Transfer" : (tx.category || "");
 
 	const splitBtn = tx.is_split
 		? el("span", { style: { cursor: "pointer", fontSize: "var(--font-size-xs)" }, title: "View splits", onClick: () => {
@@ -330,17 +376,16 @@ function buildTxRow(tx, s) {
 
 	const row = el("tr", {},
 		el("td", {}, tx.date ? formatDateShort(tx.date) : ""),
-		el("td", { class: "fin-truncate", style: { maxWidth: "200px" } }, tx.description || ""),
-		el("td", {}, tx.category || ""),
+		el("td", { class: "fin-truncate", style: { maxWidth: "120px" } }, account?.name || ""),
+		el("td", { class: "fin-truncate", style: { maxWidth: "200px" } }, description),
+		el("td", {}, category),
 		el("td", {}, tx.payee_name || ""),
 		el("td", { class: "fin-col-right fin-text-mono " + amtClass }, prefix + centsToDisplay(Math.abs(amt))),
 		el("td", { class: "fin-col-center" }, splitBtn),
 		el("td", {},
 			el("div", { class: "fin-flex-row fin-gap-sm" },
 				el("button", { class: "fin-btn fin-btn-icon", title: "Edit", onClick: () => {
-					editingTx = tx;
-					formVisible = true;
-					renderContent();
+					openForm(tx);
 				} }, "\u270E"),
 				el("button", { class: "fin-btn fin-btn-icon", title: "Delete", onClick: (e) => {
 					handleDelete(tx, e.currentTarget);
@@ -355,6 +400,7 @@ function buildTxRow(tx, s) {
 function buildSplitRow(split) {
 	const amt = Number(split.amount || 0);
 	return el("tr", { style: { background: "var(--color-bg-secondary)" } },
+		el("td", {}),
 		el("td", {}),
 		el("td", { style: { paddingLeft: "var(--spacing-lg)" } }, split.notes || "Split"),
 		el("td", {}, split.category || ""),
@@ -371,6 +417,18 @@ function buildSplitRow(split) {
 
 function handleDelete(tx, btnEl) {
 	if (btnEl.dataset.confirming) {
+		beginFinanceWrite("fin_transaction_delete", {
+			entityKind: "transaction",
+			entityId: tx.id,
+			refreshKinds: ["accounts"],
+			onSuccess: () => {
+				showToast("Transaction deleted", "info");
+				fetchTransactions(false);
+			},
+			onNotFound: () => {
+				fetchTransactions(false);
+			},
+		});
 		sendEvent("fin_transaction_delete", { id: tx.id });
 		return;
 	}
@@ -418,6 +476,13 @@ function setupScrollListener() {
 // =========================================
 
 function buildForm(s, editing) {
+	const draft = ensureFormDraft(editing);
+	const activeAccounts = [...s.accounts.values()]
+		.filter(a => !a.is_archived)
+		.sort((a, b) => (a.position || 0) - (b.position || 0));
+	const activeAccountMap = new Map(activeAccounts.map(account => [account.id, account]));
+	const accountRef = resolveSingleReference(draft.account_id, activeAccountMap);
+	const payeeRef = resolveSingleReference(draft.payee_id, s.payees);
 	const panel = el("div", { class: "fin-card", style: { marginBottom: "var(--spacing-md)" } });
 	const title = el("h3", { style: { margin: "0 0 var(--spacing-md) 0", fontSize: "var(--font-size-md)", fontWeight: "var(--font-weight-semibold)" } },
 		editing ? "Edit Transaction" : "New Transaction",
@@ -429,41 +494,60 @@ function buildForm(s, editing) {
 	// Account
 	const accSelect = el("select", { class: "fin-select" });
 	accSelect.appendChild(el("option", { value: "" }, "Select account..."));
-	for (const a of s.accounts.values()) {
-		if (a.is_archived) continue;
+	if (accountRef.isStale && draft.account_id) {
+		accSelect.appendChild(el("option", { value: draft.account_id, selected: true }, "Unavailable account (stale)"));
+	}
+	for (const a of activeAccounts) {
 		const opt = el("option", { value: a.id }, a.name);
-		if (editing && editing.account_id === a.id) opt.selected = true;
+		if (draft.account_id === a.id) opt.selected = true;
 		accSelect.appendChild(opt);
 	}
+	accSelect.addEventListener("change", () => {
+		draft.account_id = accSelect.value;
+		if (container) renderContent();
+	});
 	form.appendChild(formRow("Account", accSelect));
+	if (accountRef.isStale) {
+		form.appendChild(formHint("The selected account is no longer available. Choose another account to continue.", "error"));
+	}
 
 	// Type
+	const isEditingTransfer = editing && (editing.transaction_type === "transfer" || editing.transfer_peer_id);
 	const typeSelect = el("select", { class: "fin-select" });
-	for (const t of ["income", "expense"]) {
+	const typeOptions = isEditingTransfer ? ["transfer", "income", "expense"] : ["income", "expense"];
+	for (const t of typeOptions) {
 		const opt = el("option", { value: t }, t.charAt(0).toUpperCase() + t.slice(1));
-		if (editing && editing.transaction_type === t) opt.selected = true;
+		if (draft.transaction_type === t) opt.selected = true;
 		typeSelect.appendChild(opt);
 	}
+	if (isEditingTransfer) typeSelect.disabled = true;
+	typeSelect.addEventListener("change", () => {
+		draft.transaction_type = typeSelect.value;
+	});
 	form.appendChild(formRow("Type", typeSelect));
 
 	// Amount
 	const amtInput = el("input", { class: "fin-input", type: "text", placeholder: "0.00" });
-	if (editing) amtInput.value = centsToDisplay(Math.abs(Number(editing.amount || 0)));
+	amtInput.value = draft.amount;
+	amtInput.addEventListener("input", () => {
+		draft.amount = amtInput.value;
+	});
 	form.appendChild(formRow("Amount", amtInput));
 
 	// Date
 	const dateInput = el("input", { class: "fin-input", type: "datetime-local" });
-	if (editing && editing.date) {
-		const d = new Date(editing.date);
-		dateInput.value = d.toISOString().slice(0, 16);
-	} else {
-		dateInput.value = new Date().toISOString().slice(0, 16);
-	}
+	dateInput.value = draft.date;
+	dateInput.addEventListener("change", () => {
+		draft.date = dateInput.value;
+	});
 	form.appendChild(formRow("Date", dateInput));
 
 	// Description
 	const descInput = el("input", { class: "fin-input", type: "text", placeholder: "Description" });
-	if (editing) descInput.value = editing.description || "";
+	descInput.value = draft.description;
+	descInput.addEventListener("input", () => {
+		draft.description = descInput.value;
+	});
 	form.appendChild(formRow("Description", descInput));
 
 	// Category
@@ -471,26 +555,29 @@ function buildForm(s, editing) {
 	catSelect.appendChild(el("option", { value: "" }, "Uncategorized"));
 	for (const c of s.categories) {
 		const opt = el("option", { value: c }, c);
-		if (editing && editing.category === c) opt.selected = true;
+		if (draft.category === c) opt.selected = true;
 		catSelect.appendChild(opt);
 	}
+	catSelect.addEventListener("change", () => {
+		draft.category = catSelect.value;
+	});
 	form.appendChild(formRow("Category", catSelect));
 
 	// Payee (with search)
 	const payeeWrapper = el("div", { style: { position: "relative" } });
 	const payeeInput = el("input", { class: "fin-input", type: "text", placeholder: "Search payee..." });
-	if (editing && editing.payee_name) payeeInput.value = editing.payee_name;
-	let selectedPayeeId = editing?.payee_id || "";
+	payeeInput.value = draft.payee_label;
 
 	payeeInput.addEventListener("input", () => {
 		const q = payeeInput.value.trim();
+		draft.payee_label = payeeInput.value;
+		draft.payee_id = "";
 		if (q.length >= 2) {
 			sendEvent("fin_payee_search", { search_query: q });
 		} else {
 			_payeeResults = [];
 			removePayeeDropdown();
 		}
-		selectedPayeeId = "";
 	});
 
 	_payeeDropdown = null;
@@ -500,67 +587,120 @@ function buildForm(s, editing) {
 	// Store refs for payee dropdown rendering
 	payeeWrapper._payeeInput = payeeInput;
 	payeeWrapper._setPayee = (id, name) => {
-		selectedPayeeId = id;
+		draft.payee_id = id;
+		draft.payee_label = name;
 		payeeInput.value = name;
 		removePayeeDropdown();
+		if (container) renderContent();
 	};
 	form._payeeWrapper = payeeWrapper;
+	if (payeeRef.isStale) {
+		form.appendChild(formHint("The selected payee is no longer available. Clear it or choose another payee.", "error"));
+	}
 
 	// Tags
 	const tagsInput = el("input", { class: "fin-input", type: "text", placeholder: "tag1, tag2, ..." });
-	if (editing && editing.tags) {
-		tagsInput.value = Array.isArray(editing.tags) ? editing.tags.join(", ") : editing.tags;
-	}
+	tagsInput.value = draft.tags;
+	tagsInput.addEventListener("input", () => {
+		draft.tags = tagsInput.value;
+	});
 	form.appendChild(formRow("Tags", tagsInput));
 
 	// Notes
 	const notesInput = el("textarea", { class: "fin-textarea", placeholder: "Notes" });
-	if (editing) notesInput.value = editing.notes || "";
+	notesInput.value = draft.notes;
+	notesInput.addEventListener("input", () => {
+		draft.notes = notesInput.value;
+	});
 	form.appendChild(formRow("Notes", notesInput));
 
 	// Buttons
 	const btns = el("div", { class: "fin-flex-row fin-gap-sm" },
 		el("button", { class: "fin-btn fin-btn-primary", onClick: () => {
-			const accountId = accSelect.value;
+			const accountId = draft.account_id;
+			const currentAccountRef = resolveSingleReference(draft.account_id, activeAccountMap);
+			const currentPayeeRef = resolveSingleReference(draft.payee_id, s.payees);
 			if (!accountId) {
 				showToast("Account is required", "error");
 				return;
 			}
-			const amount = displayToCents(amtInput.value);
+			if (currentAccountRef.isStale) {
+				showToast("Choose a valid account before saving.", "error");
+				return;
+			}
+			if (currentPayeeRef.isStale) {
+				showToast("Choose a valid payee or clear the stale payee selection.", "error");
+				return;
+			}
+			const amount = displayToCents(draft.amount);
 			if (amount <= 0) {
 				showToast("Amount must be positive", "error");
 				return;
 			}
 
-			const tagStr = tagsInput.value.trim();
+			const tagStr = draft.tags.trim();
 			const tags = tagStr ? tagStr.split(",").map(t => t.trim()).filter(Boolean) : [];
 
 			const payload = {
 				account_id: accountId,
-				transaction_type: typeSelect.value,
+				transaction_type: draft.transaction_type,
 				amount,
-				date: dateInput.value ? new Date(dateInput.value).toISOString() : new Date().toISOString(),
-				description: descInput.value.trim(),
-				category: catSelect.value,
-				payee_id: selectedPayeeId || null,
+				date: draft.date ? new Date(draft.date).toISOString() : new Date().toISOString(),
+				description: draft.description.trim(),
+				category: draft.category,
+				payee_id: draft.payee_id || null,
 				tags,
-				notes: notesInput.value.trim(),
+				notes: draft.notes.trim(),
 			};
 
 			if (editing) {
+				beginFinanceWrite("fin_transaction_edit", {
+					entityKind: "transaction",
+					entityId: editing.id,
+					refreshKinds: ["accounts", "payees"],
+					onSuccess: () => {
+						showToast("Transaction updated", "info");
+						closeForm();
+						fetchTransactions(false);
+					},
+					onNotFound: () => {
+						fetchTransactions(false);
+						renderContent();
+					},
+				});
 				payload.id = editing.id;
 				payload.is_split = !!editing.is_split;
 				payload.last_modified_at = editing.last_modified_at || Date.now();
 				sendEvent("fin_transaction_edit", payload);
 			} else {
+				const createMatcher = (eventName, response) => (
+					eventName === "fin_transaction_created" &&
+					Number(response?.last_modified_at) === Number(payload.last_modified_at) &&
+					response?.account_id === payload.account_id &&
+					response?.transaction_type === payload.transaction_type &&
+					Number(response?.amount) === Number(payload.amount) &&
+					response?.date === payload.date &&
+					(response?.description || "") === payload.description
+				);
+				beginFinanceWrite("fin_transaction_create", {
+					entityKind: "transaction",
+					refreshKinds: ["accounts", "payees"],
+					matches: createMatcher,
+					onSuccess: () => {
+						showToast("Transaction created", "info");
+						closeForm();
+						fetchTransactions(false);
+					},
+					onNotFound: () => {
+						renderContent();
+					},
+				});
 				payload.last_modified_at = Date.now();
 				sendEvent("fin_transaction_create", payload);
 			}
 		} }, editing ? "Save" : "Create"),
 		el("button", { class: "fin-btn fin-btn-secondary", onClick: () => {
-			formVisible = false;
-			editingTx = null;
-			renderContent();
+			closeForm();
 		} }, "Cancel"),
 	);
 	form.appendChild(btns);
@@ -574,6 +714,19 @@ function formRow(label, input) {
 		el("label", {}, label),
 		input,
 	);
+}
+
+function formHint(message, tone = "muted") {
+	const color = tone === "error" ? "var(--color-danger, #dc2626)" : "var(--color-text-secondary)";
+	return el("div", {
+		class: "fin-form-hint",
+		style: {
+			marginTop: "calc(var(--spacing-xs) * -1)",
+			marginBottom: "var(--spacing-sm)",
+			fontSize: "var(--font-size-xs)",
+			color,
+		},
+	}, message);
 }
 
 // =========================================

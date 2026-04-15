@@ -1,4 +1,5 @@
-import { sendEvent, showToast, state, utils } from "./financeWindow.js";
+import { beginFinanceWrite, sendEvent, showToast, state, utils } from "./financeWindow.js";
+import { resolveSingleReference } from "./financeReferenceState.js";
 
 const { el, formatCurrency, displayToCents, centsToDisplay, formatDateShort, relativeDays } = utils;
 
@@ -8,6 +9,7 @@ let editingId = null;
 let formVisible = false;
 let summaryData = null;
 let collapsedGroups = new Set();
+let formDraft = null;
 
 const FREQ_LABELS = { weekly: "week", monthly: "month", yearly: "year", custom: "interval" };
 const STATUS_ORDER = ["active", "paused", "cancelled"];
@@ -43,24 +45,6 @@ export function onEvent(event, data) {
 		summaryData = data;
 		renderContent();
 	}
-	if (event === "fin_subscription_confirmed") {
-		showToast("Payment confirmed", "info");
-	}
-	if (event === "fin_subscription_created") {
-		showToast("Subscription created", "info");
-		formVisible = false;
-		editingId = null;
-		renderContent();
-	}
-	if (event === "fin_subscription_updated") {
-		showToast("Subscription updated", "info");
-		formVisible = false;
-		editingId = null;
-		renderContent();
-	}
-	if (event === "fin_subscription_deleted") {
-		showToast("Subscription deleted", "info");
-	}
 }
 
 // =========================================
@@ -75,6 +59,46 @@ export function destroy() {
 	formVisible = false;
 	summaryData = null;
 	collapsedGroups.clear();
+	formDraft = null;
+}
+
+function createSubscriptionDraft(editing) {
+	return {
+		name: editing?.name || "",
+		amount: editing ? centsToDisplay(Number(editing.amount || 0)) : "",
+		currency: editing?.currency || "RON",
+		frequency: editing?.frequency || "monthly",
+		frequency_interval: editing?.frequency_interval || 1,
+		next_due_date: editing?.next_due_date ? String(editing.next_due_date).slice(0, 10) : "",
+		category: editing?.category || "",
+		account_id: editing?.account_id || "",
+		payee_id: editing?.payee_id || "",
+		notes: editing?.notes || "",
+		auto_create_transaction: !!editing?.auto_create_transaction,
+		icon: editing?.icon || "",
+		color: editing?.color || "#22c55e",
+	};
+}
+
+function ensureFormDraft(editing) {
+	if (!formDraft) {
+		formDraft = createSubscriptionDraft(editing);
+	}
+	return formDraft;
+}
+
+function openForm(sub = null) {
+	editingId = sub?.id || null;
+	formDraft = createSubscriptionDraft(sub);
+	formVisible = true;
+	renderContent();
+}
+
+function closeForm() {
+	formVisible = false;
+	editingId = null;
+	formDraft = null;
+	renderContent();
 }
 
 // =========================================
@@ -83,6 +107,13 @@ export function destroy() {
 
 function renderContent() {
 	if (!container) return;
+
+	if (formVisible && editingId && !state.getState().subscriptions.has(editingId)) {
+		showToast("This item no longer exists. The list has been refreshed.", "info");
+		closeForm();
+		return;
+	}
+
 	container.innerHTML = "";
 
 	// Header
@@ -90,9 +121,8 @@ function renderContent() {
 		el("h2", {}, "Subscriptions"),
 		el("div", { class: "fin-section-actions" },
 			el("button", { class: "fin-btn fin-btn-primary", onClick: () => {
-				editingId = null;
-				formVisible = !formVisible;
-				renderContent();
+				if (formVisible && !editingId) closeForm();
+				else openForm(null);
 			} }, formVisible && !editingId ? "Cancel" : "+ Add Subscription"),
 		),
 	);
@@ -204,27 +234,57 @@ function buildSubCard(sub) {
 
 	if (status === "active") {
 		actions.appendChild(el("button", { class: "fin-btn fin-btn-sm fin-btn-primary", onClick: () => {
+			beginFinanceWrite("fin_subscription_confirm", {
+				entityKind: "subscription",
+				entityId: sub.id,
+				refreshKinds: ["subscriptions", "accounts", "customViews"],
+				onSuccess: () => {
+					showToast("Payment confirmed", "info");
+				},
+			});
 			sendEvent("fin_subscription_confirm", { id: sub.id, last_modified_at: sub.last_modified_at || Date.now() });
 		} }, "Confirm Payment"));
 		actions.appendChild(el("button", { class: "fin-btn fin-btn-sm fin-btn-secondary", onClick: () => {
+			beginFinanceWrite("fin_subscription_pause", {
+				entityKind: "subscription",
+				entityId: sub.id,
+				refreshKinds: ["subscriptions"],
+				onSuccess: () => {
+					showToast("Subscription paused", "info");
+				},
+			});
 			sendEvent("fin_subscription_pause", { id: sub.id, last_modified_at: sub.last_modified_at || Date.now() });
 		} }, "Pause"));
 	}
 	if (status === "paused") {
 		actions.appendChild(el("button", { class: "fin-btn fin-btn-sm fin-btn-primary", onClick: () => {
+			beginFinanceWrite("fin_subscription_resume", {
+				entityKind: "subscription",
+				entityId: sub.id,
+				refreshKinds: ["subscriptions"],
+				onSuccess: () => {
+					showToast("Subscription resumed", "info");
+				},
+			});
 			sendEvent("fin_subscription_resume", { id: sub.id, last_modified_at: sub.last_modified_at || Date.now() });
 		} }, "Resume"));
 	}
 	if (status !== "cancelled") {
 		actions.appendChild(el("button", { class: "fin-btn fin-btn-sm fin-btn-secondary", onClick: () => {
+			beginFinanceWrite("fin_subscription_cancel", {
+				entityKind: "subscription",
+				entityId: sub.id,
+				refreshKinds: ["subscriptions"],
+				onSuccess: () => {
+					showToast("Subscription cancelled", "info");
+				},
+			});
 			sendEvent("fin_subscription_cancel", { id: sub.id, last_modified_at: sub.last_modified_at || Date.now() });
 		} }, "Cancel"));
 	}
 
 	actions.appendChild(el("button", { class: "fin-btn fin-btn-sm fin-btn-secondary", onClick: () => {
-		editingId = sub.id;
-		formVisible = true;
-		renderContent();
+		openForm(sub);
 	} }, "Edit"));
 
 	actions.appendChild(el("button", { class: "fin-btn fin-btn-sm fin-btn-danger", onClick: (e) => {
@@ -240,6 +300,14 @@ function buildSubCard(sub) {
 
 function handleDelete(sub, btnEl) {
 	if (btnEl.dataset.confirming) {
+		beginFinanceWrite("fin_subscription_delete", {
+			entityKind: "subscription",
+			entityId: sub.id,
+			refreshKinds: ["subscriptions"],
+			onSuccess: () => {
+				showToast("Subscription deleted", "info");
+			},
+		});
 		sendEvent("fin_subscription_delete", { id: sub.id });
 		return;
 	}
@@ -258,6 +326,13 @@ function handleDelete(sub, btnEl) {
 // =========================================
 
 function buildForm(editing) {
+	const draft = ensureFormDraft(editing);
+	const activeAccounts = [...state.getState().accounts.values()]
+		.filter(account => !account.is_archived)
+		.sort((a, b) => (a.position || 0) - (b.position || 0));
+	const activeAccountMap = new Map(activeAccounts.map(account => [account.id, account]));
+	const accountRef = resolveSingleReference(draft.account_id, activeAccountMap);
+	const payeeRef = resolveSingleReference(draft.payee_id, state.getState().payees);
 	const panel = el("div", { class: "fin-card", style: { marginBottom: "var(--spacing-md)" } });
 	panel.appendChild(el("h3", { style: { margin: "0 0 var(--spacing-md) 0", fontSize: "var(--font-size-md)", fontWeight: "var(--font-weight-semibold)" } },
 		editing ? "Edit Subscription" : "New Subscription"));
@@ -265,115 +340,205 @@ function buildForm(editing) {
 	const form = el("div", { class: "fin-form" });
 
 	const nameInput = el("input", { class: "fin-input", type: "text", placeholder: "Subscription name" });
-	if (editing) nameInput.value = editing.name || "";
+	nameInput.value = draft.name;
+	nameInput.addEventListener("input", () => {
+		draft.name = nameInput.value;
+	});
 	form.appendChild(formRow("Name", nameInput));
 
 	const amountInput = el("input", { class: "fin-input", type: "text", placeholder: "0.00" });
-	if (editing) amountInput.value = centsToDisplay(Number(editing.amount || 0));
+	amountInput.value = draft.amount;
+	amountInput.addEventListener("input", () => {
+		draft.amount = amountInput.value;
+	});
 	form.appendChild(formRow("Amount", amountInput));
 
 	const currInput = el("input", { class: "fin-input", type: "text", placeholder: "RON" });
-	currInput.value = editing ? (editing.currency || "RON") : "RON";
+	currInput.value = draft.currency;
+	currInput.addEventListener("input", () => {
+		draft.currency = currInput.value;
+	});
 	form.appendChild(formRow("Currency", currInput));
 
 	const freqSelect = el("select", { class: "fin-select" });
 	for (const f of ["weekly", "monthly", "yearly", "custom"]) {
 		const opt = el("option", { value: f }, f.charAt(0).toUpperCase() + f.slice(1));
-		if (editing && editing.frequency === f) opt.selected = true;
+		if (draft.frequency === f) opt.selected = true;
 		freqSelect.appendChild(opt);
 	}
+	freqSelect.addEventListener("change", () => {
+		draft.frequency = freqSelect.value;
+	});
 	form.appendChild(formRow("Frequency", freqSelect));
 
 	const intervalInput = el("input", { class: "fin-input", type: "number", placeholder: "1" });
-	intervalInput.value = editing ? (editing.frequency_interval || 1) : 1;
+	intervalInput.value = draft.frequency_interval;
+	intervalInput.addEventListener("input", () => {
+		draft.frequency_interval = parseInt(intervalInput.value, 10) || 1;
+	});
 	form.appendChild(formRow("Frequency Interval", intervalInput));
 
 	const dueDateInput = el("input", { class: "fin-input", type: "date" });
-	if (editing && editing.next_due_date) {
-		dueDateInput.value = String(editing.next_due_date).slice(0, 10);
-	}
+	dueDateInput.value = draft.next_due_date;
+	dueDateInput.addEventListener("change", () => {
+		draft.next_due_date = dueDateInput.value;
+	});
 	form.appendChild(formRow("Next Due Date", dueDateInput));
 
 	const catSelect = el("select", { class: "fin-select" });
 	catSelect.appendChild(el("option", { value: "" }, "-- None --"));
 	for (const cat of state.getState().categories) {
 		const opt = el("option", { value: cat }, cat);
-		if (editing && editing.category === cat) opt.selected = true;
+		if (draft.category === cat) opt.selected = true;
 		catSelect.appendChild(opt);
 	}
+	catSelect.addEventListener("change", () => {
+		draft.category = catSelect.value;
+	});
 	form.appendChild(formRow("Category", catSelect));
 
 	const accountSelect = el("select", { class: "fin-select" });
 	accountSelect.appendChild(el("option", { value: "" }, "-- None --"));
-	for (const acct of state.getState().accounts.values()) {
+	if (accountRef.isStale && draft.account_id) {
+		accountSelect.appendChild(el("option", { value: draft.account_id, selected: true }, "Unavailable account (stale)"));
+	}
+	for (const acct of activeAccounts) {
 		const opt = el("option", { value: acct.id }, acct.name);
-		if (editing && editing.account_id === acct.id) opt.selected = true;
+		if (draft.account_id === acct.id) opt.selected = true;
 		accountSelect.appendChild(opt);
 	}
+	accountSelect.addEventListener("change", () => {
+		draft.account_id = accountSelect.value;
+		if (container) renderContent();
+	});
 	form.appendChild(formRow("Account", accountSelect));
+	if (accountRef.isStale) {
+		form.appendChild(formHint("The selected account is no longer available. Choose another account or clear the field.", "error"));
+	}
 
 	const payeeSelect = el("select", { class: "fin-select" });
 	payeeSelect.appendChild(el("option", { value: "" }, "-- None --"));
+	if (payeeRef.isStale && draft.payee_id) {
+		payeeSelect.appendChild(el("option", { value: draft.payee_id, selected: true }, "Unavailable payee (stale)"));
+	}
 	for (const p of state.getState().payees.values()) {
 		const opt = el("option", { value: p.id }, p.name);
-		if (editing && editing.payee_id === p.id) opt.selected = true;
+		if (draft.payee_id === p.id) opt.selected = true;
 		payeeSelect.appendChild(opt);
 	}
+	payeeSelect.addEventListener("change", () => {
+		draft.payee_id = payeeSelect.value;
+		if (container) renderContent();
+	});
 	form.appendChild(formRow("Payee", payeeSelect));
+	if (payeeRef.isStale) {
+		form.appendChild(formHint("The selected payee is no longer available. Choose another payee or clear the field.", "error"));
+	}
 
 	const notesInput = el("textarea", { class: "fin-textarea", placeholder: "Notes (optional)" });
-	if (editing) notesInput.value = editing.notes || "";
+	notesInput.value = draft.notes;
+	notesInput.addEventListener("input", () => {
+		draft.notes = notesInput.value;
+	});
 	form.appendChild(formRow("Notes", notesInput));
 
 	const autoCreateCb = el("input", { type: "checkbox" });
-	if (editing && editing.auto_create_transaction) autoCreateCb.checked = true;
+	autoCreateCb.checked = draft.auto_create_transaction;
+	autoCreateCb.addEventListener("change", () => {
+		draft.auto_create_transaction = autoCreateCb.checked;
+	});
 	form.appendChild(el("div", { class: "fin-form-row horizontal" },
 		autoCreateCb,
 		el("label", {}, "Auto-create transaction"),
 	));
 
 	const iconInput = el("input", { class: "fin-input", type: "text", placeholder: "Icon text" });
-	if (editing) iconInput.value = editing.icon || "";
+	iconInput.value = draft.icon;
+	iconInput.addEventListener("input", () => {
+		draft.icon = iconInput.value;
+	});
 	form.appendChild(formRow("Icon", iconInput));
 
 	const colorInput = el("input", { class: "fin-input", type: "color" });
-	colorInput.value = editing?.color || "#22c55e";
+	colorInput.value = draft.color;
+	colorInput.addEventListener("input", () => {
+		draft.color = colorInput.value;
+	});
 	form.appendChild(formRow("Color", colorInput));
 
 	const btns = el("div", { class: "fin-flex-row fin-gap-sm" },
 		el("button", { class: "fin-btn fin-btn-primary", onClick: () => {
+			const currentAccountRef = resolveSingleReference(draft.account_id, activeAccountMap);
+			const currentPayeeRef = resolveSingleReference(draft.payee_id, state.getState().payees);
+			if (currentAccountRef.isStale) {
+				showToast("Choose a valid account or clear the stale account selection.", "error");
+				return;
+			}
+			if (currentPayeeRef.isStale) {
+				showToast("Choose a valid payee or clear the stale payee selection.", "error");
+				return;
+			}
 			const payload = {
-				name: nameInput.value.trim(),
-				amount: displayToCents(amountInput.value),
-				currency: currInput.value.trim() || "RON",
-				frequency: freqSelect.value,
-				frequency_interval: parseInt(intervalInput.value, 10) || 1,
-				next_due_date: dueDateInput.value ? dueDateInput.value + "T00:00:00Z" : "",
-				category: catSelect.value,
-				account_id: accountSelect.value || null,
-				payee_id: payeeSelect.value || null,
-				notes: notesInput.value.trim(),
-				auto_create_transaction: autoCreateCb.checked,
-				icon: iconInput.value.trim(),
-				color: colorInput.value,
+				name: draft.name.trim(),
+				amount: displayToCents(draft.amount),
+				currency: draft.currency.trim() || "RON",
+				frequency: draft.frequency,
+				frequency_interval: draft.frequency_interval || 1,
+				next_due_date: draft.next_due_date ? draft.next_due_date + "T00:00:00Z" : "",
+				category: draft.category,
+				account_id: draft.account_id || null,
+				payee_id: draft.payee_id || null,
+				notes: draft.notes.trim(),
+				auto_create_transaction: draft.auto_create_transaction,
+				icon: draft.icon.trim(),
+				color: draft.color,
 			};
 			if (!payload.name) {
 				showToast("Name is required", "error");
 				return;
 			}
 			if (editing) {
+				beginFinanceWrite("fin_subscription_edit", {
+					entityKind: "subscription",
+					entityId: editing.id,
+					refreshKinds: ["subscriptions", "accounts", "payees"],
+					onSuccess: () => {
+						showToast("Subscription updated", "info");
+						closeForm();
+					},
+					onNotFound: () => {
+						renderContent();
+					},
+				});
 				payload.id = editing.id;
 				payload.last_modified_at = editing.last_modified_at || Date.now();
 				sendEvent("fin_subscription_edit", payload);
 			} else {
+				beginFinanceWrite("fin_subscription_create", {
+					entityKind: "subscription",
+					refreshKinds: ["subscriptions", "accounts", "payees"],
+					matches: (eventName, response) => (
+						eventName === "fin_subscription_created" &&
+						Number(response?.last_modified_at) === Number(payload.last_modified_at) &&
+						response?.name === payload.name &&
+						Number(response?.amount) === Number(payload.amount) &&
+						response?.frequency === payload.frequency &&
+						response?.next_due_date === payload.next_due_date
+					),
+					onSuccess: () => {
+						showToast("Subscription created", "info");
+						closeForm();
+					},
+					onNotFound: () => {
+						renderContent();
+					},
+				});
 				payload.last_modified_at = Date.now();
 				sendEvent("fin_subscription_create", payload);
 			}
 		} }, editing ? "Save" : "Create"),
 		el("button", { class: "fin-btn fin-btn-secondary", onClick: () => {
-			formVisible = false;
-			editingId = null;
-			renderContent();
+			closeForm();
 		} }, "Cancel"),
 	);
 	form.appendChild(btns);
@@ -384,4 +549,17 @@ function buildForm(editing) {
 
 function formRow(label, input) {
 	return el("div", { class: "fin-form-row" }, el("label", {}, label), input);
+}
+
+function formHint(message, tone = "muted") {
+	const color = tone === "error" ? "var(--color-danger, #dc2626)" : "var(--color-text-secondary)";
+	return el("div", {
+		class: "fin-form-hint",
+		style: {
+			marginTop: "calc(var(--spacing-xs) * -1)",
+			marginBottom: "var(--spacing-sm)",
+			fontSize: "var(--font-size-xs)",
+			color,
+		},
+	}, message);
 }

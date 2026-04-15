@@ -1,4 +1,4 @@
-import { sendEvent, showToast, state, utils } from "./financeWindow.js";
+import { beginFinanceWrite, sendEvent, showToast, state, utils } from "./financeWindow.js";
 
 const { el } = utils;
 
@@ -36,19 +36,6 @@ export function onEvent(event, data) {
 	if (event === "fin_payee_results") {
 		searchResults = Array.isArray(data) ? data : [];
 		renderContent();
-	}
-	if (event === "fin_payee_created") {
-		showToast("Payee created", "info");
-		formVisible = false;
-		renderContent();
-	}
-	if (event === "fin_payee_updated") {
-		showToast("Payee updated", "info");
-		editingId = null;
-		renderContent();
-	}
-	if (event === "fin_payee_deleted") {
-		showToast("Payee deleted", "info");
 	}
 }
 
@@ -179,6 +166,16 @@ function buildEditRow(payee) {
 				el("button", { class: "fin-btn fin-btn-sm fin-btn-primary", onClick: () => {
 					const name = nameInput.value.trim();
 					if (!name) { showToast("Name is required", "error"); return; }
+					beginFinanceWrite("fin_payee_edit", {
+						entityKind: "payee",
+						entityId: payee.id,
+						refreshKinds: ["payees"],
+						onSuccess: () => {
+							showToast("Payee updated", "info");
+							editingId = null;
+							renderContent();
+						},
+					});
 					sendEvent("fin_payee_edit", { id: payee.id, name, notes: notesInput.value.trim() });
 				} }, "Save"),
 				el("button", { class: "fin-btn fin-btn-sm fin-btn-secondary", onClick: () => {
@@ -208,6 +205,16 @@ function buildAddForm() {
 				el("button", { class: "fin-btn fin-btn-primary", onClick: () => {
 					const name = nameInput.value.trim();
 					if (!name) { showToast("Name is required", "error"); return; }
+					beginFinanceWrite("fin_payee_create", {
+						entityKind: "payee",
+						refreshKinds: ["payees"],
+						matches: (eventName, response) => eventName === "fin_payee_created" && response?.name === name,
+						onSuccess: () => {
+							showToast("Payee created", "info");
+							formVisible = false;
+							renderContent();
+						},
+					});
 					sendEvent("fin_payee_create", { name, notes: notesInput.value.trim() });
 				} }, "Create"),
 				el("button", { class: "fin-btn fin-btn-secondary", onClick: () => {
@@ -225,6 +232,14 @@ function buildAddForm() {
 
 function handleDelete(payee, btnEl) {
 	if (btnEl.dataset.confirming) {
+		beginFinanceWrite("fin_payee_delete", {
+			entityKind: "payee",
+			entityId: payee.id,
+			refreshKinds: ["payees"],
+			onSuccess: () => {
+				showToast("Payee deleted", "info");
+			},
+		});
 		sendEvent("fin_payee_delete", { id: payee.id });
 		return;
 	}

@@ -1,4 +1,4 @@
-import { sendEvent, showToast, switchSection, state, utils } from "./financeWindow.js";
+import { beginFinanceWrite, sendEvent, showToast, switchSection, state, utils } from "./financeWindow.js";
 
 const { el, formatCurrency, displayToCents, centsToDisplay } = utils;
 
@@ -42,26 +42,7 @@ export function render(ct) {
 // onEvent
 // =========================================
 
-export function onEvent(event, data) {
-	if (event === "fin_account_created") {
-		showToast("Account created", "info");
-		formVisible = false;
-		editingId = null;
-		renderContent();
-	}
-	if (event === "fin_account_updated") {
-		showToast("Account updated", "info");
-		formVisible = false;
-		editingId = null;
-		renderContent();
-	}
-	if (event === "fin_account_deleted") {
-		showToast("Account deleted", "info");
-	}
-	if (event === "fin_account_archived") {
-		showToast("Account archived", "info");
-	}
-}
+export function onEvent() {}
 
 // =========================================
 // Destroy
@@ -81,6 +62,13 @@ export function destroy() {
 
 function renderContent() {
 	if (!container) return;
+
+	if (formVisible && editingId && !state.getState().accounts.has(editingId)) {
+		showToast("This item no longer exists. The list has been refreshed.", "info");
+		editingId = null;
+		formVisible = false;
+	}
+
 	container.innerHTML = "";
 
 	// Header
@@ -136,7 +124,7 @@ function getSortedAccounts() {
 
 function buildAccountCard(a) {
 	const typeLabel = ACCOUNT_TYPES.find(t => t.value === a.account_type)?.label || a.account_type || "";
-	const balance = Number(a.computed_balance || 0);
+	const balance = Number(a.computed_balance ?? a.initial_balance ?? 0);
 
 	const card = el("div", { class: "fin-card", "data-id": a.id, draggable: "true" },
 		el("div", { class: "fin-flex-row", style: { justifyContent: "space-between", marginBottom: "var(--spacing-sm)" } },
@@ -159,7 +147,16 @@ function buildAccountCard(a) {
 				renderContent();
 			} }, "Edit"),
 			el("button", { class: "fin-btn fin-btn-sm fin-btn-secondary", onClick: () => {
-				sendEvent("fin_account_archive", { id: a.id, last_modified_at: a.last_modified_at || Date.now() });
+				const event = a.is_archived ? "fin_account_unarchive" : "fin_account_archive";
+				beginFinanceWrite(event, {
+					entityKind: "account",
+					entityId: a.id,
+					refreshKinds: ["accounts"],
+					onSuccess: () => {
+						showToast(a.is_archived ? "Account unarchived" : "Account archived", "info");
+					},
+				});
+				sendEvent(event, { id: a.id, last_modified_at: a.last_modified_at || Date.now() });
 			} }, a.is_archived ? "Unarchive" : "Archive"),
 			el("button", { class: "fin-btn fin-btn-sm fin-btn-danger", onClick: (e) => {
 				handleDelete(a, e.currentTarget);
@@ -200,6 +197,14 @@ function buildAccountCard(a) {
 
 function handleDelete(account, btnEl) {
 	if (btnEl.dataset.confirming) {
+		beginFinanceWrite("fin_account_delete", {
+			entityKind: "account",
+			entityId: account.id,
+			refreshKinds: ["accounts"],
+			onSuccess: () => {
+				showToast("Account deleted", "info");
+			},
+		});
 		sendEvent("fin_account_delete", { id: account.id });
 		return;
 	}
@@ -229,6 +234,10 @@ function handleReorder(draggedId, targetId) {
 	ids.splice(toIdx, 0, draggedId);
 
 	const orders = ids.map((id, i) => ({ id, position: i }));
+	beginFinanceWrite("fin_account_reorder", {
+		entityKind: "account",
+		refreshKinds: ["accounts"],
+	});
 	sendEvent("fin_account_reorder", { orders, last_modified_at: Date.now() });
 }
 
@@ -267,7 +276,21 @@ function buildForm(editing) {
 	// Initial balance
 	const balInput = el("input", { class: "fin-input", type: "text", placeholder: "0.00" });
 	if (editing) balInput.value = centsToDisplay(Number(editing.initial_balance || 0));
-	form.appendChild(formRow("Initial Balance", balInput));
+	const balRow = formRow("Initial Balance", balInput);
+	const balHint = el("span", { class: "fin-form-hint" });
+	const updateBalHint = () => {
+		const t = typeSelect.value;
+		if (t === "credit_card" || t === "loan") {
+			balHint.textContent = "Negative = you owe, positive = overpaid, zero = settled";
+			balHint.style.display = "";
+		} else {
+			balHint.style.display = "none";
+		}
+	};
+	balRow.appendChild(balHint);
+	typeSelect.addEventListener("change", updateBalHint);
+	updateBalHint();
+	form.appendChild(balRow);
 
 	// Icon
 	const iconInput = el("input", { class: "fin-input", type: "text", placeholder: "Icon (optional)" });
@@ -301,10 +324,41 @@ function buildForm(editing) {
 				return;
 			}
 			if (editing) {
+				beginFinanceWrite("fin_account_edit", {
+					entityKind: "account",
+					entityId: editing.id,
+					refreshKinds: ["accounts"],
+					onSuccess: () => {
+						showToast("Account updated", "info");
+						formVisible = false;
+						editingId = null;
+						renderContent();
+					},
+					onNotFound: () => {
+						renderContent();
+					},
+				});
 				payload.id = editing.id;
 				payload.last_modified_at = editing.last_modified_at || Date.now();
 				sendEvent("fin_account_edit", payload);
 			} else {
+				beginFinanceWrite("fin_account_create", {
+					entityKind: "account",
+					refreshKinds: ["accounts"],
+					matches: (eventName, response) => (
+						eventName === "fin_account_created" &&
+						Number(response?.last_modified_at) === Number(payload.last_modified_at) &&
+						response?.name === payload.name &&
+						response?.account_type === payload.account_type &&
+						response?.currency === payload.currency
+					),
+					onSuccess: () => {
+						showToast("Account created", "info");
+						formVisible = false;
+						editingId = null;
+						renderContent();
+					},
+				});
 				payload.position = state.getState().accounts.size;
 				payload.last_modified_at = Date.now();
 				sendEvent("fin_account_create", payload);

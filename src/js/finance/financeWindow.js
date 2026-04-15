@@ -11,6 +11,11 @@ import * as budgets from "./financeBudgets.js";
 import * as reports from "./financeReports.js";
 import * as payees from "./financePayees.js";
 import * as categories from "./financeCategories.js";
+import * as customViews from "./financeCustomViews.js";
+import {
+	createWriteCoordinator,
+	getBalanceRefreshKindsForEvent,
+} from "./financeWriteCoordinator.js";
 
 // =========================================
 // Send helper
@@ -34,6 +39,7 @@ const NAV_ITEMS = [
 	{ id: "reports", label: "Reports", icon: "\u25F2" },
 	{ id: "payees", label: "Payees", icon: "\u22A1" },
 	{ id: "categories", label: "Categories", icon: "\u229E" },
+	{ id: "custom-views", label: "Custom Views", icon: "\u25C8" },
 ];
 
 // =========================================
@@ -65,6 +71,7 @@ sections["budgets"] = budgets;
 sections["reports"] = reports;
 sections["payees"] = payees;
 sections["categories"] = categories;
+sections["custom-views"] = customViews;
 
 // =========================================
 // State
@@ -72,6 +79,7 @@ sections["categories"] = categories;
 
 let activeSection = null;
 let activeSectionId = null;
+const writeCoordinator = createWriteCoordinator();
 
 // =========================================
 // Toast helper
@@ -85,6 +93,144 @@ function showToast(message, type = "info") {
 		toast.classList.remove("fin-toast--visible");
 		setTimeout(() => toast.remove(), 300);
 	}, 3000);
+}
+
+function refreshFinanceCollections(kinds) {
+	const refreshKinds = new Set(Array.isArray(kinds) ? kinds : []);
+
+	if (refreshKinds.has("accounts")) {
+		sendEvent("fin_accounts_fetch", {});
+	}
+	if (refreshKinds.has("payees")) {
+		sendEvent("fin_payees_fetch", {});
+	}
+	if (refreshKinds.has("customViews")) {
+		sendEvent("fin_custom_views_fetch", {});
+	}
+	if (refreshKinds.has("subscriptions")) {
+		sendEvent("fin_subscriptions_fetch", {});
+	}
+	if (refreshKinds.has("dashboard")) {
+		sendEvent("fin_dashboard_fetch", {});
+	}
+	if (refreshKinds.has("budget") && activeSectionId === "budgets" && typeof budgets.refetchCurrentBudget === "function") {
+		budgets.refetchCurrentBudget();
+	}
+}
+
+export function beginFinanceWrite(requestEvent, metadata = {}) {
+	return writeCoordinator.beginWrite(requestEvent, metadata);
+}
+
+function resolveFinanceWrite(event, data) {
+	const resolved = writeCoordinator.resolveWrite(event, data);
+	if (!resolved) return null;
+
+	try {
+		resolved.onSuccess?.(event, data, resolved);
+	} catch (error) {
+		console.error("[Finance] onSuccess callback failed:", error);
+	}
+
+	return resolved;
+}
+
+function getDefaultNotFoundRefreshKinds() {
+	const refreshKinds = ["accounts", "payees", "customViews", "subscriptions"];
+	if (activeSectionId === "budgets") {
+		refreshKinds.push("budget");
+	}
+	return refreshKinds;
+}
+
+function failFinanceWrite(errorData) {
+	const requestEvent = typeof errorData?.request_event === "string"
+		? errorData.request_event.trim()
+		: "";
+	if (!requestEvent) return null;
+
+	const failed = writeCoordinator.failWrite(write => write.requestEvent === requestEvent);
+	if (!failed) return null;
+
+	if (errorData?.type === "not_found") {
+		refreshFinanceCollections(failed.refreshKinds);
+		try {
+			failed.onNotFound?.(errorData, failed);
+		} catch (error) {
+			console.error("[Finance] onNotFound callback failed:", error);
+		}
+		return failed;
+	}
+
+	try {
+		failed.onError?.(errorData, failed);
+	} catch (error) {
+		console.error("[Finance] onError callback failed:", error);
+	}
+
+	if (errorData?.type === "database_error") {
+		refreshFinanceCollections(failed.refreshKinds);
+	}
+
+	return failed;
+}
+
+function handleConnectionError(data) {
+	const errorData = data && typeof data === "object" ? data : {};
+	const hadRequestHint = typeof errorData.request_event === "string" && errorData.request_event.trim().length > 0;
+	const failedWrite = failFinanceWrite(errorData);
+
+	if (!hadRequestHint) {
+		writeCoordinator.clearWrites();
+	}
+
+	if (errorData.type === "not_found") {
+		if (!failedWrite) {
+			refreshFinanceCollections(getDefaultNotFoundRefreshKinds());
+		}
+		showToast(errorData.message || "This item no longer exists. The list has been refreshed.", "info");
+		return;
+	}
+
+	if (failedWrite && errorData.message) {
+		showToast(errorData.message, "error");
+		return;
+	}
+
+	showToast(errorData.message || "Connection error", "error");
+}
+
+function refreshDerivedFinanceState(event, data) {
+	refreshFinanceCollections(getBalanceRefreshKindsForEvent(event, data));
+
+	if (
+		event === "fin_account_created" ||
+		event === "fin_account_updated" ||
+		event === "fin_account_deleted"
+	) {
+		refreshFinanceCollections(["customViews"]);
+	}
+
+	if (
+		event === "fin_custom_view_created" ||
+		event === "fin_custom_view_updated" ||
+		event === "fin_custom_views_reordered"
+	) {
+		refreshFinanceCollections(["customViews"]);
+	}
+
+	if (
+		activeSectionId === "budgets" &&
+		(
+			event === "fin_transaction_created" ||
+			event === "fin_transaction_updated" ||
+			event === "fin_transaction_deleted" ||
+			event === "fin_transfer_created" ||
+			(event === "fin_subscription_confirmed" && data?.transaction)
+		)
+	) {
+		refreshFinanceCollections(["budget"]);
+	}
 }
 
 // =========================================
@@ -144,15 +290,31 @@ function handleStateEvent(event, data) {
 			state.setAccounts(data);
 			break;
 		case "fin_account_created":
-		case "fin_account_updated":
+		case "fin_account_updated": {
+			const existing = state.getState().accounts.get(data.id);
+			if (existing && !("computed_balance" in data)) {
+				// Adjust computed_balance if initial_balance changed
+				const oldInitial = Number(existing.initial_balance ?? 0);
+				const newInitial = Number(data.initial_balance ?? oldInitial);
+				const oldComputed = Number(existing.computed_balance ?? oldInitial);
+				data.computed_balance = oldComputed + (newInitial - oldInitial);
+			}
 			state.upsertAccount(data);
 			break;
+		}
 		case "fin_account_archived": {
 			const existing = state.getState().accounts.get(data.id);
 			if (existing) {
 				state.upsertAccount({ ...existing, is_archived: true });
 			} else {
 				state.upsertAccount({ ...data, is_archived: true });
+			}
+			break;
+		}
+		case "fin_account_unarchived": {
+			const existing = state.getState().accounts.get(data.id);
+			if (existing) {
+				state.upsertAccount({ ...existing, is_archived: false });
 			}
 			break;
 		}
@@ -253,13 +415,15 @@ function handleStateEvent(event, data) {
 
 		// Reports — store any fin_report_* events
 		case "connection_error":
-			showToast(data.message || "Connection error", "error");
+			handleConnectionError(data);
 			break;
 
 		case "fin_reconnected":
 			// Re-fetch core data after WebSocket reconnect
 			sendEvent("fin_accounts_fetch", {});
 			sendEvent("fin_categories_fetch", {});
+			sendEvent("fin_custom_views_fetch", {});
+			sendEvent("fin_dashboard_fetch", {});
 			// Re-render active section so it re-fetches its own data
 			if (activeSectionId) {
 				const contentEl = document.getElementById("fin-content");
@@ -281,6 +445,36 @@ function handleStateEvent(event, data) {
 			break;
 		}
 
+		// Custom Views
+		case "fin_custom_views_list": {
+			const list = typeof data === "string" ? JSON.parse(data) : data;
+			state.setCustomViews(Array.isArray(list) ? list : []);
+			break;
+		}
+		case "fin_custom_view_created":
+		case "fin_custom_view_updated": {
+			const view = typeof data === "string" ? JSON.parse(data) : data;
+			console.log("[Finance] custom view event:", event, view);
+			if (view?.id) state.upsertCustomView(view);
+			break;
+		}
+		case "fin_custom_view_deleted": {
+			const del = typeof data === "string" ? JSON.parse(data) : data;
+			if (del?.id) state.removeCustomView(del.id);
+			break;
+		}
+		case "fin_custom_views_reordered":
+			sendEvent("fin_custom_views_fetch", {});
+			break;
+
+		// Dashboard config
+		case "fin_dashboard_data":
+		case "fin_dashboard_updated": {
+			const cfg = typeof data === "string" ? JSON.parse(data) : data;
+			state.setDashboardConfig(cfg?.items ?? []);
+			break;
+		}
+
 		default:
 			// fin_report_* events
 			if (event.startsWith("fin_report_")) {
@@ -299,6 +493,8 @@ function handleStateEvent(event, data) {
 
 ipcRenderer.on("fin-event", (_, { event, data }) => {
 	handleStateEvent(event, data);
+	refreshDerivedFinanceState(event, data);
+	resolveFinanceWrite(event, data);
 	activeSection?.onEvent?.(event, data);
 });
 
@@ -313,7 +509,7 @@ document.getElementById("fin-close-btn").onclick = () => window.close();
 // =========================================
 
 // Init section modules with shared context
-const sharedCtx = { sendEvent, showToast, switchSection, state, utils };
+const sharedCtx = { sendEvent, showToast, switchSection, state, utils, beginFinanceWrite, refreshFinanceCollections };
 dashboard.init(sharedCtx);
 accounts.init(sharedCtx);
 transactions.init(sharedCtx);
@@ -323,6 +519,7 @@ budgets.init(sharedCtx);
 reports.init(sharedCtx);
 payees.init(sharedCtx);
 categories.init(sharedCtx);
+customViews.init(sharedCtx);
 
 renderSidebar();
 switchSection("dashboard");
@@ -330,6 +527,8 @@ switchSection("dashboard");
 // Initial data fetch
 sendEvent("fin_accounts_fetch", {});
 sendEvent("fin_categories_fetch", {});
+sendEvent("fin_custom_views_fetch", {});
+sendEvent("fin_dashboard_fetch", {});
 
 // Export for section modules
-export { showToast, switchSection, state, utils };
+export { showToast, switchSection, state, utils, refreshFinanceCollections };

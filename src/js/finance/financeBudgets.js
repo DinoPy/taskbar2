@@ -1,4 +1,4 @@
-import { sendEvent, showToast, state, utils } from "./financeWindow.js";
+import { beginFinanceWrite, sendEvent, showToast, state, utils } from "./financeWindow.js";
 
 const { el, formatCurrency, displayToCents, centsToDisplay } = utils;
 
@@ -57,6 +57,10 @@ export function destroy() {
 
 function fetchBudget() {
 	sendEvent("fin_budget_fetch", { year: currentYear, month: currentMonth });
+}
+
+export function refetchCurrentBudget() {
+	fetchBudget();
 }
 
 function prevMonth() {
@@ -166,6 +170,14 @@ function buildBudgetRow(cat) {
 		inp.focus();
 		inp.select();
 		const save = () => {
+			beginFinanceWrite("fin_budget_category_set", {
+				entityKind: "budget_category",
+				refreshKinds: ["budget"],
+				matches: (eventName, response) => (
+					eventName === "fin_budget_category_updated" &&
+					response?.category === cat.category
+				),
+			});
 			sendEvent("fin_budget_category_set", {
 				budget_id: state.getState().budget?.id,
 				category: cat.category,
@@ -181,6 +193,14 @@ function buildBudgetRow(cat) {
 	const rolloverCb = el("input", { type: "checkbox" });
 	rolloverCb.checked = !!cat.rollover;
 	rolloverCb.addEventListener("change", () => {
+		beginFinanceWrite("fin_budget_category_set", {
+			entityKind: "budget_category",
+			refreshKinds: ["budget"],
+			matches: (eventName, response) => (
+				eventName === "fin_budget_category_updated" &&
+				response?.category === cat.category
+			),
+		});
 		sendEvent("fin_budget_category_set", {
 			budget_id: state.getState().budget?.id,
 			category: cat.category,
@@ -217,6 +237,11 @@ function buildBudgetRow(cat) {
 
 function handleDeleteCat(cat, btnEl) {
 	if (btnEl.dataset.confirming) {
+		beginFinanceWrite("fin_budget_category_delete", {
+			entityKind: "budget_category",
+			entityId: cat.id,
+			refreshKinds: ["budget"],
+		});
 		sendEvent("fin_budget_category_delete", { id: cat.id, budget_id: state.getState().budget?.id });
 		return;
 	}
@@ -253,6 +278,14 @@ function buildAddCategoryRow(existingCats) {
 	wrapper.appendChild(el("button", { class: "fin-btn fin-btn-sm fin-btn-primary", onClick: () => {
 		const category = catSelect.value;
 		if (!category) { showToast("Select a category", "error"); return; }
+		beginFinanceWrite("fin_budget_category_set", {
+			entityKind: "budget_category",
+			refreshKinds: ["budget"],
+			matches: (eventName, response) => (
+				eventName === "fin_budget_category_updated" &&
+				response?.category === category
+			),
+		});
 		sendEvent("fin_budget_category_set", {
 			budget_id: state.getState().budget?.id,
 			category,

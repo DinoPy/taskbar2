@@ -1,4 +1,5 @@
-import { sendEvent, showToast, switchSection, state, utils } from "./financeWindow.js";
+import { beginFinanceWrite, sendEvent, showToast, switchSection, state, utils } from "./financeWindow.js";
+import { resolveSingleReference } from "./financeReferenceState.js";
 
 const { el, formatCurrency, formatDateShort, displayToCents, centsToDisplay } = utils;
 
@@ -26,15 +27,7 @@ export function render(ct) {
 // onEvent
 // =========================================
 
-export function onEvent(event, data) {
-	if (event === "fin_transfer_created") {
-		showToast("Transfer completed", "info");
-		// Refetch accounts to get updated balances
-		sendEvent("fin_accounts_fetch", {});
-		clearForm();
-		renderContent();
-	}
-}
+export function onEvent() {}
 
 // =========================================
 // Destroy
@@ -98,6 +91,9 @@ function renderContent() {
 // =========================================
 
 function buildTransferForm(accounts) {
+	const accountMap = new Map(accounts.map(account => [account.id, account]));
+	const fromRef = resolveSingleReference(formState.from_account_id, accountMap);
+	const toRef = resolveSingleReference(formState.to_account_id, accountMap);
 	const card = el("div", { class: "fin-card", style: { marginBottom: "var(--spacing-md)" } });
 	const form = el("div", { class: "fin-form" });
 
@@ -109,14 +105,23 @@ function buildTransferForm(accounts) {
 	fromGroup.appendChild(el("label", {}, "From Account"));
 	const fromSelect = el("select", { class: "fin-select" });
 	fromSelect.appendChild(el("option", { value: "" }, "Select source..."));
+	if (fromRef.isStale && formState.from_account_id) {
+		fromSelect.appendChild(el("option", { value: formState.from_account_id, selected: true }, "Unavailable account (stale)"));
+	}
 	for (const a of accounts) {
 		const opt = el("option", { value: a.id },
-			a.name + " (" + formatCurrency(Number(a.computed_balance || 0), a.currency || "RON") + ")");
+			a.name + " (" + formatCurrency(Number(a.computed_balance ?? a.initial_balance ?? 0), a.currency || "RON") + ")");
 		if (formState.from_account_id === a.id) opt.selected = true;
 		fromSelect.appendChild(opt);
 	}
-	fromSelect.addEventListener("change", () => { formState.from_account_id = fromSelect.value; });
+	fromSelect.addEventListener("change", () => {
+		formState.from_account_id = fromSelect.value;
+		renderContent();
+	});
 	fromGroup.appendChild(fromSelect);
+	if (fromRef.isStale) {
+		fromGroup.appendChild(formHint("The selected source account is no longer available. Choose another account to continue.", "error"));
+	}
 	transferRow.appendChild(fromGroup);
 
 	// Arrow
@@ -127,14 +132,23 @@ function buildTransferForm(accounts) {
 	toGroup.appendChild(el("label", {}, "To Account"));
 	const toSelect = el("select", { class: "fin-select" });
 	toSelect.appendChild(el("option", { value: "" }, "Select target..."));
+	if (toRef.isStale && formState.to_account_id) {
+		toSelect.appendChild(el("option", { value: formState.to_account_id, selected: true }, "Unavailable account (stale)"));
+	}
 	for (const a of accounts) {
 		const opt = el("option", { value: a.id },
-			a.name + " (" + formatCurrency(Number(a.computed_balance || 0), a.currency || "RON") + ")");
+			a.name + " (" + formatCurrency(Number(a.computed_balance ?? a.initial_balance ?? 0), a.currency || "RON") + ")");
 		if (formState.to_account_id === a.id) opt.selected = true;
 		toSelect.appendChild(opt);
 	}
-	toSelect.addEventListener("change", () => { formState.to_account_id = toSelect.value; });
+	toSelect.addEventListener("change", () => {
+		formState.to_account_id = toSelect.value;
+		renderContent();
+	});
 	toGroup.appendChild(toSelect);
+	if (toRef.isStale) {
+		toGroup.appendChild(formHint("The selected target account is no longer available. Choose another account to continue.", "error"));
+	}
 	transferRow.appendChild(toGroup);
 
 	form.appendChild(transferRow);
@@ -166,12 +180,22 @@ function buildTransferForm(accounts) {
 	// Submit
 	form.appendChild(el("div", { class: "fin-flex-row fin-gap-sm" },
 		el("button", { class: "fin-btn fin-btn-primary", onClick: () => {
+			const currentFromRef = resolveSingleReference(formState.from_account_id, accountMap);
+			const currentToRef = resolveSingleReference(formState.to_account_id, accountMap);
 			if (!formState.from_account_id) {
 				showToast("Select source account", "error");
 				return;
 			}
+			if (currentFromRef.isStale) {
+				showToast("Choose a valid source account before creating the transfer.", "error");
+				return;
+			}
 			if (!formState.to_account_id) {
 				showToast("Select target account", "error");
+				return;
+			}
+			if (currentToRef.isStale) {
+				showToast("Choose a valid target account before creating the transfer.", "error");
 				return;
 			}
 			if (formState.from_account_id === formState.to_account_id) {
@@ -184,7 +208,7 @@ function buildTransferForm(accounts) {
 				return;
 			}
 
-			sendEvent("fin_transfer_create", {
+			const payload = {
 				from_account_id: formState.from_account_id,
 				to_account_id: formState.to_account_id,
 				amount,
@@ -192,6 +216,26 @@ function buildTransferForm(accounts) {
 				description: formState.description.trim(),
 				notes: formState.notes.trim(),
 				last_modified_at: Date.now(),
+			};
+			beginFinanceWrite("fin_transfer_create", {
+				entityKind: "transfer",
+				refreshKinds: ["accounts", "customViews"],
+				matches: (eventName, response) => (
+					eventName === "fin_transfer_created" &&
+					Number(response?.outgoing?.last_modified_at) === Number(payload.last_modified_at) &&
+					response?.outgoing?.account_id === payload.from_account_id &&
+					response?.incoming?.account_id === payload.to_account_id &&
+					Number(response?.outgoing?.amount) === Number(payload.amount) &&
+					response?.outgoing?.date === payload.date
+				),
+				onSuccess: () => {
+					showToast("Transfer completed", "info");
+					clearForm();
+					renderContent();
+				},
+			});
+			sendEvent("fin_transfer_create", {
+				...payload,
 			});
 		} }, "Transfer"),
 		el("button", { class: "fin-btn fin-btn-secondary", onClick: () => {
@@ -209,6 +253,19 @@ function formRow(label, input) {
 		el("label", {}, label),
 		input,
 	);
+}
+
+function formHint(message, tone = "muted") {
+	const color = tone === "error" ? "var(--color-danger, #dc2626)" : "var(--color-text-secondary)";
+	return el("div", {
+		class: "fin-form-hint",
+		style: {
+			marginTop: "calc(var(--spacing-xs) * -1)",
+			marginBottom: "var(--spacing-sm)",
+			fontSize: "var(--font-size-xs)",
+			color,
+		},
+	}, message);
 }
 
 // =========================================
