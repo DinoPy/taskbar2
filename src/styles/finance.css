@@ -265,6 +265,12 @@ html, body {
 	font-weight: var(--font-weight-medium);
 }
 
+.fin-form-hint {
+	font-size: var(--font-size-xs);
+	color: var(--color-text-tertiary);
+	font-style: italic;
+}
+
 /* Inputs */
 .fin-input,
 .fin-select,
@@ -634,4 +640,34 @@ html, body {
 
 .fin-hidden {
 	display: none !important;
+}
+
+/* Custom Views — account picker */
+.fin-custom-view-account-picker {
+	display: flex;
+	flex-direction: column;
+	gap: 4px;
+	max-height: 200px;
+	overflow-y: auto;
+	padding: 6px 0;
+}
+
+.fin-custom-view-account-option {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	padding: 4px 6px;
+	border-radius: 4px;
+	cursor: pointer;
+	font-size: var(--font-size-sm);
+	color: var(--color-text-secondary);
+	transition: background 0.1s ease;
+}
+
+.fin-custom-view-account-option:hover {
+	background: var(--color-bg-hover);
+}
+
+.fin-custom-view-account-option input[type="checkbox"] {
+	accent-color: var(--color-accent-primary);
 }

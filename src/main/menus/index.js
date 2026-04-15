@@ -16,6 +16,7 @@ export function showMainContextMenu({
 	openFinanceWindow,
 	openRecipesWindow,
 	openListsWindow,
+	openDevTools,
 }) {
 	const menu = new Menu();
 
@@ -262,6 +263,15 @@ export function showMainContextMenu({
 		new MenuItem({
 			label: "Select screen",
 			submenu: displayMenus,
+		})
+	);
+
+	menu.append(new MenuItem({ type: "separator" }));
+
+	menu.append(
+		new MenuItem({
+			label: "Open DevTools",
+			click: () => openDevTools?.(),
 		})
 	);
 

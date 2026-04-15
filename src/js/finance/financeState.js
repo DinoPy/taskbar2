@@ -10,6 +10,8 @@ const state = {
 	budgetCategories: [],
 	categories: [],
 	reports: {},
+	customViews: new Map(),
+	dashboardConfig: [],  // Array of { kind, view_id? }
 };
 
 const listeners = new Map();
@@ -115,4 +117,25 @@ export function setCategories(categories) {
 export function setReport(reportName, data) {
 	state.reports[reportName] = data;
 	emit("reports");
+}
+
+export function setCustomViews(list) {
+	state.customViews.clear();
+	for (const v of list) state.customViews.set(v.id, v);
+	emit("customViews");
+}
+
+export function upsertCustomView(view) {
+	state.customViews.set(view.id, view);
+	emit("customViews");
+}
+
+export function removeCustomView(id) {
+	state.customViews.delete(id);
+	emit("customViews");
+}
+
+export function setDashboardConfig(items) {
+	state.dashboardConfig = Array.isArray(items) ? items : [];
+	emit("dashboardConfig");
 }

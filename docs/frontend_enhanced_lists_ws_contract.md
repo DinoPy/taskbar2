@@ -2,7 +2,7 @@
 
 ## Overview
 
-Enhances standalone lists with: organization (pinning, tags, status, search), sharing/collaboration, richer item fields (quantity/unit), list duplication, and item cancellation.
+Enhances standalone lists with: organization (pinning, tags, status, search), sharing/collaboration, richer item fields (quantity/unit), list duplication, item cancellation, and optional item images.
 
 All changes build on the existing two-layer architecture (list definition + list run). Shared lists broadcast mutations to all users with access.
 
@@ -28,6 +28,7 @@ All changes build on the existing two-layer architecture (list definition + list
 |-------|------|---------|-------|
 | `quantity` | string (nullable) | `null` | e.g. `"2"`, `"0.5"` |
 | `unit` | string | `""` | e.g. `"kg"`, `"pcs"`, `"L"` |
+| `image_path` | string (nullable) | `null` | Relative path to uploaded image. Set via HTTP endpoint, not WS. |
 
 ### List Run Items — Changed Fields
 
@@ -624,3 +625,90 @@ A: No. Only standalone lists can be shared. Attempting to share a non-standalone
 
 **Q: What happens to assignments when a share is removed?**
 A: Assignments for the removed user remain in the database but are orphaned. The frontend should handle cleanup gracefully.
+
+---
+
+## HTTP Endpoints — List Item Images
+
+List item images are managed via HTTP (not WebSocket), following the same pattern as recipe images. Images are resized (max 1200px), compressed (JPEG 70%), and served statically.
+
+### Authentication
+
+All image endpoints require two headers:
+
+| Header | Description |
+|--------|-------------|
+| `X-Google-UID` | The user's Google UID string |
+| `X-Email` | The user's email address |
+
+### POST /api/lists/{listID}/items/{itemID}/image — Upload Image
+
+Uploads or replaces an image for a list item. If the item already has an image, the old file is deleted first.
+
+**Content-Type:** `multipart/form-data`
+
+**Form field:** `image` — the image file (JPEG, PNG). Max 10MB.
+
+**Success response (201):**
+```json
+{
+  "id": "aaaaaaaa-0000-0000-0000-000000000001",
+  "image_path": "uploads/lists/aaaaaaaa-0000-0000-0000-000000000001/bbbbbbbb-0000-0000-0000-000000000001.jpg"
+}
+```
+
+**Error responses:**
+| Status | Condition |
+|--------|-----------|
+| 400 | Invalid list/item ID, missing image, invalid image format |
+| 401 | Missing or invalid auth headers |
+| 403 | User is not a member of the list (owner or shared) |
+| 404 | Item not found or does not belong to the specified list |
+| 500 | Server error |
+
+**Notes:**
+- The image is decoded, resized (max 1200px on longest side), and re-encoded as JPEG (quality 70).
+- Uploading again replaces the existing image (only one image per item).
+- The `image_path` in the response is the relative URL for serving: prepend the server base URL to load the image.
+- The ListItem model returned by WS events (e.g., `list_item_created`, `list_item_updated`) now includes the `image_path` field.
+
+### DELETE /api/lists/{listID}/items/{itemID}/image — Remove Image
+
+Removes the image from a list item.
+
+**Success response (200):**
+```json
+{
+  "id": "aaaaaaaa-0000-0000-0000-000000000001",
+  "image_path": null
+}
+```
+
+**Error responses:**
+| Status | Condition |
+|--------|-----------|
+| 400 | Invalid list/item ID |
+| 401 | Missing or invalid auth headers |
+| 403 | User is not a member of the list |
+| 404 | Item not found, does not belong to list, or has no image |
+| 500 | Server error |
+
+### GET /uploads/lists/{itemID}/{imageFileName}.jpg — Serve Image
+
+Static file serving. No authentication required (same as recipe images).
+
+**URL pattern:** `/uploads/lists/{itemID}/{uuid}.jpg`
+
+### Real-Time Sync
+
+After a successful upload or delete, the server broadcasts a `list_item_image_updated` WebSocket event to all members of the list (owner + shared users). This event contains the full lists target response, so the frontend should handle it the same way as other list mutation events (reload the list data from the payload).
+
+When a list item or list is deleted via WebSocket, the server automatically cleans up associated image files on disk.
+
+### Frontend Integration
+
+1. After creating or editing a list item, optionally call `POST .../image` to attach an image.
+2. When rendering list items, check `image_path` — if non-null, display the image at `{serverBaseURL}/{image_path}`.
+3. To remove an image, call `DELETE .../image`.
+4. Uploading a new image automatically replaces the old one (no need to delete first).
+5. Listen for `list_item_image_updated` WS events to update the UI when another user changes an item's image on a shared list.

@@ -3645,3 +3645,160 @@ window.addEventListener("DOMContentLoaded", () => {
 
 	refreshWeek();
 });
+
+// =========================================
+// Schedule Search
+// =========================================
+
+const searchInput = document.querySelector("[data-search-input]");
+const searchResultsEl = document.querySelector("[data-search-results]");
+let searchDebounce = null;
+let searchFocusIndex = -1;
+
+function updateSearchFocus() {
+	const items = searchResultsEl.querySelectorAll(".calendar-search-item");
+	items.forEach((item, i) => {
+		item.classList.toggle("focused", i === searchFocusIndex);
+		if (i === searchFocusIndex) item.scrollIntoView({ block: "nearest" });
+	});
+}
+
+function activateSearchResult() {
+	const items = searchResultsEl.querySelectorAll(".calendar-search-item");
+	if (searchFocusIndex >= 0 && searchFocusIndex < items.length) {
+		items[searchFocusIndex].click();
+	}
+}
+
+if (searchInput && searchResultsEl) {
+	searchInput.addEventListener("input", () => {
+		clearTimeout(searchDebounce);
+		searchFocusIndex = -1;
+		const query = searchInput.value.trim();
+		if (!query) {
+			searchResultsEl.classList.add("hidden");
+			searchResultsEl.innerHTML = "";
+			return;
+		}
+		searchDebounce = setTimeout(() => {
+			ipcRenderer.send("calendar-search", { query });
+		}, 300);
+	});
+
+	searchInput.addEventListener("keydown", (e) => {
+		if (e.key === "Escape") {
+			searchInput.value = "";
+			searchResultsEl.classList.add("hidden");
+			searchResultsEl.innerHTML = "";
+			searchFocusIndex = -1;
+			searchInput.blur();
+			return;
+		}
+		if (e.key === "ArrowDown") {
+			e.preventDefault();
+			const count = searchResultsEl.querySelectorAll(".calendar-search-item").length;
+			if (count > 0) {
+				searchFocusIndex = Math.min(searchFocusIndex + 1, count - 1);
+				updateSearchFocus();
+			}
+			return;
+		}
+		if (e.key === "ArrowUp") {
+			e.preventDefault();
+			searchFocusIndex = Math.max(searchFocusIndex - 1, 0);
+			updateSearchFocus();
+			return;
+		}
+		if (e.key === "Enter") {
+			e.preventDefault();
+			activateSearchResult();
+			return;
+		}
+	});
+
+	// Ctrl+F focuses search
+	document.addEventListener("keydown", (e) => {
+		if ((e.ctrlKey || e.metaKey) && e.key === "f") {
+			e.preventDefault();
+			searchInput.focus();
+			searchInput.select();
+		}
+	});
+
+	document.addEventListener("click", (e) => {
+		if (!searchResultsEl.classList.contains("hidden") && !searchResultsEl.contains(e.target) && e.target !== searchInput) {
+			searchResultsEl.classList.add("hidden");
+			searchFocusIndex = -1;
+		}
+	});
+}
+
+ipcRenderer.on("calendar-search-results", (_, data) => {
+	if (!searchResultsEl) return;
+	const results = Array.isArray(data) ? data : [];
+
+	searchResultsEl.innerHTML = "";
+	if (results.length === 0) {
+		searchResultsEl.innerHTML = '<div class="calendar-search-empty">No results</div>';
+		searchResultsEl.classList.remove("hidden");
+		return;
+	}
+
+	for (const item of results) {
+		const hasFuture = item.next_occurs_at && new Date(item.next_occurs_at) > new Date();
+		const row = document.createElement("div");
+		row.className = "calendar-search-item" + (hasFuture ? "" : " inactive");
+
+		const kindIcon = document.createElement("span");
+		kindIcon.className = "calendar-search-kind";
+		kindIcon.textContent = item.kind === "task" ? "\u25A0" : "\u25CB";
+		kindIcon.title = item.kind;
+		row.appendChild(kindIcon);
+
+		const info = document.createElement("div");
+		info.className = "calendar-search-info";
+
+		const title = document.createElement("span");
+		title.className = "calendar-search-title";
+		title.textContent = item.title || "(untitled)";
+		info.appendChild(title);
+
+		const meta = document.createElement("span");
+		meta.className = "calendar-search-meta";
+		const parts = [];
+		if (item.category) parts.push(item.category);
+		if (item.common_language) parts.push(item.common_language);
+		else if (item.rrule) parts.push("recurring");
+		if (!item.active) parts.push("inactive");
+		meta.textContent = parts.join(" \u00B7 ");
+		info.appendChild(meta);
+
+		row.appendChild(info);
+
+		if (item.next_occurs_at) {
+			const next = document.createElement("span");
+			next.className = "calendar-search-next";
+			const d = new Date(item.next_occurs_at);
+			const now = new Date();
+			const diffDays = Math.ceil((d - now) / (1000 * 60 * 60 * 24));
+			if (diffDays === 0) next.textContent = "today";
+			else if (diffDays === 1) next.textContent = "tomorrow";
+			else if (diffDays > 0 && diffDays <= 7) next.textContent = `in ${diffDays}d`;
+			else next.textContent = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+			row.appendChild(next);
+		}
+
+		row.addEventListener("click", () => {
+			if (item.next_occurs_at) {
+				state.currentWeekStart = getStartOfWeek(new Date(item.next_occurs_at));
+			}
+			searchInput.value = "";
+			searchResultsEl.classList.add("hidden");
+			searchResultsEl.innerHTML = "";
+			refreshWeek();
+		});
+
+		searchResultsEl.appendChild(row);
+	}
+	searchResultsEl.classList.remove("hidden");
+});

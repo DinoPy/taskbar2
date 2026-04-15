@@ -1,3 +1,7 @@
+import { net, dialog } from "electron";
+import fs from "node:fs";
+import path from "node:path";
+
 export function registerIpcHandlers({
     ipc,
     appState,
@@ -28,6 +32,7 @@ export function registerIpcHandlers({
     openCalendarWindow,
     financeController,
     recipesController,
+    createCompletedTasksPopUp,
 }) {
     const logger = log ?? console.log;
     const RFC3339_TIMESTAMP_REGEX =
@@ -226,7 +231,7 @@ export function registerIpcHandlers({
 
     ipc.on("completed_task_date_updated", (e, data) => {
         appState.fromCompletedData = data;
-        sendEvent("get_completed_tasks", data);
+        sendEvent("get_completed_tasks_v2", data);
     });
 
     ipc.on("new_command_added", (_, data) => {
@@ -757,6 +762,12 @@ export function registerIpcHandlers({
         calendarController?.updateUserSettings?.(data);
     });
 
+    ipc.on("calendar-search", (_, data) => {
+        const query = data?.query?.trim();
+        if (!query) return;
+        sendEvent?.("calendar_search", { query });
+    });
+
     ipc.on("calendar-fetch-occurrences", (_, data) => {
         const start = data?.start;
         const end = data?.end;
@@ -813,6 +824,10 @@ export function registerIpcHandlers({
 
     ipc.on("close-completed-list-window", () => {
         windowManager.closeCompletedTasksWindow();
+    });
+
+    ipc.on("open-completed-tasks-window", () => {
+        createCompletedTasksPopUp?.();
     });
 
     ipc.on("duplicate_completed_task", (_, data) => {
@@ -885,6 +900,12 @@ export function registerIpcHandlers({
     ipc.on("lists-mutation", (_, data) => {
         if (!data?.event) return;
         listsController?.sendMutation?.(data.event, data.data ?? {});
+    });
+
+    ipc.on("lists-deleted-fetch", (_, data) => {
+        const payload = {};
+        if (data?.task_id) payload.task_id = data.task_id;
+        sendEvent?.("list_deleted_fetch", payload);
     });
 
     ipc.on("open-list-window", (_, data) => {
@@ -1048,9 +1069,6 @@ export function registerIpcHandlers({
     }
 
     ipc.handle("recipes:upload-image", async (_, { recipeId, filePath }) => {
-        const { net } = require("electron");
-        const fs = require("fs");
-        const path = require("path");
         const info = getUserInfo?.() ?? {};
         const googleUid = info.id ?? "";
         const email = info.email ?? "";
@@ -1086,9 +1104,6 @@ export function registerIpcHandlers({
     });
 
     ipc.handle("recipes:replace-image", async (_, { recipeId, imageId, filePath }) => {
-        const { net } = require("electron");
-        const fs = require("fs");
-        const path = require("path");
         const info = getUserInfo?.() ?? {};
         const googleUid = info.id ?? "";
         const email = info.email ?? "";
@@ -1123,8 +1138,78 @@ export function registerIpcHandlers({
         return response.json();
     });
 
+    // ---- Lists image HTTP handlers ----
+
+    ipc.handle("lists:pick-and-upload-image", async (_, { listId, itemId }) => {
+        const { canceled, filePaths } = await dialog.showOpenDialog({
+            properties: ["openFile"],
+            filters: [{ name: "Images", extensions: ["jpg", "jpeg", "png"] }],
+        });
+        if (canceled || !filePaths.length) return { cancelled: true };
+
+        const filePath = filePaths[0];
+        const stat = fs.statSync(filePath);
+        if (stat.size > 10 * 1024 * 1024) {
+            return { error: "Image must be under 10 MB" };
+        }
+
+        const info = getUserInfo?.() ?? {};
+        const googleUid = info.id ?? "";
+        const email = info.email ?? "";
+        const baseUrl = getRecipesHttpBaseUrl();
+        const url = `${baseUrl}/api/lists/${listId}/items/${itemId}/image`;
+        const boundary = "----ListsFormBoundary" + Date.now();
+        const fileBuffer = fs.readFileSync(filePath);
+        const fileName = path.basename(filePath);
+        const ext = path.extname(fileName).toLowerCase();
+        const mimeType = ext === ".png" ? "image/png" : "image/jpeg";
+
+        const prefix = Buffer.from(
+            `--${boundary}\r\nContent-Disposition: form-data; name="image"; filename="${fileName}"\r\nContent-Type: ${mimeType}\r\n\r\n`
+        );
+        const suffix = Buffer.from(`\r\n--${boundary}--\r\n`);
+        const body = Buffer.concat([prefix, fileBuffer, suffix]);
+
+        const response = await net.fetch(url, {
+            method: "POST",
+            headers: {
+                "Content-Type": `multipart/form-data; boundary=${boundary}`,
+                "X-Google-UID": googleUid,
+                "X-Email": email,
+            },
+            body,
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Upload failed (${response.status}): ${text}`);
+        }
+        return response.json();
+    });
+
+    ipc.handle("lists:delete-image", async (_, { listId, itemId }) => {
+        const info = getUserInfo?.() ?? {};
+        const googleUid = info.id ?? "";
+        const email = info.email ?? "";
+        const baseUrl = getRecipesHttpBaseUrl();
+        const url = `${baseUrl}/api/lists/${listId}/items/${itemId}/image`;
+
+        const response = await net.fetch(url, {
+            method: "DELETE",
+            headers: {
+                "X-Google-UID": googleUid,
+                "X-Email": email,
+            },
+        });
+
+        if (!response.ok) {
+            const text = await response.text();
+            throw new Error(`Delete failed (${response.status}): ${text}`);
+        }
+        return response.json();
+    });
+
     ipc.handle("recipes:delete-image", async (_, { recipeId, imageId }) => {
-        const { net } = require("electron");
         const info = getUserInfo?.() ?? {};
         const googleUid = info.id ?? "";
         const email = info.email ?? "";

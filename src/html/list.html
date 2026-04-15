@@ -33,6 +33,7 @@
 						<option value="">All</option>
 						<option value="completed">Completed</option>
 						<option value="archived">Archived</option>
+						<option value="deleted">Deleted</option>
 					</select>
 				</div>
 				<div class="list-sidebar-items" id="sidebarItems"></div>
@@ -202,6 +203,23 @@
 			</div>
 			<div class="list-dialog-actions">
 				<button class="list-dialog-btn list-dialog-btn-cancel" id="shareCloseBtn">Close</button>
+			</div>
+		</dialog>
+
+		<!-- Encryption password dialog -->
+		<dialog class="list-dialog" id="encryptDialog">
+			<h3 class="list-dialog-title" id="encryptDialogTitle">Unlock List</h3>
+			<p class="list-dialog-message" id="encryptDialogHint"></p>
+			<label class="list-dialog-label" for="encryptPasswordInput">Password</label>
+			<input class="list-dialog-input" id="encryptPasswordInput" type="password" placeholder="Enter password" autocomplete="off" />
+			<div id="encryptHintGroup" style="display:none">
+				<label class="list-dialog-label" for="encryptHintInput">Password hint (optional)</label>
+				<input class="list-dialog-input" id="encryptHintInput" type="text" placeholder="e.g. childhood pet" />
+			</div>
+			<p class="list-dialog-message" id="encryptDialogError" style="color: var(--color-status-error); display: none;"></p>
+			<div class="list-dialog-actions">
+				<button class="list-dialog-btn list-dialog-btn-submit" id="encryptDialogSubmit">Unlock</button>
+				<button class="list-dialog-btn list-dialog-btn-cancel" id="encryptDialogCancel">Cancel</button>
 			</div>
 		</dialog>
 

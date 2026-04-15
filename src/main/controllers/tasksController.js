@@ -34,7 +34,7 @@ export function createTasksController({
 	const refreshCompletedTasksIfOpen = () => {
 		if (windowManager.getCompletedTasksWindow()) {
 			setTimeout(() => {
-				sendEvent("get_completed_tasks", appState.fromCompletedData);
+				sendEvent("get_completed_tasks_v2", appState.fromCompletedData);
 			}, 250);
 			return true;
 		}

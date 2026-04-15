@@ -22,6 +22,196 @@ let searchDebounceTimer = null;
 let shareListId = null;
 let currentShares = [];
 let runItemAssignments = new Map(); // run_item_id -> [{id, assigned_user_id}]
+let deletedLists = []; // soft-deleted list definitions
+let _currentListEncryptedLocked = false; // set during render for sub-renderers
+const decryptedCache = new Map(); // itemId -> { title, description }
+
+// ---------------------------------------------------------------
+// Encryption — in-memory keys only, cleared on window close
+// Format per field: base64(salt[16] + iv[12] + ciphertext)
+// ---------------------------------------------------------------
+const unlockedKeys = new Map(); // listId -> CryptoKey
+
+const PBKDF2_ITERATIONS = 100000;
+const SALT_LEN = 16;
+const IV_LEN = 12;
+
+async function deriveKey(password, salt) {
+	const enc = new TextEncoder();
+	const keyMaterial = await crypto.subtle.importKey(
+		"raw", enc.encode(password), "PBKDF2", false, ["deriveKey"]
+	);
+	return crypto.subtle.deriveKey(
+		{ name: "PBKDF2", salt, iterations: PBKDF2_ITERATIONS, hash: "SHA-256" },
+		keyMaterial,
+		{ name: "AES-GCM", length: 256 },
+		false,
+		["encrypt", "decrypt"]
+	);
+}
+
+async function encryptField(text, password) {
+	if (!text) return "";
+	const salt = crypto.getRandomValues(new Uint8Array(SALT_LEN));
+	const iv = crypto.getRandomValues(new Uint8Array(IV_LEN));
+	const key = await deriveKey(password, salt);
+	const ciphertext = await crypto.subtle.encrypt(
+		{ name: "AES-GCM", iv }, key, new TextEncoder().encode(text)
+	);
+	const combined = new Uint8Array(SALT_LEN + IV_LEN + new Uint8Array(ciphertext).length);
+	combined.set(salt);
+	combined.set(iv, SALT_LEN);
+	combined.set(new Uint8Array(ciphertext), SALT_LEN + IV_LEN);
+	return btoa(String.fromCharCode(...combined));
+}
+
+async function decryptField(encoded, password) {
+	if (!encoded) return "";
+	try {
+		const raw = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
+		const salt = raw.slice(0, SALT_LEN);
+		const iv = raw.slice(SALT_LEN, SALT_LEN + IV_LEN);
+		const ciphertext = raw.slice(SALT_LEN + IV_LEN);
+		const key = await deriveKey(password, salt);
+		const decrypted = await crypto.subtle.decrypt(
+			{ name: "AES-GCM", iv }, key, ciphertext
+		);
+		return new TextDecoder().decode(decrypted);
+	} catch {
+		return null; // wrong password or corrupted
+	}
+}
+
+// Decrypt using a cached key (already derived, same salt)
+async function decryptFieldWithKey(encoded, key) {
+	if (!encoded) return "";
+	try {
+		const raw = Uint8Array.from(atob(encoded), c => c.charCodeAt(0));
+		const iv = raw.slice(SALT_LEN, SALT_LEN + IV_LEN);
+		const ciphertext = raw.slice(SALT_LEN + IV_LEN);
+		const decrypted = await crypto.subtle.decrypt(
+			{ name: "AES-GCM", iv }, key, ciphertext
+		);
+		return new TextDecoder().decode(decrypted);
+	} catch {
+		return null;
+	}
+}
+
+// Try unlocking: derive key from first encrypted item, verify it works
+async function tryUnlockList(listId, password, items) {
+	const firstEncrypted = items.find(i => i.title && i.title.length > 0);
+	if (!firstEncrypted) {
+		// No items to verify against — derive key from a fresh salt
+		const salt = crypto.getRandomValues(new Uint8Array(SALT_LEN));
+		const key = await deriveKey(password, salt);
+		unlockedKeys.set(listId, { key, password });
+		return true;
+	}
+	// Derive key using salt from the first encrypted field
+	const raw = Uint8Array.from(atob(firstEncrypted.title), c => c.charCodeAt(0));
+	const salt = raw.slice(0, SALT_LEN);
+	const key = await deriveKey(password, salt);
+	// Try decrypting to verify
+	const result = await decryptFieldWithKey(firstEncrypted.title, key);
+	if (result === null) return false; // wrong password
+	unlockedKeys.set(listId, { key, password });
+	return true;
+}
+
+// Encrypt all items in a list and send mutations
+async function encryptAllItems(listId, password, items) {
+	for (const item of items) {
+		const encTitle = await encryptField(item.title || "", password);
+		const encDesc = await encryptField(item.description || "", password);
+		sendMutation("list_item_edit", {
+			id: item.id,
+			list_id: listId,
+			title: encTitle,
+			description: encDesc,
+			last_modified_at: Date.now(),
+		});
+	}
+}
+
+// Decrypt all items and send mutations (removing encryption)
+async function decryptAllItems(listId, password, items) {
+	for (const item of items) {
+		const plainTitle = item.title ? await decryptField(item.title, password) : "";
+		const plainDesc = item.description ? await decryptField(item.description, password) : "";
+		sendMutation("list_item_edit", {
+			id: item.id,
+			list_id: listId,
+			title: plainTitle ?? item.title,
+			description: plainDesc ?? item.description,
+			last_modified_at: Date.now(),
+		});
+	}
+}
+
+// Get decrypted text for display (returns original if not encrypted or not unlocked)
+async function getDecryptedText(listId, text) {
+	if (!text) return "";
+	const entry = unlockedKeys.get(listId);
+	if (!entry) return text;
+	const result = await decryptField(text, entry.password);
+	return result ?? text;
+}
+
+// Check if definition is encrypted — handles snake_case, camelCase, PascalCase
+function isDefinitionEncrypted(def) {
+	if (!def) return false;
+	return !!(def.is_encrypted || def.isEncrypted || def.IsEncrypted);
+}
+
+function getEncryptionHint(def) {
+	if (!def) return "";
+	return def.encryption_hint || def.encryptionHint || def.EncryptionHint || "";
+}
+
+function isListUnlocked(listId) {
+	return unlockedKeys.has(listId);
+}
+
+function lockList(listId) {
+	unlockedKeys.delete(listId);
+	// Clear decrypted cache for this list
+	for (const [key] of decryptedCache) {
+		decryptedCache.delete(key);
+	}
+}
+
+async function decryptItemsToCache(listId, items) {
+	const entry = unlockedKeys.get(listId);
+	if (!entry) return;
+	for (const item of items) {
+		const id = item.id || item.snapshot?.item_id;
+		if (!id) continue;
+		const rawTitle = item.snapshot?.title ?? item.title ?? "";
+		const rawDesc = item.snapshot?.description ?? item.description ?? "";
+		const title = rawTitle ? await decryptField(rawTitle, entry.password) : "";
+		const desc = rawDesc ? await decryptField(rawDesc, entry.password) : "";
+		decryptedCache.set(id, {
+			title: title ?? rawTitle,
+			description: desc ?? rawDesc,
+		});
+	}
+}
+
+// Get display text for an item — uses decrypted cache if available
+function getDisplayTitle(item) {
+	const id = item.id || item.snapshot?.item_id || item.item_id;
+	const cached = decryptedCache.get(id);
+	if (cached) return cached.title || "(untitled)";
+	return (item.snapshot?.title ?? item.title) || "(untitled)";
+}
+
+function getDisplayDescription(item) {
+	const id = item.id || item.snapshot?.item_id || item.item_id;
+	const cached = decryptedCache.get(id);
+	if (cached) return cached.description || "";
+	return (item.snapshot?.description ?? item.description) || "";
+}
 
 // ---------------------------------------------------------------
 // DOM refs
@@ -95,6 +285,18 @@ const deleteConfirmMessage = document.getElementById("deleteConfirmMessage");
 const deleteConfirmSubmit = document.getElementById("deleteConfirmSubmit");
 const deleteConfirmCancel = document.getElementById("deleteConfirmCancel");
 let pendingDeleteListId = null;
+let pendingDeleteItemId = null;
+
+const encryptDialog = document.getElementById("encryptDialog");
+const encryptDialogTitle = document.getElementById("encryptDialogTitle");
+const encryptDialogHint = document.getElementById("encryptDialogHint");
+const encryptPasswordInput = document.getElementById("encryptPasswordInput");
+const encryptHintInput = document.getElementById("encryptHintInput");
+const encryptHintGroup = document.getElementById("encryptHintGroup");
+const encryptDialogError = document.getElementById("encryptDialogError");
+const encryptDialogSubmit = document.getElementById("encryptDialogSubmit");
+const encryptDialogCancel = document.getElementById("encryptDialogCancel");
+let encryptDialogCallback = null; // (password, hint) => void
 
 const attachOverlay = document.getElementById("attachOverlay");
 const attachInput = document.getElementById("attachInput");
@@ -156,8 +358,146 @@ const sendMutation = (event, data) => {
 	ipc.send("lists-mutation", { event, data });
 };
 
+const imageBaseUrl = (typeof process !== "undefined" && process.env?.APP_STAGE === "production")
+	? "https://pythonws.dinodev.dev"
+	: "http://localhost:8080";
+
+const itemImageUrl = (imagePath) => imagePath ? `${imageBaseUrl}/${imagePath}` : null;
+
+// Fullscreen image overlay
+const showFullscreenImage = (src, alt) => {
+	const overlay = document.createElement("div");
+	overlay.className = "list-image-fullscreen";
+	const img = document.createElement("img");
+	img.src = src;
+	img.alt = alt || "";
+	overlay.appendChild(img);
+	const dismiss = () => overlay.remove();
+	overlay.addEventListener("click", dismiss);
+	const onKey = (e) => {
+		if (e.key === "Escape") { dismiss(); document.removeEventListener("keydown", onKey); }
+	};
+	document.addEventListener("keydown", onKey);
+	document.body.appendChild(overlay);
+};
+
+// Local image cache — server's lists_target doesn't include image_path,
+// so we track it client-side from HTTP upload/delete responses.
+const itemImageCache = new Map(); // itemId -> image_path (string or null)
+
+const patchLocalItemImage = (itemId, imagePath) => {
+	if (imagePath) {
+		itemImageCache.set(itemId, imagePath);
+	} else {
+		itemImageCache.delete(itemId);
+	}
+};
+
+// Resolve image_path for an item: check item data first, then local cache
+const resolveImagePath = (item) => {
+	return item?.image_path || itemImageCache.get(item?.id) || null;
+};
+
+const uploadItemImage = async (listId, itemId) => {
+	try {
+		const result = await ipc.invoke("lists:pick-and-upload-image", { listId, itemId });
+		if (result?.cancelled) return;
+		if (result?.error) {
+			showToast(result.error);
+			return;
+		}
+		// Patch local data with image_path from HTTP response and re-render
+		if (result?.image_path) {
+			patchLocalItemImage(itemId, result.image_path);
+			render();
+		}
+	} catch (err) {
+		showToast("Upload failed: " + err.message);
+	}
+};
+
+const deleteItemImage = async (listId, itemId) => {
+	try {
+		await ipc.invoke("lists:delete-image", { listId, itemId });
+		// Clear local image_path and re-render
+		patchLocalItemImage(itemId, null);
+		render();
+	} catch (err) {
+		showToast("Delete failed: " + err.message);
+	}
+};
+
+const copyListAsMarkdown = async (bundle) => {
+	if (!bundle) return;
+	const def = bundle.definition;
+	const items = bundle.run_items ?? bundle.items ?? [];
+	const lines = [];
+	const entry = isDefinitionEncrypted(def) ? unlockedKeys.get(def.id) : null;
+
+	lines.push(`# ${def.title || "(untitled)"}`);
+	lines.push("");
+
+	const sorted = [...items].sort((a, b) => {
+		const posA = a.snapshot?.position ?? a.position ?? 0;
+		const posB = b.snapshot?.position ?? b.position ?? 0;
+		return posA - posB;
+	});
+
+	const roots = sorted.filter(i => !(i.snapshot?.parent_item_id ?? i.parent_item_id));
+	const childMap = new Map();
+	for (const i of sorted) {
+		const pid = i.snapshot?.parent_item_id ?? i.parent_item_id;
+		if (pid) {
+			if (!childMap.has(pid)) childMap.set(pid, []);
+			childMap.get(pid).push(i);
+		}
+	}
+
+	const addItem = async (item, indent) => {
+		const snap = item.snapshot ?? item;
+		let title = snap.title || "(untitled)";
+		let desc = snap.description || "";
+		if (entry?.password && isDefinitionEncrypted(def)) {
+			title = await decryptField(snap.title, entry.password) || title;
+			desc = snap.description ? (await decryptField(snap.description, entry.password) || desc) : "";
+		}
+		const status = item.status === "completed" ? "[x]" : item.status === "cancelled" ? "[-]" : "[ ]";
+		lines.push(`${indent}### ${status} ${title}`);
+		if (desc) {
+			lines.push(`${indent}${desc}`);
+		}
+		lines.push("");
+		const itemId = snap.item_id ?? snap.id ?? item.id;
+		const children = childMap.get(itemId) ?? [];
+		for (const child of children) {
+			await addItem(child, indent + "  ");
+		}
+	};
+
+	for (const root of roots) {
+		await addItem(root, "");
+	}
+
+	try {
+		await navigator.clipboard.writeText(lines.join("\n"));
+		showToast("Copied to clipboard", 1500, "success");
+	} catch {
+		showToast("Failed to copy");
+	}
+};
+
 const refetchLists = () => {
-	if (!isStandalone) return;
+	if (statusFilter === "deleted") {
+		const payload = {};
+		if (!isStandalone && target?.id) payload.task_id = target.id;
+		ipc.send("lists-deleted-fetch", payload);
+		return;
+	}
+	if (!isStandalone) {
+		// Re-fetch task-linked lists (e.g. switching back from deleted view)
+		ipc.send("lists-fetch", { target });
+		return;
+	}
 	const payload = { target };
 	if (searchText) payload.search_text = searchText;
 	if (statusFilter) payload.status_filter = statusFilter;
@@ -206,11 +546,9 @@ const showContextMenu = (e, def) => {
 		menu.appendChild(item);
 	};
 
-	if (!isStandalone) return;
-
 	const owner = isListOwner(def);
 
-	if (owner) {
+	if (isStandalone && owner) {
 		addMenuItem("Edit...", () => {
 			openEditListDialog(def);
 		});
@@ -256,37 +594,31 @@ const showContextMenu = (e, def) => {
 			});
 		}
 
-		const statusSub = document.createElement("div");
-		statusSub.className = "list-context-menu-item has-submenu";
-		statusSub.textContent = "Set Status";
-		const subMenu = document.createElement("div");
-		subMenu.className = "list-context-submenu";
-		for (const s of ["active", "completed", "archived"]) {
-			const si = document.createElement("div");
-			si.className = "list-context-menu-item" + (def.status === s ? " active" : "");
-			si.textContent = s.charAt(0).toUpperCase() + s.slice(1);
-			si.addEventListener("click", () => {
-				sendMutation("list_set_status", {
-					list_id: def.id,
-					status: s,
-					last_modified_at: Date.now(),
+		// Don't show status submenu for archived schedule-owned lists (server rejects un-archiving)
+		const isScheduleArchived = def.owner?.kind === "schedule" && def.status === "archived";
+		if (!isScheduleArchived) {
+			const statusSub = document.createElement("div");
+			statusSub.className = "list-context-menu-item has-submenu";
+			statusSub.textContent = "Set Status";
+			const subMenu = document.createElement("div");
+			subMenu.className = "list-context-submenu";
+			for (const s of ["active", "completed", "archived"]) {
+				const si = document.createElement("div");
+				si.className = "list-context-menu-item" + (def.status === s ? " active" : "");
+				si.textContent = s.charAt(0).toUpperCase() + s.slice(1);
+				si.addEventListener("click", () => {
+					sendMutation("list_set_status", {
+						list_id: def.id,
+						status: s,
+						last_modified_at: Date.now(),
+					});
+					closeContextMenu();
 				});
-				closeContextMenu();
-			});
-			subMenu.appendChild(si);
+				subMenu.appendChild(si);
+			}
+			statusSub.appendChild(subMenu);
+			menu.appendChild(statusSub);
 		}
-		statusSub.appendChild(subMenu);
-		menu.appendChild(statusSub);
-
-		addMenuItem("Duplicate", () => {
-			const lists = listsPayload?.lists ?? [];
-			const maxPos = lists.reduce((max, b) => Math.max(max, b.definition?.position ?? 0), -1);
-			sendMutation("list_duplicate", {
-				list_id: def.id,
-				position: maxPos + 1,
-				last_modified_at: Date.now(),
-			});
-		});
 
 		addMenuItem("Share...", () => {
 			openShareDialog(def.id);
@@ -300,7 +632,7 @@ const showContextMenu = (e, def) => {
 		addMenuItem("Delete", () => {
 			openDeleteConfirmDialog(def.id, def.title);
 		});
-	} else {
+	} else if (isStandalone && !owner) {
 		// Shared user can only leave
 		addMenuItem("Leave list", () => {
 			sendMutation("list_share_remove", {
@@ -309,6 +641,57 @@ const showContextMenu = (e, def) => {
 			});
 		});
 	}
+
+	// Actions available for all list types (standalone + task-linked)
+	if (owner) {
+		if (isStandalone) {
+			const sep2 = document.createElement("div");
+			sep2.className = "list-context-menu-separator";
+			menu.appendChild(sep2);
+		}
+
+		if (!isStandalone) {
+			addMenuItem("Edit...", () => {
+				openEditListDialog(def);
+			});
+
+			addMenuItem(def.is_pinned ? "Unpin" : "Pin", () => {
+				sendMutation("list_pin", {
+					list_id: def.id,
+					is_pinned: !def.is_pinned,
+					last_modified_at: Date.now(),
+				});
+			});
+		}
+
+		addMenuItem("Add Item...", () => {
+			selectedListId = def.id;
+			openItemDialog();
+		});
+
+		addMenuItem("Duplicate", () => {
+			const lists = listsPayload?.lists ?? [];
+			const maxPos = lists.reduce((max, b) => Math.max(max, b.definition?.position ?? 0), -1);
+			sendMutation("list_duplicate", {
+				list_id: def.id,
+				position: maxPos + 1,
+				last_modified_at: Date.now(),
+			});
+		});
+
+		if (!isStandalone) {
+			const sep3 = document.createElement("div");
+			sep3.className = "list-context-menu-separator";
+			menu.appendChild(sep3);
+
+			addMenuItem("Delete", () => {
+				openDeleteConfirmDialog(def.id, def.title);
+			});
+		}
+	}
+
+	// Don't show empty context menu
+	if (menu.children.length === 0) return;
 
 	document.body.appendChild(menu);
 	contextMenuEl = menu;
@@ -333,6 +716,12 @@ document.addEventListener("click", closeContextMenu);
 // ---------------------------------------------------------------
 
 const render = () => {
+	// If viewing deleted lists, don't render normal view
+	if (statusFilter === "deleted") {
+		renderDeletedView();
+		return;
+	}
+
 	const lists = listsPayload?.lists ?? [];
 	const hasLists = lists.length > 0;
 
@@ -357,7 +746,11 @@ const render = () => {
 	renderSidebar(lists);
 
 	if (sidebarFilter) {
-		sidebarFilter.classList.toggle("hidden", !isStandalone);
+		sidebarFilter.classList.remove("hidden");
+		// Hide search for non-standalone (server search only works for standalone)
+		if (sidebarSearch) {
+			sidebarSearch.style.display = isStandalone ? "" : "none";
+		}
 	}
 
 	if (!hasLists) {
@@ -390,10 +783,25 @@ const render = () => {
 };
 
 const renderSidebar = (lists) => {
+	// Filter out soft-deleted lists and apply status filter for non-standalone
+	const activeLists = lists.filter(b => {
+		const def = b.definition;
+		if (!def) return false;
+		// Always exclude soft-deleted from normal views
+		if (def.deleted_at) return false;
+		// For non-standalone, also filter by status if set
+		if (!isStandalone && statusFilter && statusFilter !== "deleted") {
+			if (statusFilter === "active" && def.status !== "active") return false;
+			if (statusFilter === "completed" && def.status !== "completed") return false;
+			if (statusFilter === "archived" && def.status !== "archived") return false;
+		}
+		return true;
+	});
+
 	let sorted;
 	if (isStandalone) {
 		// Pinned first, then by updated_at DESC
-		sorted = [...lists.map((b) => b.definition).filter(Boolean)].sort((a, b) => {
+		sorted = [...activeLists.map((b) => b.definition).filter(Boolean)].sort((a, b) => {
 			if (a.is_pinned && !b.is_pinned) return -1;
 			if (!a.is_pinned && b.is_pinned) return 1;
 			const tA = a.updated_at ?? "";
@@ -401,7 +809,7 @@ const renderSidebar = (lists) => {
 			return tB < tA ? -1 : tB > tA ? 1 : 0;
 		});
 	} else {
-		sorted = sortByPosition(lists.map((b) => b.definition).filter(Boolean));
+		sorted = sortByPosition(activeLists.map((b) => b.definition).filter(Boolean));
 	}
 	sidebarItems.innerHTML = "";
 
@@ -421,6 +829,14 @@ const renderSidebar = (lists) => {
 		titleSpan.className = "list-sidebar-item-title";
 		titleSpan.textContent = def.title || "(untitled)";
 		item.appendChild(titleSpan);
+
+		if (isDefinitionEncrypted(def)) {
+			const lockIcon = document.createElement("span");
+			lockIcon.className = "list-sidebar-pin-icon";
+			lockIcon.textContent = isListUnlocked(def.id) ? "\u{1F513}" : "\u{1F512}";
+			lockIcon.title = isDefinitionEncrypted(def) ? "Encrypted" : "";
+			item.appendChild(lockIcon);
+		}
 
 		if (def.is_pinned) {
 			const pinIcon = document.createElement("span");
@@ -469,11 +885,7 @@ const renderSidebar = (lists) => {
 			deleteBtn.setAttribute("tabindex", "-1");
 			deleteBtn.addEventListener("click", (e) => {
 				e.stopPropagation();
-				if (isStandalone) {
-					openDeleteConfirmDialog(def.id, def.title);
-				} else {
-					sendMutation("list_delete", { id: def.id });
-				}
+				openDeleteConfirmDialog(def.id, def.title);
 			});
 			actionsDiv.appendChild(deleteBtn);
 		}
@@ -501,6 +913,12 @@ const renderTemplateItems = (bundle) => {
 	const items = bundle.items ?? [];
 	const hasRun = !!bundle.run;
 
+	// When a run exists, hide template items — run section shows the interactive list
+	if (hasRun) {
+		templateSection.classList.add("hidden");
+		return;
+	}
+
 	templateSection.classList.remove("hidden");
 	templateTitle.textContent = def.title || "(untitled)";
 	templateKind.textContent = def.kind || "";
@@ -516,9 +934,31 @@ const renderTemplateItems = (bundle) => {
 		templateSection.querySelector(".list-template-header")?.appendChild(shareBtn);
 	}
 
+	// Encrypt/lock button
+	const existingEncBtn = templateSection.querySelector(".list-encrypt-btn");
+	if (existingEncBtn) existingEncBtn.remove();
+	const listIsEncrypted = isDefinitionEncrypted(def);
+	if (isListOwner(def)) {
+		const encBtn = document.createElement("button");
+		encBtn.className = "list-share-btn list-encrypt-btn";
+		if (listIsEncrypted) {
+			encBtn.textContent = isListUnlocked(def.id) ? "Unlocked" : "Locked";
+		} else {
+			encBtn.textContent = "Encrypt";
+		}
+		encBtn.addEventListener("click", () => handleEncryptToggle(def, items));
+		templateSection.querySelector(".list-template-header")?.appendChild(encBtn);
+	}
+
 	// If there's a run, we show template items as reference but focus on run
 	const sorted = sortByPosition(items);
 	templateItems.innerHTML = "";
+
+	// Debug: log cached images applied
+	const cachedCount = items.filter(i => itemImageCache.has(i.id)).length;
+	if (cachedCount > 0) {
+		console.log(`[Lists] ${cachedCount} item(s) with cached image_path`);
+	}
 
 	// Separate root and children
 	const roots = sorted.filter((i) => !i.parent_item_id);
@@ -530,9 +970,14 @@ const renderTemplateItems = (bundle) => {
 		}
 	}
 
+	const isEncryptedLocked = isDefinitionEncrypted(def) && !isListUnlocked(def.id);
+
 	const renderItem = (item, isChild = false) => {
+		const wrapper = document.createElement("div");
+		wrapper.className = "list-item-wrapper" + (isChild ? " child" : "");
+
 		const row = document.createElement("div");
-		row.className = "list-item-row" + (isChild ? " child" : "");
+		row.className = "list-item-row";
 
 		const icon = document.createElement("span");
 		icon.className = "list-item-icon";
@@ -541,7 +986,7 @@ const renderTemplateItems = (bundle) => {
 
 		const title = document.createElement("span");
 		title.className = "list-item-title";
-		title.textContent = item.title || "(untitled)";
+		title.textContent = isEncryptedLocked ? "\u{1F512} Encrypted" : getDisplayTitle(item);
 		if (item.quantity || item.unit) {
 			const qtySpan = document.createElement("span");
 			qtySpan.className = "list-item-quantity";
@@ -549,6 +994,21 @@ const renderTemplateItems = (bundle) => {
 			title.appendChild(qtySpan);
 		}
 		row.appendChild(title);
+
+		// Image indicator badge
+		const itemImgPath = resolveImagePath(item);
+		if (itemImgPath) {
+			const imgBadge = document.createElement("span");
+			imgBadge.className = "list-item-badge list-item-image-badge";
+			imgBadge.textContent = "\u25A3";
+			imgBadge.title = "Toggle image preview";
+			imgBadge.addEventListener("click", (e) => {
+				e.stopPropagation();
+				const preview = wrapper.querySelector(".list-item-image-preview");
+				if (preview) preview.classList.toggle("expanded");
+			});
+			row.appendChild(imgBadge);
+		}
 
 		const meta = document.createElement("span");
 		meta.className = "list-item-meta";
@@ -570,6 +1030,26 @@ const renderTemplateItems = (bundle) => {
 
 		const actions = document.createElement("div");
 		actions.className = "list-item-actions";
+
+		// Image upload/delete
+		const imgBtn = document.createElement("button");
+		imgBtn.className = "list-item-action";
+		imgBtn.textContent = itemImgPath ? "\u25A3" : "\u25A1";
+		imgBtn.title = itemImgPath ? "Replace / remove image" : "Add image";
+		imgBtn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			if (resolveImagePath(item)) {
+				const remove = confirm("Remove image? (Cancel to upload a new one instead)");
+				if (remove) {
+					deleteItemImage(def.id, item.id);
+				} else {
+					uploadItemImage(def.id, item.id);
+				}
+			} else {
+				uploadItemImage(def.id, item.id);
+			}
+		});
+		actions.appendChild(imgBtn);
 
 		// Move up
 		const upBtn = document.createElement("button");
@@ -619,12 +1099,26 @@ const renderTemplateItems = (bundle) => {
 		delBtn.title = "Delete item";
 		delBtn.addEventListener("click", (e) => {
 			e.stopPropagation();
-			sendMutation("list_item_delete", { id: item.id });
+			openDeleteItemConfirmDialog(item.id, item.title);
 		});
 		actions.appendChild(delBtn);
 
 		row.appendChild(actions);
-		templateItems.appendChild(row);
+		wrapper.appendChild(row);
+
+		// Collapsible image preview
+		if (itemImgPath) {
+			const preview = document.createElement("div");
+			preview.className = "list-item-image-preview";
+			const img = document.createElement("img");
+			img.src = itemImageUrl(itemImgPath);
+			img.alt = item.title || "";
+			img.addEventListener("click", () => showFullscreenImage(img.src, img.alt));
+			preview.appendChild(img);
+			wrapper.appendChild(preview);
+		}
+
+		templateItems.appendChild(wrapper);
 	};
 
 	for (const root of roots) {
@@ -645,6 +1139,7 @@ const renderRunItems = (bundle) => {
 	}
 
 	runSection.classList.remove("hidden");
+	const def = bundle.definition;
 	const run = bundle.run;
 	const readonly = isRunReadonly(bundle);
 
@@ -655,9 +1150,72 @@ const renderRunItems = (bundle) => {
 		runSection.classList.remove("list-run-readonly");
 	}
 
-	// Status
+	// Clean up dynamically added elements from previous render
+	const runHeader = runSection.querySelector(".list-run-header");
+	const existingTitleRow = runSection.querySelector(".list-run-title-row");
+	if (existingTitleRow) existingTitleRow.remove();
+	const existingAddBtn = runSection.querySelector(".list-add-item-btn");
+	if (existingAddBtn) existingAddBtn.remove();
+
+	if (templateSection.classList.contains("hidden") && def) {
+		const titleRow = document.createElement("div");
+		titleRow.className = "list-run-title-row";
+
+		const titleLeft = document.createElement("div");
+		titleLeft.className = "list-run-title-left";
+
+		const titleEl = document.createElement("h3");
+		titleEl.className = "list-template-title";
+		titleEl.textContent = def.title || "(untitled)";
+		titleLeft.appendChild(titleEl);
+
+		const kindEl = document.createElement("span");
+		kindEl.className = "list-template-kind";
+		kindEl.textContent = def.kind || "";
+		titleLeft.appendChild(kindEl);
+
+		titleRow.appendChild(titleLeft);
+
+		// Share button
+		if (isStandalone && def && isListOwner(def)) {
+			const shareBtn = document.createElement("button");
+			shareBtn.className = "list-share-btn";
+			shareBtn.textContent = "Share";
+			shareBtn.addEventListener("click", () => openShareDialog(def.id));
+			titleRow.appendChild(shareBtn);
+		}
+
+		// Encrypt/lock button
+		if (isListOwner(def)) {
+			const encBtn = document.createElement("button");
+			encBtn.className = "list-share-btn list-encrypt-btn";
+			const runItems = bundle.run_items ?? [];
+			const itemsForEncrypt = bundle.items ?? [];
+			if (isDefinitionEncrypted(def)) {
+				encBtn.textContent = isListUnlocked(def.id) ? "Unlocked" : "Locked";
+			} else {
+				encBtn.textContent = "Encrypt";
+			}
+			encBtn.addEventListener("click", () => handleEncryptToggle(def, itemsForEncrypt));
+			titleRow.appendChild(encBtn);
+		}
+
+		runHeader.parentNode.insertBefore(titleRow, runHeader);
+	}
+
+	// Status + copy button
 	runStatus.textContent = run.status;
 	runStatus.className = "list-run-status " + (run.status ?? "");
+
+	const existingCopyBtn = runSection.querySelector(".list-copy-md-btn");
+	if (existingCopyBtn) existingCopyBtn.remove();
+	const copyBtn = document.createElement("button");
+	copyBtn.className = "list-copy-md-btn";
+	copyBtn.textContent = "Copy";
+	copyBtn.title = "Copy list as Markdown";
+	copyBtn.addEventListener("click", () => copyListAsMarkdown(bundle));
+	const runHeaderEl = runSection.querySelector(".list-run-header");
+	if (runHeaderEl) runHeaderEl.appendChild(copyBtn);
 
 	// Progress
 	const total = run.required_total ?? 0;
@@ -676,6 +1234,9 @@ const renderRunItems = (bundle) => {
 
 	runItemsEl.innerHTML = "";
 
+	// Module-level flag for encrypted display in run item renderers
+	_currentListEncryptedLocked = !!(isDefinitionEncrypted(def) && !isListUnlocked(def.id));
+
 	// Separate root and children
 	const roots = sorted.filter((ri) => !ri.snapshot?.parent_item_id);
 	const childMap = new Map();
@@ -687,10 +1248,31 @@ const renderRunItems = (bundle) => {
 		}
 	}
 
+	// Build template item lookup for current data + image fallback
+	const templateItems_ = bundle.items ?? [];
+	const templateItemMap = new Map();
+	const templateImageMap = new Map();
+	for (const ti of templateItems_) {
+		templateItemMap.set(ti.id, ti);
+		if (ti.image_path) templateImageMap.set(ti.id, ti.image_path);
+	}
+
 	const renderRunItem = (ri, isChild = false) => {
-		const snap = ri.snapshot ?? {};
+		const rawSnap = ri.snapshot ?? {};
+		// Merge current template item data over frozen snapshot (title, description, quantity, unit)
+		const templateItem = templateItemMap.get(rawSnap.item_id);
+		const snap = templateItem ? {
+			...rawSnap,
+			title: templateItem.title ?? rawSnap.title,
+			description: templateItem.description ?? rawSnap.description,
+			quantity: templateItem.quantity ?? rawSnap.quantity,
+			unit: templateItem.unit ?? rawSnap.unit,
+		} : rawSnap;
+		const wrapper = document.createElement("div");
+		wrapper.className = "list-run-item-wrapper" + (isChild ? " child" : "");
+
 		const el = document.createElement("div");
-		el.className = "list-run-item" + (isChild ? " child" : "") + (ri.status === "completed" ? " completed" : "") + (ri.status === "cancelled" ? " cancelled" : "");
+		el.className = "list-run-item" + (ri.status === "completed" ? " completed" : "") + (ri.status === "cancelled" ? " cancelled" : "");
 		el.setAttribute("tabindex", "0");
 		el.setAttribute("data-run-item-id-row", ri.id);
 		if (snap.item_id) el.setAttribute("data-item-id", snap.item_id);
@@ -704,7 +1286,119 @@ const renderRunItems = (bundle) => {
 			renderNoteRunItem(el, ri, snap, run, readonly);
 		}
 
-		runItemsEl.appendChild(el);
+		// Resolve image: snapshot first, then local cache, then template item fallback
+		const imgPath = snap.image_path || itemImageCache.get(snap.item_id) || templateImageMap.get(snap.item_id) || null;
+
+		// Image indicator badge in the run item row
+		if (imgPath) {
+			const imgBadge = document.createElement("span");
+			imgBadge.className = "list-item-badge list-item-image-badge";
+			imgBadge.textContent = "\u25A3";
+			imgBadge.title = "Toggle image preview";
+			imgBadge.style.marginLeft = "auto";
+			imgBadge.addEventListener("click", (e) => {
+				e.stopPropagation();
+				const preview = wrapper.querySelector(".list-item-image-preview");
+				if (preview) preview.classList.toggle("expanded");
+			});
+			el.appendChild(imgBadge);
+		}
+
+		// Template item actions (edit, reorder, delete, image) when template section is hidden
+		if (templateSection.classList.contains("hidden") && !isOwnerFrozen && snap.item_id) {
+			const templateItem = templateItems_.find(ti => ti.id === snap.item_id);
+			const actions = document.createElement("div");
+			actions.className = "list-item-actions";
+
+			// Image upload/delete
+			const imgBtn = document.createElement("button");
+			imgBtn.className = "list-item-action";
+			imgBtn.textContent = imgPath ? "\u25A3" : "\u25A1";
+			imgBtn.title = imgPath ? "Replace / remove image" : "Add image";
+			imgBtn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				if (resolveImagePath(templateItem || {})) {
+					const remove = confirm("Remove image? (Cancel to upload a new one instead)");
+					if (remove) deleteItemImage(def.id, snap.item_id);
+					else uploadItemImage(def.id, snap.item_id);
+				} else {
+					uploadItemImage(def.id, snap.item_id);
+				}
+			});
+			actions.appendChild(imgBtn);
+
+			// Move up
+			const upBtn = document.createElement("button");
+			upBtn.className = "list-item-action";
+			upBtn.textContent = "\u2191";
+			upBtn.title = "Move up";
+			upBtn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				sendMutation("list_item_reorder", {
+					id: snap.item_id,
+					list_id: def.id,
+					position: Math.max(0, (snap.position ?? 0) - 1),
+				});
+			});
+			actions.appendChild(upBtn);
+
+			// Move down
+			const downBtn = document.createElement("button");
+			downBtn.className = "list-item-action";
+			downBtn.textContent = "\u2193";
+			downBtn.title = "Move down";
+			downBtn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				sendMutation("list_item_reorder", {
+					id: snap.item_id,
+					list_id: def.id,
+					position: (snap.position ?? 0) + 1,
+				});
+			});
+			actions.appendChild(downBtn);
+
+			// Edit
+			if (templateItem) {
+				const editBtn = document.createElement("button");
+				editBtn.className = "list-item-action";
+				editBtn.textContent = "\u270E";
+				editBtn.title = "Edit item";
+				editBtn.addEventListener("click", (e) => {
+					e.stopPropagation();
+					openItemDialog(templateItem);
+				});
+				actions.appendChild(editBtn);
+			}
+
+			// Delete
+			const delBtn = document.createElement("button");
+			delBtn.className = "list-item-action delete";
+			delBtn.textContent = "\u2715";
+			delBtn.title = "Delete item";
+			delBtn.addEventListener("click", (e) => {
+				e.stopPropagation();
+				openDeleteItemConfirmDialog(snap.item_id, snap.title);
+			});
+			actions.appendChild(delBtn);
+
+			el.appendChild(actions);
+		}
+
+		wrapper.appendChild(el);
+
+		// Collapsible image preview below run item
+		if (imgPath) {
+			const preview = document.createElement("div");
+			preview.className = "list-item-image-preview";
+			const img = document.createElement("img");
+			img.src = itemImageUrl(imgPath);
+			img.alt = snap.title || "";
+			img.addEventListener("click", () => showFullscreenImage(img.src, img.alt));
+			preview.appendChild(img);
+			wrapper.appendChild(preview);
+		}
+
+		runItemsEl.appendChild(wrapper);
 	};
 
 	for (const root of roots) {
@@ -716,6 +1410,18 @@ const renderRunItems = (bundle) => {
 				renderRunItem(child, true);
 			}
 		}
+	}
+
+	// Add Item button when template section is hidden and list is editable
+	if (templateSection.classList.contains("hidden") && !isOwnerFrozen) {
+		const addBtn = document.createElement("button");
+		addBtn.className = "list-add-item-btn";
+		addBtn.textContent = "+ Add Item";
+		addBtn.addEventListener("click", () => {
+			if (!selectedListId) return;
+			openItemDialog();
+		});
+		runSection.appendChild(addBtn);
 	}
 };
 
@@ -785,18 +1491,19 @@ const renderCheckboxRunItem = (el, ri, snap, run, readonly) => {
 	content.className = "list-run-item-content";
 	const title = document.createElement("span");
 	title.className = "list-run-item-title";
-	title.textContent = snap.title || "(untitled)";
-	if (snap.quantity || snap.unit) {
+	title.textContent = _currentListEncryptedLocked ? "\u{1F512} Encrypted" : getDisplayTitle({ snapshot: snap });
+	if (!_currentListEncryptedLocked && (snap.quantity || snap.unit)) {
 		const qtySpan = document.createElement("span");
 		qtySpan.className = "list-item-quantity";
 		qtySpan.textContent = ` — ${snap.quantity || ""}${snap.unit ? " " + snap.unit : ""}`;
 		title.appendChild(qtySpan);
 	}
 	content.appendChild(title);
-	if (snap.description) {
+	const displayDesc = getDisplayDescription({ snapshot: snap });
+	if (!_currentListEncryptedLocked && displayDesc) {
 		const desc = document.createElement("span");
 		desc.className = "list-run-item-description";
-		desc.textContent = snap.description;
+		desc.textContent = displayDesc;
 		content.appendChild(desc);
 	}
 	el.appendChild(content);
@@ -844,8 +1551,8 @@ const renderTimerRunItem = (el, ri, snap, run, readonly) => {
 
 	const title = document.createElement("span");
 	title.className = "list-run-item-title";
-	title.textContent = snap.title || "(untitled)";
-	if (snap.quantity || snap.unit) {
+	title.textContent = _currentListEncryptedLocked ? "\u{1F512} Encrypted" : getDisplayTitle({ snapshot: snap });
+	if (!_currentListEncryptedLocked && (snap.quantity || snap.unit)) {
 		const qtySpan = document.createElement("span");
 		qtySpan.className = "list-item-quantity";
 		qtySpan.textContent = ` — ${snap.quantity || ""}${snap.unit ? " " + snap.unit : ""}`;
@@ -926,8 +1633,8 @@ const renderNoteRunItem = (el, ri, snap, run, readonly) => {
 
 	const title = document.createElement("span");
 	title.className = "list-run-item-title";
-	title.textContent = snap.title || "(untitled)";
-	if (snap.quantity || snap.unit) {
+	title.textContent = _currentListEncryptedLocked ? "\u{1F512} Encrypted" : getDisplayTitle({ snapshot: snap });
+	if (!_currentListEncryptedLocked && (snap.quantity || snap.unit)) {
 		const qtySpan = document.createElement("span");
 		qtySpan.className = "list-item-quantity";
 		qtySpan.textContent = ` — ${snap.quantity || ""}${snap.unit ? " " + snap.unit : ""}`;
@@ -992,6 +1699,95 @@ const renderFooter = (bundle) => {
 	footerOwner.textContent = def.owner ? `${def.owner.kind}` : "";
 	footerRev.textContent = `rev ${def.rev ?? 0}`;
 	footerStatus.textContent = run ? `run: ${run.status}` : "no run";
+};
+
+// ---------------------------------------------------------------
+// Deleted lists (trash) view
+// ---------------------------------------------------------------
+
+const renderDeletedView = () => {
+	sidebarItems.innerHTML = "";
+	templateSection.classList.add("hidden");
+	runSection.classList.add("hidden");
+	emptyState.classList.add("hidden");
+
+	if (deletedLists.length === 0) {
+		emptyState.classList.remove("hidden");
+		const p = emptyState.querySelector("p");
+		if (p) p.textContent = "No deleted lists.";
+		footerOwner.textContent = "Trash";
+		footerRev.textContent = "";
+		footerStatus.textContent = "";
+		return;
+	}
+
+	footerOwner.textContent = `${deletedLists.length} deleted list${deletedLists.length !== 1 ? "s" : ""}`;
+	footerRev.textContent = "";
+	footerStatus.textContent = "";
+
+	for (const def of deletedLists) {
+		const item = document.createElement("div");
+		item.className = "list-sidebar-item";
+		item.setAttribute("tabindex", "0");
+
+		const colorDot = document.createElement("span");
+		colorDot.className = "list-sidebar-color-dot";
+		colorDot.style.backgroundColor = def.color || "#4A90D9";
+		colorDot.style.opacity = "0.5";
+		item.appendChild(colorDot);
+
+		const titleSpan = document.createElement("span");
+		titleSpan.className = "list-sidebar-item-title";
+		titleSpan.style.opacity = "0.6";
+		titleSpan.textContent = def.title || "(untitled)";
+		item.appendChild(titleSpan);
+
+		// Days remaining before purge
+		if (def.deleted_at) {
+			const deletedDate = new Date(def.deleted_at);
+			if (!isNaN(deletedDate.getTime())) {
+				const purgeDate = new Date(deletedDate.getTime() + 30 * 24 * 60 * 60 * 1000);
+				const daysLeft = Math.max(0, Math.ceil((purgeDate - Date.now()) / (24 * 60 * 60 * 1000)));
+				const daysSpan = document.createElement("span");
+				daysSpan.className = "list-sidebar-pin-icon";
+				daysSpan.style.color = daysLeft <= 7 ? "var(--color-status-error, #dc2626)" : "var(--color-text-tertiary)";
+				daysSpan.textContent = `${daysLeft}d`;
+				daysSpan.title = `Permanently deleted in ${daysLeft} day${daysLeft !== 1 ? "s" : ""}`;
+				item.appendChild(daysSpan);
+			}
+		}
+
+		const actionsDiv = document.createElement("div");
+		actionsDiv.className = "list-sidebar-item-actions";
+
+		const restoreBtn = document.createElement("button");
+		restoreBtn.className = "list-sidebar-item-action";
+		restoreBtn.textContent = "\u21A9";
+		restoreBtn.title = "Restore list";
+		restoreBtn.setAttribute("tabindex", "-1");
+		restoreBtn.addEventListener("click", (e) => {
+			e.stopPropagation();
+			sendMutation("list_restore", { id: def.id });
+		});
+		actionsDiv.appendChild(restoreBtn);
+
+		item.appendChild(actionsDiv);
+		sidebarItems.appendChild(item);
+	}
+
+	// Show restore info in main panel
+	templateSection.classList.remove("hidden");
+	templateTitle.textContent = "Recently Deleted";
+	templateKind.textContent = "";
+	templateItems.innerHTML = "";
+
+	const info = document.createElement("div");
+	info.style.cssText = "padding: 12px 0; color: var(--color-text-tertiary); font-size: var(--font-size-sm); line-height: 1.6;";
+	info.textContent = "Deleted lists are kept for 30 days before being permanently removed. Click the restore button (\u21A9) to recover a list.";
+	templateItems.appendChild(info);
+
+	// Hide add item button
+	addItemBtn.classList.add("hidden");
 };
 
 // ---------------------------------------------------------------
@@ -1065,8 +1861,10 @@ const openItemDialog = (existingItem = null) => {
 	itemDialogTitle.textContent = existingItem ? "Edit Item" : "New Item";
 	itemDialogSubmit.textContent = existingItem ? "Save" : "Create";
 
-	itemTitleInput.value = existingItem?.title ?? "";
-	itemDescriptionInput.value = existingItem?.description ?? "";
+	// Use decrypted cache if available (for encrypted lists)
+	const cached = existingItem?.id ? decryptedCache.get(existingItem.id) : null;
+	itemTitleInput.value = cached?.title ?? existingItem?.title ?? "";
+	itemDescriptionInput.value = cached?.description ?? existingItem?.description ?? "";
 	timerDurationInput.value = existingItem?.config?.duration_seconds ?? "";
 	itemRequiredInput.checked = existingItem ? !!existingItem.required : true;
 	itemQuantityInput.value = existingItem?.quantity ?? "";
@@ -1104,24 +1902,213 @@ const updateItemDialogVisibility = (type) => {
 };
 
 // ---------------------------------------------------------------
-// Delete confirmation dialog (standalone mode)
+// Delete confirmation dialog
 // ---------------------------------------------------------------
 
 const openDeleteConfirmDialog = (listId, title) => {
 	pendingDeleteListId = listId;
-	deleteConfirmMessage.textContent = `Delete "${title || "(untitled)"}"? This cannot be undone.`;
+	pendingDeleteItemId = null;
+	deleteConfirmMessage.textContent = `Delete list "${title || "(untitled)"}"? This cannot be undone.`;
+	deleteConfirmSubmit.textContent = "Delete";
+	deleteConfirmDialog.showModal();
+};
+
+const openDeleteItemConfirmDialog = (itemId, title) => {
+	pendingDeleteItemId = itemId;
+	pendingDeleteListId = null;
+	deleteConfirmMessage.textContent = `Delete item "${title || "(untitled)"}"? This cannot be undone.`;
+	deleteConfirmSubmit.textContent = "Delete";
 	deleteConfirmDialog.showModal();
 };
 
 const closeDeleteConfirmDialog = () => {
 	pendingDeleteListId = null;
+	pendingDeleteItemId = null;
 	deleteConfirmDialog.close();
 };
 
 const confirmDelete = () => {
-	if (!pendingDeleteListId) return;
-	sendMutation("list_delete", { id: pendingDeleteListId });
+	if (pendingDeleteListId) {
+		sendMutation("list_delete", { id: pendingDeleteListId });
+		// Refetch to remove deleted list from view
+		if (target) {
+			setTimeout(() => ipc.send("lists-fetch", { target }), 300);
+		}
+	} else if (pendingDeleteItemId) {
+		sendMutation("list_item_delete", { id: pendingDeleteItemId });
+	}
 	closeDeleteConfirmDialog();
+};
+
+// ---------------------------------------------------------------
+// Encryption dialog
+// ---------------------------------------------------------------
+
+const openEncryptDialog = ({ mode, hint, onSubmit }) => {
+	// mode: "unlock", "encrypt", "decrypt"
+	encryptPasswordInput.value = "";
+	encryptHintInput.value = "";
+	encryptDialogError.style.display = "none";
+	encryptDialogError.textContent = "";
+
+	if (mode === "unlock") {
+		encryptDialogTitle.textContent = "Unlock List";
+		encryptDialogSubmit.textContent = "Unlock";
+		encryptHintGroup.style.display = "none";
+		encryptDialogHint.textContent = hint ? `Hint: ${hint}` : "";
+		encryptDialogHint.style.display = hint ? "" : "none";
+	} else if (mode === "encrypt") {
+		encryptDialogTitle.textContent = "Encrypt List";
+		encryptDialogSubmit.textContent = "Encrypt";
+		encryptHintGroup.style.display = "";
+		encryptDialogHint.textContent = "Choose a password. If you forget it, the data is unrecoverable.";
+		encryptDialogHint.style.display = "";
+	} else if (mode === "decrypt") {
+		encryptDialogTitle.textContent = "Remove Encryption";
+		encryptDialogSubmit.textContent = "Decrypt";
+		encryptHintGroup.style.display = "none";
+		encryptDialogHint.textContent = hint ? `Hint: ${hint}` : "Enter the password to remove encryption.";
+		encryptDialogHint.style.display = "";
+	}
+
+	encryptDialogCallback = onSubmit;
+	encryptDialog.showModal();
+	encryptPasswordInput.focus();
+};
+
+const closeEncryptDialog = () => {
+	encryptDialogCallback = null;
+	encryptDialog.close();
+};
+
+const submitEncryptDialog = () => {
+	const password = encryptPasswordInput.value;
+	if (!password) {
+		encryptDialogError.textContent = "Password is required";
+		encryptDialogError.style.display = "";
+		return;
+	}
+	const hint = encryptHintInput.value.trim();
+	if (encryptDialogCallback) {
+		encryptDialogCallback(password, hint);
+	}
+};
+
+// Encrypt button handler — called from template/run header
+const handleEncryptToggle = async (def, items) => {
+	if (!def) return;
+
+	if (isDefinitionEncrypted(def)) {
+		if (isListUnlocked(def.id)) {
+			// Already unlocked — offer to remove encryption or re-lock
+			const action = confirm("List is unlocked.\n\nOK = Remove encryption (decrypt all items)\nCancel = Lock it again");
+			if (action) {
+				// Remove encryption
+				const entry = unlockedKeys.get(def.id);
+				if (entry) {
+					await decryptAllItems(def.id, entry.password, items);
+					sendMutation("list_edit", {
+						id: def.id,
+						is_encrypted: false,
+						encryption_hint: "",
+						last_modified_at: Date.now(),
+					});
+					lockList(def.id);
+					// Optimistically update local definition
+					if (listsPayload?.lists) {
+						for (const bundle of listsPayload.lists) {
+							if (bundle.definition?.id === def.id) {
+								bundle.definition.is_encrypted = false;
+								bundle.definition.encryption_hint = "";
+								break;
+							}
+						}
+					}
+					showToast("Encryption removed", 2000, "success");
+					render();
+				}
+			} else {
+				lockList(def.id);
+				render();
+			}
+		} else {
+			// Locked — prompt for password to unlock
+			openEncryptDialog({
+				mode: "unlock",
+				hint: getEncryptionHint(def),
+				onSubmit: async (password) => {
+					const success = await tryUnlockList(def.id, password, items);
+					if (success) {
+						closeEncryptDialog();
+						// Decrypt items to cache for display
+						const bundle = getSelectedBundle();
+						const allItems = [...(bundle?.items ?? []), ...(bundle?.run_items ?? [])];
+						await decryptItemsToCache(def.id, allItems);
+						render();
+					} else {
+						encryptDialogError.textContent = "Wrong password";
+						encryptDialogError.style.display = "";
+					}
+				},
+			});
+		}
+	} else {
+		// Guard: don't encrypt if already encrypted (prevents double-encryption)
+		if (isDefinitionEncrypted(def)) {
+			showToast("List is already encrypted", 2000);
+			return;
+		}
+		// Not encrypted — prompt to encrypt
+		openEncryptDialog({
+			mode: "encrypt",
+			onSubmit: async (password, hint) => {
+				if (password.length < 4) {
+					encryptDialogError.textContent = "Password must be at least 4 characters";
+					encryptDialogError.style.display = "";
+					return;
+				}
+				// Re-check before actually encrypting (server state may have changed)
+				const freshBundle = getSelectedBundle();
+				if (freshBundle && isDefinitionEncrypted(freshBundle.definition)) {
+					closeEncryptDialog();
+					showToast("List is already encrypted", 2000);
+					return;
+				}
+				closeEncryptDialog();
+				showToast("Encrypting...", 5000);
+				await encryptAllItems(def.id, password, items);
+				sendMutation("list_edit", {
+					id: def.id,
+					is_encrypted: true,
+					encryption_hint: hint || "",
+					last_modified_at: Date.now(),
+				});
+				// Store key so list stays unlocked this session
+				unlockedKeys.set(def.id, { key: null, password });
+				// Cache plaintext values for display (we still have them in memory)
+				for (const item of items) {
+					decryptedCache.set(item.id, {
+						title: item.title || "",
+						description: item.description || "",
+					});
+				}
+				// Optimistically update local definition
+				if (listsPayload?.lists) {
+					for (const bundle of listsPayload.lists) {
+						if (bundle.definition?.id === def.id) {
+							bundle.definition.is_encrypted = true;
+							bundle.definition.encryption_hint = hint || "";
+							break;
+						}
+					}
+				}
+				showToast("List encrypted", 2000, "success");
+				render();
+				// Refetch to get server's encrypted item data
+				ipc.send("lists-fetch", { target });
+			},
+		});
+	}
 };
 
 // ---------------------------------------------------------------
@@ -1217,15 +2204,35 @@ const submitEditList = () => {
 		editListTitleInput.focus();
 		return;
 	}
+	const id = editingListId;
+	const color = editListColorInput.value || "#4A90D9";
+	const icon = editListIconInput.value.trim() || "list";
+	const tags = editListTagsInput.value.split(",").map(t => t.trim()).filter(Boolean);
+
 	sendMutation("list_edit", {
-		id: editingListId,
+		id,
 		title,
-		icon: editListIconInput.value.trim() || "list",
-		color: editListColorInput.value || "#4A90D9",
-		tags: editListTagsInput.value.split(",").map(t => t.trim()).filter(Boolean),
+		icon,
+		color,
+		tags,
 		last_modified_at: Date.now(),
 	});
+
+	// Optimistically update local definition so UI reflects changes immediately
+	if (listsPayload?.lists) {
+		for (const bundle of listsPayload.lists) {
+			if (bundle.definition?.id === id) {
+				bundle.definition.title = title;
+				bundle.definition.icon = icon;
+				bundle.definition.color = color;
+				bundle.definition.tags = tags;
+				break;
+			}
+		}
+	}
+
 	closeEditListDialog();
+	render();
 };
 
 // ---------------------------------------------------------------
@@ -1295,8 +2302,8 @@ const confirmAttach = (targetRef) => {
 	showToast(`Attaching to ${targetRef.kind}: ${targetRef.label}`, 2000, "success");
 };
 
-const submitItemDialog = () => {
-	const title = itemTitleInput.value.trim();
+const submitItemDialog = async () => {
+	let title = itemTitleInput.value.trim();
 	if (!title) {
 		itemTitleInput.focus();
 		return;
@@ -1304,7 +2311,7 @@ const submitItemDialog = () => {
 
 	const type = itemDialog.querySelector('input[name="itemType"]:checked')?.value ?? "checkbox";
 	const required = type === "note" ? false : itemRequiredInput.checked;
-	const description = itemDescriptionInput.value.trim() || null;
+	let description = itemDescriptionInput.value.trim() || null;
 	const quantity = itemQuantityInput.value.trim() || null;
 	const unit = itemUnitInput.value.trim() || "";
 	let config = {};
@@ -1317,26 +2324,59 @@ const submitItemDialog = () => {
 		config = { duration_seconds: dur };
 	}
 
-	if (editingItemId) {
-		// Find existing item for its current properties
-		const bundle = getSelectedBundle();
-		const existingItem = bundle?.items?.find((i) => i.id === editingItemId);
+	// If the list is encrypted and unlocked, encrypt title/description before sending
+	const bundle = getSelectedBundle();
+	const def = bundle?.definition;
+	const entry = def && isDefinitionEncrypted(def) ? unlockedKeys.get(def.id) : null;
+	if (entry?.password) {
+		// Update decrypted cache with new plaintext values
+		if (editingItemId) {
+			decryptedCache.set(editingItemId, { title, description: description || "" });
+		}
+		title = await encryptField(title, entry.password);
+		if (description) description = await encryptField(description, entry.password);
+	}
 
-		sendMutation("list_item_edit", {
+	if (editingItemId) {
+		// Optimistic update — patch local item data immediately
+		const existingItem = bundle?.items?.find((i) => i.id === editingItemId);
+		const snapshot = existingItem ? { ...existingItem } : null; // save for rollback
+
+		if (existingItem) {
+			existingItem.title = title;
+			existingItem.description = description;
+			existingItem.type = type;
+			existingItem.required = required;
+			existingItem.config = config;
+			existingItem.quantity = quantity;
+			existingItem.unit = unit;
+		}
+
+		// Also patch run item snapshots
+		if (bundle?.run_items) {
+			for (const ri of bundle.run_items) {
+				if (ri.snapshot?.item_id === editingItemId) {
+					ri.snapshot.title = title;
+					ri.snapshot.description = description;
+				}
+			}
+		}
+
+		const editPayload = {
 			id: editingItemId,
 			list_id: selectedListId,
+			title,
+			description,
 			parent_item_id: existingItem?.parent_item_id ?? null,
 			position: existingItem?.position ?? 0,
 			item_type: type,
-			title,
-			description,
 			required,
 			config,
 			quantity,
 			unit,
-		});
+		};
+		sendMutation("list_item_edit", editPayload);
 	} else {
-		const bundle = getSelectedBundle();
 		const items = bundle?.items ?? [];
 		const maxPos = items.reduce((max, i) => Math.max(max, i.position ?? 0), -1);
 
@@ -1355,6 +2395,7 @@ const submitItemDialog = () => {
 	}
 
 	closeItemDialog();
+	render();
 };
 
 // ---------------------------------------------------------------
@@ -1399,6 +2440,23 @@ ipc.on("lists-error", (_, errorPayload) => {
 		} else {
 			ipc.send("lists-fetch", { target });
 		}
+	}
+});
+
+ipc.on("lists-deleted-list", (_, data) => {
+	deletedLists = Array.isArray(data) ? data : [];
+	if (statusFilter === "deleted") {
+		renderDeletedView();
+	}
+});
+
+ipc.on("lists-restored", () => {
+	showToast("List restored", 2000, "success");
+	if (statusFilter === "deleted") {
+		refetchLists();
+	} else {
+		// Also refetch active lists since the restored list should appear
+		ipc.send("lists-fetch", { target });
 	}
 });
 
@@ -1489,6 +2547,13 @@ itemDialogCancel.addEventListener("click", () => {
 deleteConfirmSubmit.addEventListener("click", confirmDelete);
 deleteConfirmCancel.addEventListener("click", closeDeleteConfirmDialog);
 
+encryptDialogSubmit.addEventListener("click", submitEncryptDialog);
+encryptDialogCancel.addEventListener("click", closeEncryptDialog);
+encryptPasswordInput.addEventListener("keydown", (e) => {
+	if (e.key === "Enter") submitEncryptDialog();
+});
+encryptDialog.addEventListener("cancel", (e) => e.preventDefault());
+
 shareInviteBtn.addEventListener("click", submitShareInvite);
 shareCloseBtn.addEventListener("click", closeShareDialog);
 
@@ -1508,6 +2573,11 @@ sidebarSearch.addEventListener("input", () => {
 
 sidebarStatusFilter.addEventListener("change", () => {
 	statusFilter = sidebarStatusFilter.value;
+	if (statusFilter === "deleted") {
+		addItemBtn.classList.add("hidden");
+	} else {
+		addItemBtn.classList.remove("hidden");
+	}
 	refetchLists();
 });
 
@@ -1593,7 +2663,7 @@ const activateFocusedRunItem = (el) => {
 };
 
 document.addEventListener("keydown", (e) => {
-	const inDialog = addListDialog.open || itemDialog.open || deleteConfirmDialog.open || (shareDialog && shareDialog.open) || (editListDialog && editListDialog.open) || !attachOverlay.classList.contains("hidden");
+	const inDialog = addListDialog.open || itemDialog.open || deleteConfirmDialog.open || (shareDialog && shareDialog.open) || (editListDialog && editListDialog.open) || (encryptDialog && encryptDialog.open) || !attachOverlay.classList.contains("hidden");
 	const inInput = document.activeElement?.tagName === "INPUT" ||
 		document.activeElement?.tagName === "TEXTAREA";
 
@@ -1603,6 +2673,7 @@ document.addEventListener("keydown", (e) => {
 		if (editListDialog && editListDialog.open) { closeEditListDialog(); return; }
 		if (shareDialog && shareDialog.open) { closeShareDialog(); return; }
 		if (deleteConfirmDialog.open) { closeDeleteConfirmDialog(); return; }
+		if (encryptDialog && encryptDialog.open) { closeEncryptDialog(); return; }
 		if (helpPanel.classList.contains("visible")) {
 			helpPanel.classList.remove("visible");
 		} else if (addListDialog.open) {

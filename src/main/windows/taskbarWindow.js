@@ -95,7 +95,11 @@ export const createTaskbarWindow = ({
         }
     };
 
+    let shortcutsRegistered = false;
+
     const registerLocalShortcuts = () => {
+        if (shortcutsRegistered) return;
+        shortcutsRegistered = true;
         electronLocalshortcut.register(
             win,
             ["CommandOrControl+R", "CommandOrControl+Shift+R", "F5"],
@@ -104,6 +108,8 @@ export const createTaskbarWindow = ({
     };
 
     const unregisterLocalShortcuts = () => {
+        if (!shortcutsRegistered) return;
+        shortcutsRegistered = false;
         electronLocalshortcut.unregisterAll(win);
     };
 

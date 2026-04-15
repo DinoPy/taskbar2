@@ -13,36 +13,69 @@
     <div class='body-container'>
         <div class="window-header">
             <h1> Completed Tasks </h1>
+            <div class="stats-bar">
+                <span class="stat tasksSoFar" data-tasks>Tasks: </span>
+                <span class="stat-sep">|</span>
+                <span class="stat totalDuration" data-duration>Total: </span>
+                <span class="stat-sep">|</span>
+                <span class="stat avgDuration" data-avg>Avg: </span>
+            </div>
             <img id='closeBtn' src="../images/close.svg" />
         </div>
-        <div class='generalInfo'>
-            <div class="filter-container">
-                <div class="filters-left">
-                    <div class="filter-row">
-                        <form class="search-container">
-                            <input class="search-input" type="text" id="search-input" name="search"></input>
-                            <button class="btn seach-button" id="seach-button"> Search </button>
-                        </form>
-                        <select type="text" id="category" name="category" value="none"> </select>
-                        <input class="dateInput" id="startDate" type="date" />
-                        <input class="dateInput" id="endDate" type="date" />
-                    </div>
-                    <div class="tag-search-container">
-                        <form class="tags-container">
-                            <input class="tags-input" type="text" id="tags-input" name="tags"></input>
-                            <button class="btn tags-button" id="tags-button"> Add </button>
-                        </form>
-                    </div>
-                    <div class="tags-list-container"> </div>
+        <div class="filter-bar">
+            <div class="filter-group">
+                <label class="filter-label">Dates</label>
+                <input class="dateInput" id="startDate" type="date" />
+                <input class="dateInput" id="endDate" type="date" />
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Categories</label>
+                <div class="filter-chips" id="category-chips"></div>
+            </div>
+            <div class="filter-group filter-group--tags">
+                <label class="filter-label">Tags</label>
+                <div class="tag-summary" id="tag-summary">
+                    <div class="tag-active-chips" id="tag-active-chips"></div>
+                    <button class="tag-picker-btn" id="tag-picker-btn" title="Pick tags">+</button>
                 </div>
-                <div class="stats-right">
-                    <p class="tasksSoFar" data-tasks> Tasks: </p>
-                    <p class="totalDuration" data-duration> Total duration: </p>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Lists</label>
+                <select class="filter-select" id="has-lists-filter">
+                    <option value="">All</option>
+                    <option value="true">With lists</option>
+                    <option value="false">Without lists</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label">Include Keywords</label>
+                <div class="filter-input-row">
+                    <input type="text" class="filter-input" id="include-keywords-input" placeholder="keyword..." />
+                    <button class="filter-add-btn" id="include-keywords-btn">+</button>
                 </div>
+                <div class="filter-chips" id="include-keywords-chips"></div>
+            </div>
+            <div class="filter-group">
+                <label class="filter-label filter-label--exclude">Exclude Keywords</label>
+                <div class="filter-input-row">
+                    <input type="text" class="filter-input" id="exclude-keywords-input" placeholder="keyword..." />
+                    <button class="filter-add-btn filter-add-btn--exclude" id="exclude-keywords-btn">+</button>
+                </div>
+                <div class="filter-chips" id="exclude-keywords-chips"></div>
             </div>
         </div>
     </div>
     <div class="tableContainer"> </div>
+    <!-- Tag picker popover (outside body-container for safe position:fixed) -->
+    <div class="tag-popover hidden" id="tag-popover">
+        <div class="tag-popover-header">
+            <span class="tag-popover-title">Tags</span>
+            <span class="tag-popover-hint">Click: include &middot; Again: exclude &middot; Again: clear</span>
+            <button class="tag-popover-close" id="tag-popover-close">&times;</button>
+        </div>
+        <input class="tag-popover-search" id="tag-popover-search" type="text" placeholder="Search tags..." autocomplete="off" />
+        <div class="tag-popover-list" id="tag-popover-list"></div>
+    </div>
 </body>
 
 </html>

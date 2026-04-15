@@ -48,10 +48,14 @@ export function createSocketHandlers({
 
 		if (Array.isArray(payload.categories)) {
 			appState.categories = payload.categories;
-			appState.selectedCategories = [];
 		} else if (typeof payload.categories === "string" && payload.categories.length > 0) {
 			appState.categories = payload.categories.split(",");
-			appState.selectedCategories = []; // Show all categories by default
+		}
+		// Prune selected categories that no longer exist on the server
+		if (appState.selectedCategories.length > 0) {
+			appState.selectedCategories = appState.selectedCategories.filter(
+				c => appState.categories.includes(c)
+			);
 		}
 
 		let tags = payload.tags;
@@ -129,6 +133,7 @@ export function createSocketHandlers({
 		// Refetch templates if the template window is open
 		const templateWin = windowManager.getTemplateWindow?.();
 		if (templateWin && !templateWin.isDestroyed()) {
+			templateWin.webContents.send("template-categories", appState.categories);
 			templateWin.webContents.send("socket-reconnected");
 		}
 	}
@@ -143,6 +148,16 @@ export function createSocketHandlers({
 			win.webContents.send("completed-tasks-list", {
 				tasks: data,
 				categories: appState.categories,
+			});
+		}
+	}
+
+	function handleCompletedTasksV2Response(data) {
+		const win = windowManager.getCompletedTasksWindow();
+		if (win) {
+			win.webContents.send("completed-tasks-v2-list", {
+				tasks: data.tasks || [],
+				available_filters: data.available_filters || { categories: [], tags: [] },
 			});
 		}
 	}
@@ -234,10 +249,15 @@ export function createSocketHandlers({
 		},
 		related_updated_categories: ({ data }) => {
 			appState.categories = data;
+			const templateWin = windowManager.getTemplateWindow?.();
+			if (templateWin && !templateWin.isDestroyed()) {
+				templateWin.webContents.send("template-categories", appState.categories);
+			}
 		},
 		new_task_created: ({ data }) => broadcast("new_task_from_relative", data),
 		tasks_refresher: ({ data }) => broadcast("refresh_tasks", data.tasks),
 		get_completed_tasks: ({ data }) => handleCompletedTasksResponse(data),
+		completed_tasks_v2: ({ data }) => handleCompletedTasksV2Response(data),
 		request_hard_refresh: ({ data }) => {
 			appState.categories = data.categories.split(",");
 			broadcast("refresh_tasks", data.tasks);
@@ -350,6 +370,16 @@ export function createSocketHandlers({
 						switchToSchedulesTab: true,
 					});
 				}
+			}
+		},
+		calendar_search_results: ({ data }) => {
+			let payload = data;
+			if (typeof data === "string") {
+				try { payload = JSON.parse(data); } catch { return; }
+			}
+			const win = windowManager.getCalendarWindow?.();
+			if (win && !win.isDestroyed()) {
+				win.webContents.send("calendar-search-results", payload);
 			}
 		},
 		occurrences_list: ({ data }) => {
@@ -568,6 +598,30 @@ export function createSocketHandlers({
 			}
 			if (!payload) return;
 			listsController?.handleTemplateMutation?.(payload);
+		},
+		list_item_image_updated: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			if (!payload) return;
+			listsController?.handleTemplateMutation?.(payload);
+		},
+		list_deleted_list: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			listsController?.forwardDeletedList?.(payload);
+		},
+		list_restored: ({ data }) => {
+			let payload = data;
+			if (typeof payload === "string") {
+				try { payload = JSON.parse(payload); } catch { return; }
+			}
+			if (!payload) return;
+			listsController?.handleTemplateMutation?.(payload);
+			listsController?.forwardRestored?.();
 		},
 		list_items_reordered: ({ data }) => {
 			let payload = data;

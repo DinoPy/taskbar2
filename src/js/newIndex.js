@@ -24,7 +24,7 @@ export let tasks_compl_or_del_while_nocon = []
 
 export let isSocketConnected = false;
 let isTimerRunning = true;
-let lastCategorySelected = 'none';
+let lastCategorySelected = 'Life';
 let showAllTasks = false;
 let selectedCategories = []; // Empty means show all categories
 let visualTaskOrder = []; // Stores task IDs in their visual display order
@@ -836,9 +836,6 @@ const triggerNoActiveTaskWarning = () => {
 	clearTimeout(noActiveTaskWarningTimeout);
 	bodyEl.classList.add('noActiveTaskBodyWarning');
 	noActiveTaskParagraph.classList.remove('invisible');
-	noActiveTaskWarningTimeout = setTimeout(() => {
-		bodyEl.classList.remove('noActiveTaskBodyWarning');
-	}, 1000);
 };
 
 setInterval(() => {
@@ -947,6 +944,11 @@ const parseCommand = (input) => {
 	if (trimmed.match(/^ll(\d+)$/)) {
 		const match = trimmed.match(/^ll(\d+)$/);
 		return { type: 'list', index: parseInt(match[1]) };
+	}
+
+	// Completed tasks: completed
+	if (trimmed === 'completed') {
+		return { type: 'open_completed' };
 	}
 
 	// Standalone lists home: lists
@@ -1136,6 +1138,10 @@ const executeCommand = (command) => {
 			}
 			return { success: false, message: `Invalid task index: ${command.index}` };
 		}
+
+		case 'open_completed':
+			ipc.send('open-completed-tasks-window');
+			return { success: true, message: "Opening completed tasks" };
 
 		case 'open_lists_home':
 			ipc.send("open-list-window", { target: { kind: "standalone_home" } });
@@ -1568,25 +1574,25 @@ const updateFuzzySelection = (taskId) => {
     fuzzySelectedTaskId = taskId;
 };
 
-// Navigate to next/previous visible task
+// Navigate to next/previous visible task in DOM (visual) order
 const navigateFuzzySelection = (direction) => {
-    if (fuzzyVisibleTasks.length === 0) return;
+    // Get visible tasks in DOM order (how they appear on screen)
+    const visibleEls = [...document.querySelectorAll('.task:not(.fuzzy-hidden)')];
+    if (visibleEls.length === 0) return;
 
-    const currentIndex = fuzzyVisibleTasks.indexOf(fuzzySelectedTaskId);
+    const domOrderIds = visibleEls.map(el => el.id);
+    const currentIndex = domOrderIds.indexOf(fuzzySelectedTaskId);
     let newIndex;
 
     if (currentIndex === -1) {
-        // No current selection, select first
         newIndex = 0;
     } else if (direction === 'next') {
-        // Right arrow - next task
-        newIndex = (currentIndex + 1) % fuzzyVisibleTasks.length;
+        newIndex = (currentIndex + 1) % domOrderIds.length;
     } else {
-        // Left arrow - previous task
-        newIndex = (currentIndex - 1 + fuzzyVisibleTasks.length) % fuzzyVisibleTasks.length;
+        newIndex = (currentIndex - 1 + domOrderIds.length) % domOrderIds.length;
     }
 
-    updateFuzzySelection(fuzzyVisibleTasks[newIndex]);
+    updateFuzzySelection(domOrderIds[newIndex]);
 };
 
 const toggleFuzzyTask = (task) => {

@@ -158,6 +158,11 @@ export function createListsController({ sendEvent, log = console.log, onTaskList
 	};
 
 	const fetchForTarget = (target, windowRef, options = {}) => {
+		// Clear stale cached data before subscribing — ensures fresh fetch for task-linked lists
+		const key = surfaceKey(target);
+		if (key && key !== "standalone_home") {
+			surfaces.delete(key);
+		}
 		subscribe(target, windowRef);
 		const payload = { target };
 		if (options.search_text) payload.search_text = options.search_text;
@@ -217,6 +222,7 @@ export function createListsController({ sendEvent, log = console.log, onTaskList
 
 		if (patched) {
 			pushToSubscribers(key, surface);
+			notifyTaskListStatus(key, surface);
 		}
 	};
 
@@ -241,6 +247,7 @@ export function createListsController({ sendEvent, log = console.log, onTaskList
 
 		if (patched) {
 			pushToSubscribers(key, surface);
+			notifyTaskListStatus(key, surface);
 		}
 	};
 
@@ -368,6 +375,31 @@ export function createListsController({ sendEvent, log = console.log, onTaskList
 		return surfaces.get(key) ?? null;
 	};
 
+	const forwardDeletedList = (data) => {
+		// Forward to all subscribed list windows (standalone + task-linked)
+		for (const [, subs] of surfaceSubscribers) {
+			for (const [, ref] of subs) {
+				try {
+					ref._pushFn("lists-deleted-list", data);
+				} catch (err) {
+					log(`[ListsController] forwardDeletedList error: ${err}`);
+				}
+			}
+		}
+	};
+
+	const forwardRestored = () => {
+		for (const [, subs] of surfaceSubscribers) {
+			for (const [, ref] of subs) {
+				try {
+					ref._pushFn("lists-restored", {});
+				} catch (err) {
+					log(`[ListsController] forwardRestored error: ${err}`);
+				}
+			}
+		}
+	};
+
 	return {
 		subscribe,
 		unsubscribe,
@@ -386,5 +418,7 @@ export function createListsController({ sendEvent, log = console.log, onTaskList
 		handleListError,
 		refetchAllActive,
 		getSurface,
+		forwardDeletedList,
+		forwardRestored,
 	};
 }

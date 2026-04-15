@@ -139,6 +139,10 @@ let repositionTaskbar = () => {};
 let pendingDeleteTasks = [];
 let pendingCompletionTask = null;
 
+// Preferred screen positions — most recent first, max 2
+// Each entry: { screenIndex, direction } (e.g. { screenIndex: 1, direction: "down" })
+let preferredPositions = [];
+
 const getTaskWindow = () => windowManager.getEditWindow();
 
 const syncCustomCommandsWindow = () => {
@@ -250,7 +254,7 @@ const recipesController = createRecipesController({
 
 const scheduleCompletedTasksRefresh = () => {
 	setTimeout(() => {
-		sendEvent("get_completed_tasks", appState.fromCompletedData);
+		sendEvent("get_completed_tasks_v2", appState.fromCompletedData);
 	}, 250);
 };
 
@@ -284,33 +288,73 @@ const handleTaskToggle = (data) => {
 	sendEvent("task_toggle", data);
 };
 
+const pushPreferredPosition = (screenIndex, direction) => {
+	// Remove if already in the stack (will be re-added at front)
+	preferredPositions = preferredPositions.filter(
+		p => !(p.screenIndex === screenIndex && p.direction === direction)
+	);
+	// Add to front
+	preferredPositions.unshift({ screenIndex, direction });
+	// Keep max 2
+	if (preferredPositions.length > 2) preferredPositions.length = 2;
+};
+
+const applyPosition = (screenIndex, direction) => {
+	if (!win || win.isDestroyed()) return;
+	const displays = screen.getAllDisplays();
+	if (screenIndex < 0 || screenIndex >= displays.length) return;
+
+	appState.currentlySelectedScreenIndex = screenIndex;
+	appState.currentlySelectedScreenSide = direction;
+
+	const display = displays[screenIndex];
+	const y = direction === "down"
+		? display.bounds.y + display.bounds.height - appState.taskbarHeight
+		: display.bounds.y;
+
+	win.setBounds({
+		x: display.bounds.x,
+		y,
+		height: appState.taskbarHeight,
+		width: display.bounds.width,
+	});
+
+	const reminderWin = windowManager.getReminderWindow();
+	if (reminderWin && !reminderWin.isDestroyed()) {
+		const frame = display.workArea ?? display.bounds;
+		const [reminderWidth, reminderHeight] = reminderWin.getSize();
+		const nextX = Math.round(frame.x + (frame.width - reminderWidth) / 2);
+		const nextY = Math.round(frame.y + (frame.height - reminderHeight) / 2);
+		reminderWin.setPosition(nextX, nextY);
+	}
+};
+
+// Apply the best available preferred position, or fall back to default
+const applyBestPosition = () => {
+	if (!win || win.isDestroyed()) return;
+	const displays = screen.getAllDisplays();
+	if (displays.length === 0) return;
+
+	// Try preferred positions in order
+	for (const pref of preferredPositions) {
+		if (pref.screenIndex >= 0 && pref.screenIndex < displays.length) {
+			applyPosition(pref.screenIndex, pref.direction);
+			notificationsController?.repositionWindow?.();
+			return;
+		}
+	}
+
+	// Default: first display, top
+	applyPosition(0, "up");
+	notificationsController?.repositionWindow?.();
+};
+
 const handleSwitchScreen = (data) => {
 	const displays = screen.getAllDisplays();
 
 	if (data.screenIndex >= 0 && data.screenIndex < displays.length) {
-		appState.currentlySelectedScreenIndex = data.screenIndex;
-		appState.currentlySelectedScreenSide = data.direction;
-
-		const display = displays[data.screenIndex];
-		const y = data.direction === "down"
-			? display.bounds.y + display.bounds.height - appState.taskbarHeight
-			: display.bounds.y;
-
-		win?.setBounds({
-			x: display.bounds.x,
-			y,
-			height: appState.taskbarHeight,
-			width: display.bounds.width,
-		});
-
-		const reminderWin = windowManager.getReminderWindow();
-		if (reminderWin && !reminderWin.isDestroyed()) {
-			const frame = display.workArea ?? display.bounds;
-			const [reminderWidth, reminderHeight] = reminderWin.getSize();
-			const nextX = Math.round(frame.x + (frame.width - reminderWidth) / 2);
-			const nextY = Math.round(frame.y + (frame.height - reminderHeight) / 2);
-			reminderWin.setPosition(nextX, nextY);
-		}
+		pushPreferredPosition(data.screenIndex, data.direction);
+		applyPosition(data.screenIndex, data.direction);
 	}
 
 	notificationsController.repositionWindow();
@@ -344,6 +388,11 @@ const showMainMenu = () =>
 		setNotificationsMuted: (value) => {
 			appState.notificationsMuted = Boolean(value);
 			notificationsController.setMuted(appState.notificationsMuted);
+		},
+		openDevTools: () => {
+			BrowserWindow.getAllWindows().forEach(w => {
+				if (!w.isDestroyed()) w.webContents.openDevTools();
+			});
 		},
 	});
 
@@ -437,6 +486,7 @@ registerIpcHandlers({
 	openCalendarWindow: openCalendarWindowOnFocusedScreen,
 	financeController,
 	recipesController,
+	createCompletedTasksPopUp,
 });
 
 ipc.on("completion-confirmation-confirmed", (_, payload) => {
@@ -509,30 +559,9 @@ app.whenReady().then(async () => {
 		win?.webContents.send("addEmergencyTask");
 	});
 	globalShortcut.register("CommandOrControl+Shift+j", () => {
-		// Open dev tools for all windows
-		win?.webContents.openDevTools();
-		getTaskWindow()?.webContents.openDevTools();
-		windowManager.getCompletedTasksWindow()?.webContents.openDevTools();
-		windowManager.getKenbanWindow()?.webContents.openDevTools();
-		windowManager.getHelpWindow()?.webContents.openDevTools();
-		windowManager.getCustomCommandsWindow()?.webContents.openDevTools();
-		windowManager.getTaskSplitWindow()?.webContents.openDevTools();
-		windowManager.getNotificationsWindow()?.webContents.openDevTools();
-		windowManager.getReminderWindow()?.webContents.openDevTools();
-
-		// Open dev tools for all command windows
-		windowManager.getAllCommandWindows().forEach((commandWin) => {
-			commandWin.webContents.openDevTools();
+		BrowserWindow.getAllWindows().forEach(w => {
+			if (!w.isDestroyed()) w.webContents.openDevTools();
 		});
-		// Open dev tools for all list windows
-		windowManager.getAllListWindows?.()?.forEach((listWin) => {
-			listWin.webContents.openDevTools();
-		});
-		windowManager.getTemplateWindow()?.webContents.openDevTools();
-		windowManager.getFinanceWindow()?.webContents.openDevTools();
-		windowManager.getRecipesWindow()?.webContents.openDevTools();
-		const calendarWindow = openCalendarWindowOnFocusedScreen();
-		calendarWindow?.webContents.openDevTools();
 	});
 	globalShortcut.register("CommandOrControl+Shift+e", () => {
 		win?.webContents.send("request-current-task-data-for-edit");
@@ -575,36 +604,11 @@ app.whenReady().then(async () => {
 
 	console.log("from main.js", +new Date());
 
-	repositionTaskbar = () => {
-		if (!win || win.isDestroyed()) return;
-		const displays = screen.getAllDisplays();
-		if (displays.length === 0) return;
-		// Clamp screen index to valid range
-		if (appState.currentlySelectedScreenIndex >= displays.length) {
-			appState.currentlySelectedScreenIndex = displays.length - 1;
-		}
-		if (appState.currentlySelectedScreenIndex < 0) {
-			appState.currentlySelectedScreenIndex = 0;
-		}
-		const display = displays[appState.currentlySelectedScreenIndex];
-		const y = appState.currentlySelectedScreenSide === "bottom"
-			? display.bounds.y + display.bounds.height - appState.taskbarHeight
-			: display.bounds.y;
-		win.setBounds({
-			x: display.bounds.x,
-			y,
-			height: appState.taskbarHeight,
-			width: display.bounds.width,
-		});
-	};
+	repositionTaskbar = applyBestPosition;
 
-	let displayMetricsTimer = null;
-	screen.on("display-added", () => repositionTaskbar());
-	screen.on("display-removed", () => repositionTaskbar());
-	screen.on("display-metrics-changed", () => {
-		clearTimeout(displayMetricsTimer);
-		displayMetricsTimer = setTimeout(repositionTaskbar, 300);
-	});
+	screen.on("display-added", () => applyBestPosition());
+	screen.on("display-removed", () => applyBestPosition());
+	screen.on("display-metrics-changed", () => applyBestPosition());
 });
 
 const doAuthentication = () => {
@@ -642,7 +646,7 @@ app.on("window-all-closed", () => {
 
 
 powerMonitor.on("resume", () => {
-	repositionTaskbar();
+	applyBestPosition();
 	sendEvent("request_hard_refresh", "");
 })
 
@@ -681,16 +685,16 @@ function createEditWindow(props) {
 
 function createCompletedTasksPopUp() {
 	appState.fromCompleted = false;
-	appState.fromCompletedData = { start_date: null, end_date: null, tags: [], category: null, search_query: null }
+	appState.fromCompletedData = { start_date: null, end_date: null, categories: [], include_tags: [], exclude_tags: [], include_keywords: [], exclude_keywords: [] }
 	try {
 		const alreadyOpen = !!windowManager.getCompletedTasksWindow();
 		windowManager.openCompletedTasksWindow({
 			onDidFinishLoad: () => {
-				sendEvent("get_completed_tasks", appState.fromCompletedData);
+				sendEvent("get_completed_tasks_v2", appState.fromCompletedData);
 			},
 		});
 		if (alreadyOpen) {
-			sendEvent("get_completed_tasks", appState.fromCompletedData);
+			sendEvent("get_completed_tasks_v2", appState.fromCompletedData);
 		}
 	}
 	catch (e) {

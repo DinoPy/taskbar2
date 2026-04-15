@@ -420,7 +420,6 @@ export class Task {
                 if (this.isFocused) this.removeFocus();
                 else this.addFocus();
             } else if (e.which === 2) {
-                this.removeFocus(true);
                 ipc.send("request-task-completion", {
                     task: this.formatTask('Object', false),
                 });
